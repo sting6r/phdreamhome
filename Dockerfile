@@ -17,11 +17,13 @@ COPY . .
 RUN npx prisma generate
 RUN npm run build
 
-# Expose the port Next.js runs on
-EXPOSE 3000
+# Expose the port (Railway will use this or the PORT env var)
+# We don't hardcode it here to allow Railway to inject PORT
+# EXPOSE 3000 
 
 # Set environment to production
 ENV NODE_ENV production
+ENV PORT 3000
 
 # Start the application using your server.js
-CMD ["npm", "start"]
+CMD ["node", "server.js"]
