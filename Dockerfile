@@ -4,12 +4,13 @@ WORKDIR /app
 
 # Install dependencies
 COPY package.json package-lock.json ./
-RUN npm ci
+# Skip prisma generate during npm ci because schema isn't copied yet
+RUN npm ci --ignore-scripts
 
 # Copy the rest of the application
 COPY . .
 
-# Generate Prisma Client and Build the project
+# Now generate Prisma Client and Build
 RUN npx prisma generate
 RUN npm run build
 
