@@ -1,0 +1,55 @@
+import type { Metadata, Viewport } from "next";
+import { ReactNode, Suspense } from "react";
+import "./globals.css";
+import Navbar from "../components/Navbar";
+import StatusLinksCard from "../components/StatusLinksCard";
+import FooterBanner from "../components/FooterBanner";
+
+export const metadata: Metadata = {
+  title: "PhDreamHome",
+  description: "Real estate listings",
+  applicationName: "PhDreamHome",
+  appleWebApp: {
+    title: "PhDreamHome",
+    statusBarStyle: "default",
+    capable: true,
+  },
+  manifest: "/manifest.webmanifest",
+  icons: {
+    icon: "/logo.svg",
+    apple: "/logo.svg",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#260038",
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+};
+
+export default function RootLayout({ children }: { children: ReactNode }) {
+  return (
+    <html lang="en">
+      <body className="bg-white text-black safe-area">
+        <Navbar />
+        <div id="status-links-wrapper" className="sticky top-[3.75rem] z-40 bg-white">
+          <Suspense fallback={<div className="h-10" />}>
+            <StatusLinksCard />
+          </Suspense>
+        </div>
+        <main className="container py-6">{children}</main>
+        <footer className="mt-10" style={{ background: "#EFDCEC" }}>
+          <FooterBanner />
+          <div className="container border-t py-2 flex items-center justify-between text-xs text-black">
+            <div>© 2025 PhDreamHome. All rights reserved.</div>
+            <div className="flex items-center gap-3">
+              <a href="/terms" className="text-black">Terms and Conditions</a>
+              <a href="/privacy" className="text-black">Privacy Policy</a>
+            </div>
+          </div>
+        </footer>
+      </body>
+    </html>
+  );
+}
