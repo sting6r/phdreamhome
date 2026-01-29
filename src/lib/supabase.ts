@@ -8,16 +8,18 @@ function clean(v?: string) {
 
 const urlPublic = clean(process.env.NEXT_PUBLIC_SUPABASE_URL);
 const urlServer = clean(process.env.SUPABASE_URL);
-const anon = clean(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) ?? clean(process.env.SUPABASE_ANON_KEY) ?? "";
-const service = clean(process.env.SUPABASE_SERVICE_ROLE_KEY) ?? "";
+const anon = clean(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) ?? clean(process.env.SUPABASE_ANON_KEY) ?? "placeholder-key";
+const service = clean(process.env.SUPABASE_SERVICE_ROLE_KEY) ?? "placeholder-key";
 export const bucket = clean(process.env.SUPABASE_BUCKET) ?? "images";
 export const bucketVideos = clean(process.env.SUPABASE_BUCKET_VIDEOS) ?? "videos";
 export const bucketBlogImages = clean(process.env.SUPABASE_BUCKET_BLOG_IMAGES) ?? "blog image";
 export const bucketBlogVideos = clean(process.env.SUPABASE_BUCKET_BLOG_VIDEOS) ?? "blog video";
 
-export const supabasePublic = createClient(urlPublic ?? urlServer ?? "", anon, { auth: { persistSession: true, autoRefreshToken: false, detectSessionInUrl: true } });
+const finalUrl = urlPublic ?? urlServer ?? "https://placeholder.supabase.co";
+
+export const supabasePublic = createClient(finalUrl, anon, { auth: { persistSession: true, autoRefreshToken: false, detectSessionInUrl: true } });
 export const supabaseAdmin = typeof window === "undefined"
-  ? createClient(urlServer ?? urlPublic ?? "", service, { auth: { persistSession: false } })
+  ? createClient(finalUrl, service, { auth: { persistSession: false } })
   : (undefined as unknown as ReturnType<typeof createClient>);
 
 export function parseBucketSpec(p: string) {
