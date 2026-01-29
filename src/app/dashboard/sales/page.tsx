@@ -1,0 +1,552 @@
+"use client";
+import { useState, useEffect } from "react";
+import useSWR from "swr";
+import { supabasePublic } from "@lib/supabase";
+import CurrencyInput from "@components/CurrencyInput";
+
+const fetcher = async (u: string) => {
+  const { data } = await supabasePublic.auth.getSession();
+  const token = data.session?.access_token;
+  const headers: Record<string, string> = {};
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+  const r = await fetch(u, { headers });
+  if (!r.ok) {
+    if (r.status === 401) return null;
+    throw new Error("Failed to fetch");
+  }
+  return r.json();
+};
+
+const STATUS_CATEGORIES = ["In Progress", "Closed", "Cancelled"];
+
+const Icons = {
+  Plus: () => (
+    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+  ),
+  MoreVertical: () => (
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="1"></circle><circle cx="12" cy="5" r="1"></circle><circle cx="12" cy="19" r="1"></circle></svg>
+  ),
+  Pencil: () => (
+    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>
+  ),
+  Trash2: () => (
+    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+  ),
+  X: () => (
+    <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+  )
+};
+
+export default function SalesPage() {
+  const { data: sales, mutate: mutateSales } = useSWR("/api/sales", fetcher);
+  const { data: listingsData } = useSWR("/api/listings", fetcher);
+  const listings = listingsData?.listings ?? [];
+
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
+
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState("In Progress");
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [formData, setFormData] = useState({
+    listingId: "",
+    clientName: "",
+    clientAddress: "",
+    clientEmail: "",
+    clientMessenger: "",
+    clientPhone: "",
+    amount: "",
+    salesCategory: "Sale",
+    saleDate: "",
+    rentalStartDate: "",
+    rentalDueDate: "",
+    notes: "",
+  });
+
+  useEffect(() => {
+    if (!editingId && !isFormOpen) {
+      setFormData(prev => ({
+        ...prev,
+        saleDate: new Date().toISOString().split("T")[0]
+      }));
+    }
+  }, [isFormOpen, editingId]);
+
+  const [emailSuggestion, setEmailSuggestion] = useState<string | null>(null);
+
+  const getEmailSuggestion = (email: string) => {
+    const commonDomains: Record<string, string> = {
+      "gmial.com": "gmail.com",
+      "gamil.com": "gmail.com",
+      "gmal.com": "gmail.com",
+      "gnail.com": "gmail.com",
+      "gmai.com": "gmail.com",
+      "gmaill.com": "gmail.com",
+      "yaho.com": "yahoo.com",
+      "yahuo.com": "yahoo.com",
+      "hotmal.com": "hotmail.com",
+      "hotmial.com": "hotmail.com",
+      "outlok.com": "outlook.com",
+      "outluk.com": "outlook.com",
+      "iclud.com": "icloud.com",
+      "icloud.co": "icloud.com",
+    };
+    const [local, domain] = email.split("@");
+    if (!domain) return null;
+    const suggestion = commonDomains[domain.toLowerCase()];
+    return suggestion ? `${local}@${suggestion}` : null;
+  };
+
+  const handleEmailChange = (val: string) => {
+    setFormData({ ...formData, clientEmail: val });
+    setEmailSuggestion(getEmailSuggestion(val));
+  };
+
+  const resetForm = () => {
+    setFormData({
+      listingId: "",
+      clientName: "",
+      clientAddress: "",
+      clientEmail: "",
+      clientMessenger: "",
+      clientPhone: "",
+      amount: "",
+      salesCategory: "Sale",
+      saleDate: new Date().toISOString().split("T")[0],
+      rentalStartDate: "",
+      rentalDueDate: "",
+      notes: "",
+    });
+    setActiveTab("In Progress");
+    setEditingId(null);
+    setIsFormOpen(false);
+    setEmailSuggestion(null);
+  };
+
+  const handleEdit = (sale: any) => {
+    setEditingId(sale.id);
+    setFormData({
+      listingId: sale.listingId || "",
+      clientName: sale.clientName,
+      clientAddress: sale.clientAddress || "",
+      clientEmail: sale.clientEmail || "",
+      clientMessenger: sale.clientMessenger || "",
+      clientPhone: sale.clientPhone || "",
+      amount: sale.amount.toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+      salesCategory: sale.salesCategory || "Sale",
+      saleDate: sale.saleDate ? new Date(sale.saleDate).toISOString().split("T")[0] : new Date().toISOString().split("T")[0],
+      rentalStartDate: sale.rentalStartDate ? new Date(sale.rentalStartDate).toISOString().split("T")[0] : "",
+      rentalDueDate: sale.rentalDueDate ? new Date(sale.rentalDueDate).toISOString().split("T")[0] : "",
+      notes: sale.notes || "",
+    });
+    setActiveTab(sale.status);
+    setIsFormOpen(true);
+    setOpenMenuId(null);
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this sale record?")) return;
+    try {
+      const { data } = await supabasePublic.auth.getSession();
+      const token = data.session?.access_token;
+      const headers: Record<string, string> = {};
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+
+      await fetch(`/api/sales/${id}`, { method: "DELETE", headers });
+      mutateSales();
+      setOpenMenuId(null);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const formatAmount = (value: string) => {
+    // Remove all non-digits except for the decimal point
+    const cleanValue = value.replace(/[^\d.]/g, "");
+    
+    // Split into integer and decimal parts
+    const parts = cleanValue.split(".");
+    let integerPart = parts[0];
+    const decimalPart = parts[1];
+
+    // Add commas to the integer part
+    integerPart = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+
+    // Reconstruct the value
+    if (parts.length > 1) {
+      return `${integerPart}.${decimalPart.slice(0, 2)}`;
+    }
+    return integerPart;
+  };
+
+  const formatPhone = (value: string) => {
+    // Remove all non-digits
+    const cleanValue = value.replace(/\D/g, "");
+    // Limit to 11 digits
+    return cleanValue.slice(0, 11);
+  };
+
+  const handleAmountBlur = () => {
+    if (!formData.amount) return;
+    const num = parseFloat(formData.amount.replace(/,/g, ""));
+    if (!isNaN(num)) {
+      setFormData({
+        ...formData,
+        amount: num.toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+      });
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (formData.clientPhone && formData.clientPhone.length !== 11) {
+      alert("Please enter a valid 11-digit mobile number.");
+      return;
+    }
+
+    // Strip commas before sending to API
+    const amountValue = formData.amount.replace(/,/g, "");
+    const payload = { ...formData, amount: amountValue, status: activeTab };
+    
+    try {
+      const { data } = await supabasePublic.auth.getSession();
+      const token = data.session?.access_token;
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+
+      const url = editingId ? `/api/sales/${editingId}` : "/api/sales";
+      const method = editingId ? "PATCH" : "POST";
+      
+      const res = await fetch(url, {
+        method,
+        headers,
+        body: JSON.stringify(payload),
+      });
+
+      if (res.ok) {
+        mutateSales();
+        resetForm();
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <h1 className="text-2xl font-bold text-slate-800">Sales Records</h1>
+        <button
+          onClick={() => setIsFormOpen(true)}
+          className="w-full sm:w-auto flex items-center justify-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+        >
+          <Icons.Plus />
+          Add Sale
+        </button>
+      </div>
+
+      {isFormOpen && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in duration-200">
+            <div className="p-4 border-b flex justify-between items-center">
+              <h2 className="text-lg font-semibold">
+                {editingId ? "Edit Sale Record" : "Encode New Sale"}
+              </h2>
+              <button onClick={resetForm} className="text-slate-400 hover:text-slate-600">
+                <Icons.X />
+              </button>
+            </div>
+
+            <form onSubmit={handleSubmit}>
+              <div className="p-4 space-y-3">
+                {/* Status Tabs */}
+                <div className="flex border-b">
+                  {STATUS_CATEGORIES.map((status) => (
+                    <button
+                      key={status}
+                      type="button"
+                      onClick={() => setActiveTab(status)}
+                      className={`px-4 py-2 text-xs font-medium transition-colors border-b-2 ${
+                        activeTab === status
+                          ? "border-blue-600 text-blue-600"
+                          : "border-transparent text-slate-500 hover:text-slate-700"
+                      }`}
+                    >
+                      {status}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-slate-700">Date</label>
+                    <input
+                      type="date"
+                      required
+                      value={formData.saleDate}
+                      onChange={(e) => setFormData({ ...formData, saleDate: e.target.value })}
+                      className="w-full rounded-md border border-slate-300 bg-slate-100 p-2 text-xs text-black focus:ring-2 focus:ring-blue-500 outline-none"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-slate-700">Property / Listing</label>
+                    <select
+                      value={formData.listingId}
+                      onChange={(e) => setFormData({ ...formData, listingId: e.target.value })}
+                      className="w-full rounded-md border border-slate-300 bg-slate-100 p-2 text-xs text-black focus:ring-2 focus:ring-blue-500 outline-none"
+                    >
+                      <option value="">Select a property (optional)</option>
+                      {listings.map((l: any) => (
+                        <option key={l.id} value={l.id}>{l.title}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-slate-700">Sales Category</label>
+                    <select
+                      value={formData.salesCategory}
+                      onChange={(e) => setFormData({ ...formData, salesCategory: e.target.value })}
+                      className="w-full rounded-md border border-slate-300 bg-slate-100 p-2 text-xs text-black focus:ring-2 focus:ring-blue-500 outline-none"
+                    >
+                      <option value="Sale">Sale</option>
+                      <option value="Rental">Rental</option>
+                    </select>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-slate-700">Amount (PHP)</label>
+                    <input
+                      type="text"
+                      required
+                      value={formData.amount}
+                      onChange={(e) => setFormData({ ...formData, amount: formatAmount(e.target.value) })}
+                      onBlur={handleAmountBlur}
+                      className="w-full rounded-md border border-slate-300 bg-slate-100 p-2 text-xs text-black focus:ring-2 focus:ring-blue-500 outline-none"
+                      placeholder="0.00"
+                    />
+                  </div>
+
+                  {formData.salesCategory === "Rental" && (
+                    <>
+                      <div className="space-y-1">
+                        <label className="text-xs font-medium text-slate-700">Date Started</label>
+                        <input
+                          type="date"
+                          value={formData.rentalStartDate}
+                          onChange={(e) => setFormData({ ...formData, rentalStartDate: e.target.value })}
+                          className="w-full rounded-md border border-slate-300 bg-slate-100 p-2 text-xs text-black focus:ring-2 focus:ring-blue-500 outline-none"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-xs font-medium text-slate-700">Date Due</label>
+                        <input
+                          type="date"
+                          value={formData.rentalDueDate}
+                          onChange={(e) => setFormData({ ...formData, rentalDueDate: e.target.value })}
+                          className="w-full rounded-md border border-slate-300 bg-slate-100 p-2 text-xs text-black focus:ring-2 focus:ring-blue-500 outline-none"
+                        />
+                      </div>
+                    </>
+                  )}
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-slate-700">Client Name</label>
+                    <input
+                      type="text"
+                      required
+                      value={formData.clientName}
+                      onChange={(e) => setFormData({ ...formData, clientName: e.target.value })}
+                      className="w-full rounded-md border border-slate-300 bg-slate-100 p-2 text-xs text-black focus:ring-2 focus:ring-blue-500 outline-none"
+                      placeholder="Full name"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-slate-700">Address</label>
+                    <input
+                      type="text"
+                      value={formData.clientAddress}
+                      onChange={(e) => setFormData({ ...formData, clientAddress: e.target.value })}
+                      className="w-full rounded-md border border-slate-300 bg-slate-100 p-2 text-xs text-black focus:ring-2 focus:ring-blue-500 outline-none"
+                      placeholder="Client's complete address"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-slate-700">Client Email</label>
+                    <div className="relative">
+                      <input
+                        type="email"
+                        value={formData.clientEmail}
+                        onChange={(e) => handleEmailChange(e.target.value)}
+                        className="w-full rounded-md border border-slate-300 bg-slate-100 p-2 text-xs text-black focus:ring-2 focus:ring-blue-500 outline-none"
+                        placeholder="email@example.com"
+                      />
+                      {emailSuggestion && (
+                        <div className="absolute left-0 top-full z-10 w-full bg-white border border-slate-200 shadow-lg rounded-md mt-1 p-2">
+                          <p className="text-[10px] text-slate-500 mb-1">Did you mean?</p>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setFormData({ ...formData, clientEmail: emailSuggestion });
+                              setEmailSuggestion(null);
+                            }}
+                            className="text-xs text-blue-600 hover:underline font-medium text-left w-full truncate"
+                          >
+                            {emailSuggestion}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-slate-700">Messenger</label>
+                    <input
+                      type="text"
+                      value={formData.clientMessenger}
+                      onChange={(e) => setFormData({ ...formData, clientMessenger: e.target.value })}
+                      className="w-full rounded-md border border-slate-300 bg-slate-100 p-2 text-xs text-black focus:ring-2 focus:ring-blue-500 outline-none"
+                      placeholder="Messenger link or username"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-slate-700">Client Phone</label>
+                    <input
+                      type="text"
+                      value={formData.clientPhone}
+                      onChange={(e) => setFormData({ ...formData, clientPhone: formatPhone(e.target.value) })}
+                      className="w-full rounded-md border border-slate-300 bg-slate-100 p-2 text-xs text-black focus:ring-2 focus:ring-blue-500 outline-none"
+                      placeholder="09123456789"
+                      maxLength={11}
+                    />
+                    <div className="text-[10px] text-slate-500 px-1">Format: 09XXXXXXXXX</div>
+                  </div>
+                  <div className="md:col-span-2 space-y-1">
+                    <label className="text-xs font-medium text-slate-700">Notes</label>
+                    <textarea
+                      value={formData.notes}
+                      onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                      className="w-full rounded-md border border-slate-300 bg-slate-100 p-2 text-xs text-black focus:ring-2 focus:ring-blue-500 outline-none h-16"
+                      placeholder="Additional details about the sale..."
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-4 border-t bg-slate-50 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={resetForm}
+                  className="px-4 py-2 text-xs font-medium text-slate-700 hover:bg-slate-200 rounded-md transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md transition-colors"
+                >
+                  {editingId ? "Update" : "Save"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      <div className="card overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm text-left min-w-[1000px]">
+            <thead className="bg-[#F4DDFF] border-b text-slate-700 font-semibold">
+              <tr>
+                <th className="px-6 py-4">Date</th>
+                <th className="px-6 py-4">Category</th>
+                <th className="px-6 py-4">Client</th>
+                <th className="px-6 py-4">Property</th>
+                <th className="px-6 py-4">Amount</th>
+                <th className="px-6 py-4">Status</th>
+                <th className="px-6 py-4"></th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-200">
+              {sales && sales.length > 0 ? (
+                sales.map((sale: any) => (
+                  <tr key={sale.id} className="hover:bg-slate-50 transition-colors group">
+                    <td className="px-6 py-4 text-slate-500">
+                      {mounted ? new Date(sale.saleDate).toLocaleDateString("en-PH") : ""}
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        sale.salesCategory === "Rental" ? "bg-orange-100 text-orange-700" : "bg-purple-100 text-purple-700"
+                      }`}>
+                        {sale.salesCategory || "Sale"}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="font-medium text-slate-900">{sale.clientName}</div>
+                      <div className="text-xs text-slate-500">{sale.clientEmail || "No email"}</div>
+                    </td>
+                    <td className="px-6 py-4 text-slate-600">
+                      <div>{sale.listing?.title || "Direct Sale / Other"}</div>
+                      {sale.salesCategory === "Rental" && sale.rentalStartDate && (
+                        <div className="text-[10px] text-slate-400 mt-1">
+                          {mounted ? (
+                            <>
+                              {new Date(sale.rentalStartDate).toLocaleDateString("en-PH")} - {sale.rentalDueDate ? new Date(sale.rentalDueDate).toLocaleDateString("en-PH") : "Present"}
+                            </>
+                          ) : ""}
+                        </div>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 font-semibold text-slate-900">
+                      {mounted ? `₱${sale.amount.toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ""}
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        sale.status === "Closed" ? "bg-green-100 text-green-700" :
+                        sale.status === "Cancelled" ? "bg-red-100 text-red-700" :
+                        "bg-blue-100 text-blue-700"
+                      }`}>
+                        {sale.status}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-right relative">
+                      <button 
+                        onClick={() => setOpenMenuId(openMenuId === sale.id ? null : sale.id)}
+                        className="p-1 hover:bg-slate-200 rounded-full transition-colors"
+                      >
+                        <Icons.MoreVertical />
+                      </button>
+                      
+                      {openMenuId === sale.id && (
+                        <div className="absolute right-6 top-12 bg-white shadow-lg rounded-lg border py-1 w-32 z-10 animate-in fade-in slide-in-from-top-1 duration-200">
+                          <button 
+                            onClick={() => handleEdit(sale)}
+                            className="w-full text-left px-4 py-2 text-xs hover:bg-slate-50 flex items-center gap-2"
+                          >
+                            <Icons.Pencil /> Edit
+                          </button>
+                          <button 
+                            onClick={() => handleDelete(sale.id)}
+                            className="w-full text-left px-4 py-2 text-xs hover:bg-slate-50 text-red-600 flex items-center gap-2"
+                          >
+                            <Icons.Trash2 /> Delete
+                          </button>
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={6} className="px-6 py-10 text-center text-slate-500 italic">
+                    {sales ? "No sales records found." : "Loading sales records..."}
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
