@@ -6,7 +6,8 @@ export const maxDuration = 30;
 
 async function getPythonAIResponse(message: string, sessionId: string = "default_session") {
   try {
-    const response = await fetch("http://localhost:8000/chat", {
+    const pythonApiUrl = process.env.PYTHON_API_URL || "http://localhost:8000";
+    const response = await fetch(`${pythonApiUrl}/chat`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
