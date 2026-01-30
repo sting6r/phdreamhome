@@ -15,11 +15,17 @@ export const bucketVideos = clean(process.env.SUPABASE_BUCKET_VIDEOS) ?? "videos
 export const bucketBlogImages = clean(process.env.SUPABASE_BUCKET_BLOG_IMAGES) ?? "blog image";
 export const bucketBlogVideos = clean(process.env.SUPABASE_BUCKET_BLOG_VIDEOS) ?? "blog video";
 
-const finalUrl = urlPublic ?? urlServer ?? "https://placeholder.supabase.co";
+const finalUrl = urlPublic ?? urlServer;
 
-export const supabasePublic = createClient(finalUrl, anon, { auth: { persistSession: true, autoRefreshToken: false, detectSessionInUrl: true } });
+if (!finalUrl || !finalUrl.startsWith("http")) {
+  console.error("CRITICAL ERROR: Invalid SUPABASE_URL detected in environment:", finalUrl);
+}
+
+const safeUrl = finalUrl || "https://placeholder-url-missing.supabase.co";
+
+export const supabasePublic = createClient(safeUrl, anon, { auth: { persistSession: true, autoRefreshToken: false, detectSessionInUrl: true } });
 export const supabaseAdmin = typeof window === "undefined"
-  ? createClient(finalUrl, service, { auth: { persistSession: false } })
+  ? createClient(safeUrl, service, { auth: { persistSession: false } })
   : (undefined as unknown as ReturnType<typeof createClient>);
 
 export function parseBucketSpec(p: string) {
