@@ -23,9 +23,17 @@ function getValidUrl(url?: string) {
 const finalUrl = getValidUrl(urlPublic) ?? getValidUrl(urlServer);
 
 if (!finalUrl) {
-  console.error("CRITICAL ERROR: No valid SUPABASE_URL detected. Environment values were:", {
+  let reason = "Variable is empty or missing";
+  const rawUrl = urlPublic || urlServer;
+  if (rawUrl) {
+    if (!rawUrl.startsWith("http")) reason = "URL does not start with http/https";
+    else if (rawUrl.length > 200) reason = "URL is too long (looks like a JWT/Token instead of a URL)";
+  }
+  
+  console.error(`CRITICAL ERROR: No valid SUPABASE_URL detected. Reason: ${reason}`, {
     NEXT_PUBLIC_SUPABASE_URL: urlPublic ? (urlPublic.slice(0, 10) + "...") : "MISSING",
-    SUPABASE_URL: urlServer ? (urlServer.slice(0, 10) + "...") : "MISSING"
+    SUPABASE_URL: urlServer ? (urlServer.slice(0, 10) + "...") : "MISSING",
+    rawLength: rawUrl?.length
   });
 }
 
