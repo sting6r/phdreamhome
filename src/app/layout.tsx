@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { ReactNode, Suspense } from "react";
 import "./globals.css";
+import { GoogleAnalytics } from "@next/third-parties/google";
 import Navbar from "../components/Navbar";
 import StatusLinksCard from "../components/StatusLinksCard";
 import FooterBanner from "../components/FooterBanner";
@@ -51,6 +52,9 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           </div>
         </footer>
         <AIAgent />
+        {process.env.NEXT_PUBLIC_GA_ID && (
+          <GoogleAnalytics gaId={process.env.NEXT_PUBLIC_GA_ID} />
+        )}
       </body>
     </html>
   );

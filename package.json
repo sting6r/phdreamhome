@@ -18,6 +18,7 @@
     "@ai-sdk/openai": "^3.0.18",
     "@ai-sdk/react": "^3.0.57",
     "@next-auth/prisma-adapter": "^1.0.7",
+    "@next/third-parties": "^16.1.6",
     "@prisma/client": "^5.18.0",
     "@supabase/supabase-js": "^2.45.4",
     "ai": "^6.0.55",
