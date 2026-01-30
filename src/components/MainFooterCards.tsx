@@ -28,19 +28,24 @@ export default function MainFooterCards() {
       </div>
       <div className="card p-6 transition-all duration-300 hover:scale-[1.01] hover:shadow-md border-none" style={{ backgroundColor: '#F9F5FF' }}>
         <div className="font-bold text-xl mb-3 text-purple-900">Top Developers</div>
-        <div className="space-y-2 text-sm text-gray-700">
-          <div className="flex items-center gap-2">
-            <div className="w-1.5 h-1.5 rounded-full bg-purple-400"></div>
-            <span>Ayala Land</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-1.5 h-1.5 rounded-full bg-purple-400"></div>
-            <span>SMDC</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-1.5 h-1.5 rounded-full bg-purple-400"></div>
-            <span>Megaworld</span>
-          </div>
+        <div className="grid grid-cols-2 gap-x-2 gap-y-2 text-sm text-gray-700">
+          {[
+            "Ayala Land",
+            "SMDC",
+            "Megaworld",
+            "Vista Land",
+            "DMCI Homes",
+            "Robinsons Land",
+            "Filinvest Land",
+            "Rockwell Land",
+            "Federal Land",
+            "Cebu Landmasters"
+          ].map((dev, i) => (
+            <div key={dev} className="flex items-center gap-2">
+              <div className="w-1.5 h-1.5 rounded-full bg-purple-400 shrink-0"></div>
+              <span className="truncate">{dev}</span>
+            </div>
+          ))}
         </div>
       </div>
     </div>
