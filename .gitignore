@@ -27,6 +27,14 @@ yarn-error.log*
 .env
 .env.test
 
+# secrets
+*.json
+!package.json
+!package-lock.json
+!tsconfig.json
+!next.config.json
+!components.json
+
 # vercel
 .vercel
 

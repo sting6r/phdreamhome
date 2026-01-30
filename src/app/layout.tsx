@@ -8,8 +8,38 @@ import FooterBanner from "../components/FooterBanner";
 import AIAgent from "../components/AIAgent";
 
 export const metadata: Metadata = {
-  title: "PhDreamHome",
-  description: "Real estate listings",
+  title: {
+    default: "PhDreamHome | Real Estate Listings in the Philippines",
+    template: "%s | PhDreamHome"
+  },
+  description: "Find your dream home in the Philippines. Browse house and lot, condominiums, and commercial properties for sale or rent.",
+  keywords: ["Philippines real estate", "house and lot for sale", "condominium for rent", "property listings Philippines"],
+  authors: [{ name: "PhDreamHome" }],
+  creator: "PhDreamHome",
+  publisher: "PhDreamHome",
+  formatDetection: {
+    email: false,
+    address: false,
+    telephone: false,
+  },
+  metadataBase: new URL('https://www.phdreamhome.com'),
+  alternates: {
+    canonical: '/',
+  },
+  openGraph: {
+    title: "PhDreamHome | Real Estate Listings in the Philippines",
+    description: "Find your dream home in the Philippines. Browse house and lot, condominiums, and commercial properties for sale or rent.",
+    url: "https://www.phdreamhome.com",
+    siteName: "PhDreamHome",
+    locale: "en_PH",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "PhDreamHome | Real Estate Listings in the Philippines",
+    description: "Find your dream home in the Philippines.",
+    creator: "@phdreamhome",
+  },
   applicationName: "PhDreamHome",
   appleWebApp: {
     title: "PhDreamHome",

@@ -11,12 +11,49 @@ import PropertyCalculator from "@components/PropertyCalculator";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params;
-  const listing = await prisma.listing.findFirst({ where: { OR: [{ id }, { slug: id }] } });
+  const listing = await prisma.listing.findFirst({ 
+    where: { OR: [{ id }, { slug: id }] },
+    include: { images: { take: 1 } }
+  });
+  
   if (!listing || !listing.published) return { title: "Listing not found" };
-  const title = listing.seoTitle || listing.title;
-  const description = listing.seoDescription || listing.description?.slice(0, 140);
-  const keywords = Array.isArray((listing as any).seoKeywords) && (listing as any).seoKeywords.length ? (listing as any).seoKeywords : undefined;
-  return { title, description, keywords };
+  
+  const title = listing.seoTitle || `${listing.title} | PhDreamHome`;
+  const description = listing.seoDescription || listing.description?.slice(0, 160) || `Check out this ${listing.type} in ${listing.city}, ${listing.state}.`;
+  const keywords = Array.isArray((listing as any).seoKeywords) && (listing as any).seoKeywords.length 
+    ? (listing as any).seoKeywords 
+    : [listing.type, listing.city, "Philippines real estate", "property for sale"].filter(Boolean);
+
+  const ogImage = listing.images[0]?.url ? (await createSignedUrl(listing.images[0].url)) : "https://www.phdreamhome.com/logo.svg";
+
+  return { 
+    title, 
+    description, 
+    keywords,
+    openGraph: {
+      title,
+      description,
+      type: 'website',
+      url: `https://www.phdreamhome.com/listing/${listing.slug || listing.id}`,
+      images: [
+        {
+          url: ogImage || "",
+          width: 1200,
+          height: 630,
+          alt: listing.title,
+        },
+      ],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+      images: [ogImage || ""],
+    },
+    alternates: {
+      canonical: `https://www.phdreamhome.com/listing/${listing.slug || listing.id}`,
+    },
+  };
 }
 
 export default async function ListingPage({ params, searchParams }: { params: Promise<{ id: string }>, searchParams: Promise<{ price?: string; dp?: string; rate?: string; term?: string; sp?: string }> }) {
@@ -111,13 +148,36 @@ export default async function ListingPage({ params, searchParams }: { params: Pr
     if (sParams?.term) q.set("term", String(sParams.term));
     return q;
   })();
-  const pageUrl = (p:number) => {
-    const q = new URLSearchParams(baseQs);
-    q.set("sp", String(p));
-    return `/listing/${id}?${q.toString()}`;
+  const pageUrlCanonical = `https://www.phdreamhome.com/listing/${id}`;
+
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "RealEstateListing",
+    "name": listing.title,
+    "description": description,
+    "url": pageUrlCanonical,
+    "image": items.map(i => i.url),
+    "address": {
+      "@type": "PostalAddress",
+      "addressLocality": listing.city,
+      "addressRegion": listing.state,
+      "addressCountry": "PH",
+      "streetAddress": listing.address
+    },
+    "offers": {
+      "@type": "Offer",
+      "price": listing.price,
+      "priceCurrency": "PHP",
+      "availability": "https://schema.org/InStock"
+    }
   };
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-4">
         {items.length ? <GalleryViewer items={items} title={listing.title} address={[listing.address, listing.city, listing.country].filter(Boolean).join(", ")} price={Number(listing.price)} /> : (
@@ -318,7 +378,6 @@ export default async function ListingPage({ params, searchParams }: { params: Pr
         </div>
       </div>
       <MainFooterCards />
-    </div>
     </div>
   );
 }
