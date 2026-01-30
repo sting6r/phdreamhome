@@ -174,7 +174,10 @@ export default function DashboardPage() {
                 <Tooltip 
                   cursor={{fill: '#f8fafc'}}
                   contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                  formatter={(value: number) => [`₱${value.toLocaleString("en-PH")}`, "Total Sales"]}
+                  formatter={(value) => {
+                    const numeric = typeof value === "number" ? value : Number(value ?? 0);
+                    return [`₱${numeric.toLocaleString("en-PH")}`, "Total Sales"];
+                  }}
                 />
                 <Bar 
                   dataKey="sales" 
