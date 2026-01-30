@@ -5,6 +5,38 @@ import Link from "next/link";
 import MainFooterCards from "@components/MainFooterCards";
 import BlogMediaViewer from "@components/BlogMediaViewer";
 import ShareButtons from "@components/ShareButtons";
+import type { Metadata } from "next";
+
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const { id } = await params;
+  const post = await fetchPost(id);
+  if (!post) return { title: "Blog Post Not Found" };
+
+  const title = `${post.title} | PhDreamHome Blog`;
+  const description = post.description?.slice(0, 160) || `Read more about ${post.title} on PhDreamHome.`;
+  const ogImage = post.coverUrl || "https://www.phdreamhome.com/logo.svg";
+
+  return {
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      type: "article",
+      url: `https://www.phdreamhome.com/blog/${id}`,
+      images: [{ url: ogImage }],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: [ogImage],
+    },
+    alternates: {
+      canonical: `https://www.phdreamhome.com/blog/${id}`,
+    }
+  };
+}
 
 type BlogMedia = { path: string; type: "image" | "video"; url: string | null; title?: string | null; subtitle?: string | null; description?: string | null; published?: boolean };
 type BlogPost = { id: string; userId: string; title: string; description: string; author?: string | null; displayDate?: string | null; coverPath: string | null; coverUrl: string | null; media: BlogMedia[]; published: boolean; createdAt: string | number | Date };

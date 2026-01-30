@@ -2,7 +2,25 @@ import Image from "next/image";
 import Link from "next/link";
 import MainFooterCards from "../../components/MainFooterCards";
 import { cookies, headers } from "next/headers";
+import type { Metadata } from "next";
+
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: "Real Estate Blog & News | PhDreamHome",
+  description: "Stay updated with the latest real estate trends, tips, and news in the Philippines. Expert advice for buyers, sellers, and investors.",
+  keywords: ["Philippines real estate blog", "property investment tips", "home buying guide", "real estate news"],
+  openGraph: {
+    title: "Real Estate Blog & News | PhDreamHome",
+    description: "Stay updated with the latest real estate trends, tips, and news in the Philippines.",
+    url: "https://www.phdreamhome.com/blog",
+    siteName: "PhDreamHome",
+    type: "website",
+  },
+  alternates: {
+    canonical: "https://www.phdreamhome.com/blog",
+  }
+};
 
 type BlogMedia = { path: string; type: "image" | "video"; url: string | null; title?: string | null; subtitle?: string | null; description?: string | null };
 type BlogPost = { id: string; title: string; description: string; author?: string | null; displayDate?: string | null; category?: string | null; coverPath: string | null; coverUrl: string | null; media: BlogMedia[]; createdAt: number | string | Date; featured?: boolean };

@@ -8,7 +8,7 @@ import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import Script from "next/script";
-import { X, Send, User, Minimize2, Maximize2, Sparkles, Loader2, ExternalLink, Bot, Image as ImageIcon, ChevronLeft, Undo2 } from "lucide-react";
+import { X, Send, User, Minimize2, Maximize2, Sparkles, Loader2, ExternalLink, Bot, Image as ImageIcon, ChevronLeft, Undo2, GripHorizontal } from "lucide-react";
 import Link from "next/link";
 import { supabasePublic } from "@/lib/supabase";
 
@@ -547,7 +547,7 @@ export default function AIAgent() {
                   onClick={() => setShowPropertyForm(true)}
                   className="mt-2 w-full flex items-center justify-center gap-2 bg-purple-600 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-md hover:bg-purple-700 transition-all active:scale-95"
                 >
-                  <Bot size={16} />
+                  <Bot size={14} />
                   Fill Out Property Form
                 </button>
               </span>
@@ -1418,11 +1418,31 @@ export default function AIAgent() {
     }
   }, [chatInstance.messages, currentInquiryId]);
 
+  const constraintsRef = useRef(null);
+  const isDraggingRef = useRef(false);
+
   if (!mounted) return null;
 
   return (
-    <div className="fixed bottom-6 right-6 z-50">
-      <AnimatePresence>
+    <div ref={constraintsRef} className="fixed inset-0 pointer-events-none z-[9999]">
+      <motion.div 
+        drag
+        dragMomentum={false}
+        dragElastic={0}
+        dragConstraints={constraintsRef}
+        onDragStart={() => {
+          isDraggingRef.current = true;
+        }}
+        onDragEnd={() => {
+          // Small delay to ensure click events are ignored right after dragging
+          setTimeout(() => {
+            isDraggingRef.current = false;
+          }, 100);
+        }}
+        whileDrag={{ scale: 1.02 }}
+        className="fixed bottom-6 right-6 pointer-events-auto cursor-move active:cursor-grabbing select-none"
+      >
+        <AnimatePresence mode="wait">
         {!isOpen && (
           <div className="flex flex-col items-end gap-3">
             <AnimatePresence>
@@ -1436,7 +1456,12 @@ export default function AIAgent() {
                   {/* Welcome Bubble */}
                   <div className="relative bg-[#0B2147] text-white p-4 rounded-2xl rounded-tr-none shadow-xl max-w-[240px] mb-2">
                     <button 
-                      onClick={() => setShowQuickActions(false)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (!isDraggingRef.current) {
+                          setShowQuickActions(false);
+                        }
+                      }}
                       className="absolute -top-2 -right-2 bg-white text-black rounded-full p-1 shadow-md hover:bg-gray-100 transition-colors drop-shadow-[0_2px_6px_rgba(126,43,245,0.35)]"
                     >
                       <X size={12} />
@@ -1456,6 +1481,12 @@ export default function AIAgent() {
                       <Link
                         key={item.label}
                         href={item.href}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (isDraggingRef.current) {
+                            e.preventDefault();
+                          }
+                        }}
                         className="flex items-center gap-2 bg-[#003B73] text-white px-4 py-2 rounded-lg text-sm font-medium shadow-lg hover:bg-[#002B54] transition-all hover:scale-105 active:scale-95"
                       >
                         {item.label}
@@ -1464,11 +1495,14 @@ export default function AIAgent() {
                     ) : (
                       <button
                         key={i}
-                        onClick={() => {
-                          setIsOpen(true);
-                          setShowChatHistory(false);
-                          if (isFormSubmitted) {
-                            handleQuickAction(item.action!);
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (!isDraggingRef.current) {
+                            setIsOpen(true);
+                            setShowChatHistory(false);
+                            if (isFormSubmitted) {
+                              handleQuickAction(item.action!);
+                            }
                           }
                         }}
                         className="flex items-center gap-2 bg-purple-600 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-lg hover:bg-purple-700 transition-all hover:scale-105 active:scale-95 w-full justify-center"
@@ -1482,19 +1516,25 @@ export default function AIAgent() {
               )}
             </AnimatePresence>
             <button
-              onClick={() => setIsOpen(true)}
-              className="group relative flex h-16 w-16 items-center justify-center overflow-hidden rounded-full bg-[#0B2147] shadow-2xl transition-all hover:scale-110 active:scale-95"
+              onClick={() => {
+                if (!isDraggingRef.current) {
+                  setIsOpen(true);
+                }
+              }}
+              className="group relative flex h-14 w-14 items-center justify-center overflow-hidden rounded-full bg-[#0B2147] shadow-2xl transition-all hover:scale-110 hover:shadow-purple-500/50 active:scale-95 cursor-move border-2 border-transparent hover:border-purple-400"
+              title="Click to open or drag to move"
             >
               <div className="absolute inset-0 bg-gradient-to-tr from-purple-600/20 to-transparent" />
               <Image 
                 src="/girl.png" 
                 alt="AI Assistant" 
-                width={64} 
-                height={64} 
-                className="h-full w-full object-cover transition-transform group-hover:scale-110" 
+                width={56} 
+                height={56} 
+                draggable={false}
+                className="h-full w-full object-cover transition-transform group-hover:scale-110 select-none pointer-events-none" 
               />
-              <div className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500 border-2 border-white">
-                <div className="h-2 w-2 rounded-full bg-white animate-pulse" />
+              <div className="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500 border-2 border-white">
+                <div className="h-1.5 w-1.5 rounded-full bg-white animate-pulse" />
               </div>
             </button>
           </div>
@@ -1505,28 +1545,52 @@ export default function AIAgent() {
             initial={{ y: 100, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 100, opacity: 0 }}
-            className={`flex flex-col overflow-hidden rounded-2xl bg-white shadow-2xl transition-all duration-300 ${
+            className={`flex flex-col overflow-hidden rounded-2xl bg-white shadow-2xl ${
               isMinimized ? "h-16 w-64" : "h-[500px] w-80 md:w-96"
             }`}
           >
             {/* Header */}
-            <div className="flex items-center justify-between bg-[#0B2147] p-4 text-white">
-              <div className="flex items-center gap-2">
+            <div 
+              className={`flex flex-col bg-[#0B2147] text-white transition-colors ${isMinimized ? 'cursor-pointer hover:bg-[#112d5a]' : ''}`}
+              onClick={() => {
+                if (isMinimized && !isDraggingRef.current) {
+                  setIsMinimized(false);
+                }
+              }}
+            >
+              {/* Drag Handle Bar */}
+              <div 
+                className="flex justify-center py-1 bg-white/5 cursor-move active:cursor-grabbing transition-colors hover:bg-white/10" 
+                title={isMinimized ? "Click to maximize or drag to move" : "Drag to move"}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (!isDraggingRef.current && isMinimized) {
+                    setIsMinimized(false);
+                  }
+                }}
+              >
+                <GripHorizontal size={12} className="opacity-40" />
+              </div>
+              <div className="flex items-center justify-between p-4 pt-2">
+                <div className="flex items-center gap-2">
                 {(!isFormSubmitted || !showChatHistory) && (
                   <button
-                    onClick={() => { 
-                      if (isFormSubmitted) { 
-                        setShowChatHistory(true);
-                      } else { 
-                        setIsOpen(false); 
-                        setShowQuickActions(true); 
-                      } 
+                    onClick={(e) => { 
+                      e.stopPropagation();
+                      if (!isDraggingRef.current) {
+                        if (isFormSubmitted) { 
+                          setShowChatHistory(true);
+                        } else { 
+                          setIsOpen(false); 
+                          setShowQuickActions(true); 
+                        } 
+                      }
                     }}
                     className="rounded p-1 hover:bg-white/10 transition-colors"
                     aria-label="Return"
                     title="Return"
                   >
-                    <ChevronLeft size={16} />
+                    <ChevronLeft size={14} />
                   </button>
                 )}
                 <Image src="/girl.png" alt="DreamHome Assistant" width={32} height={32} className="rounded-full" />
@@ -1543,17 +1607,28 @@ export default function AIAgent() {
               </div>
               <div className="flex items-center gap-2">
                 <button 
-                  onClick={() => setIsMinimized(!isMinimized)}
+                  onClick={(e) => { 
+                    e.stopPropagation(); 
+                    if (!isDraggingRef.current) {
+                      setIsMinimized(!isMinimized); 
+                    }
+                  }}
                   className="rounded p-1 hover:bg-white/10 transition-colors"
                 >
-                  {isMinimized ? <Maximize2 size={16} /> : <Minimize2 size={16} />}
+                  {isMinimized ? <Maximize2 size={14} /> : <Minimize2 size={14} />}
                 </button>
                 <button 
-                  onClick={() => setIsOpen(false)}
+                  onClick={(e) => { 
+                    e.stopPropagation(); 
+                    if (!isDraggingRef.current) {
+                      setIsOpen(false); 
+                    }
+                  }}
                   className="rounded p-1 hover:bg-white/10 transition-colors"
                 >
-                  <X size={16} />
+                  <X size={14} />
                 </button>
+              </div>
               </div>
             </div>
 
@@ -1624,9 +1699,11 @@ export default function AIAgent() {
                             key={`${session.id}-${idx}`}
                             className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 cursor-pointer hover:bg-emerald-100 transition-colors"
                             onClick={() => { 
-                              chatInstance.setMessages(session.messages); 
-                              setCurrentSessionId(session.id);
-                              setShowChatHistory(false); 
+                              if (!isDraggingRef.current) {
+                                chatInstance.setMessages(session.messages); 
+                                setCurrentSessionId(session.id);
+                                setShowChatHistory(false); 
+                              }
                             }}
                           >
                             <div className="flex items-center gap-2">
@@ -1643,6 +1720,7 @@ export default function AIAgent() {
                     <div className="border-t p-3 bg-purple-50">
                       <button
                         onClick={async () => {
+                          if (isDraggingRef.current) return;
                           const prevMessages = messagesRef.current && messagesRef.current.length ? messagesRef.current : chatInstance.messages;
                           if (prevMessages.length > 0) {
                             const firstIdTs = parseInt(String((prevMessages[0] as any)?.id).match(/(\d{13})/)?.[1] || String(Date.now()), 10);
@@ -1725,14 +1803,14 @@ export default function AIAgent() {
                         >
                           <div className="flex items-center justify-between mb-4">
                             <h3 className="font-bold text-slate-800 flex items-center gap-2">
-                              <Bot size={18} className="text-purple-600" />
+                              <Bot size={16} className="text-purple-600" />
                               Property Details
                             </h3>
                             <button 
                               onClick={() => setShowPropertyForm(false)}
                               className="text-slate-400 hover:text-slate-600"
                             >
-                              <X size={18} />
+                              <X size={16} />
                             </button>
                           </div>
                           <form onSubmit={handlePropertyFormSubmit} className="space-y-3">
@@ -1803,7 +1881,7 @@ export default function AIAgent() {
                         <>
                           {chatInstance.messages.length === 0 && (
                             <div className="flex flex-col items-center justify-center h-full text-center space-y-2 opacity-60">
-                              <Sparkles className="text-purple-600" size={32} />
+                              <Sparkles className="text-purple-600" size={24} />
                               <p className="text-xs font-medium text-slate-600">Start a conversation with DreamHome Assistant</p>
                             </div>
                           )}
@@ -2040,7 +2118,7 @@ export default function AIAgent() {
                             title="Attach image"
                             disabled={isUploading}
                           >
-                            <ImageIcon size={18} />
+                            <ImageIcon size={16} />
                           </button>
                           <div className="relative flex-1">
                             <input
@@ -2070,6 +2148,7 @@ export default function AIAgent() {
           </motion.div>
         )}
       </AnimatePresence>
+      </motion.div>
     </div>
   );
 }
