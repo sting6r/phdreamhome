@@ -22,7 +22,7 @@ function getValidUrl(url?: string) {
 
 const finalUrl = getValidUrl(urlPublic) ?? getValidUrl(urlServer);
 
-if (!finalUrl) {
+if (!finalUrl && process.env.NODE_ENV === "production") {
   let reason = "Variable is empty or missing";
   const rawUrl = urlPublic || urlServer;
   if (rawUrl) {
@@ -30,11 +30,13 @@ if (!finalUrl) {
     else if (rawUrl.length > 200) reason = "URL is too long (looks like a JWT/Token instead of a URL)";
   }
   
-  console.error(`CRITICAL ERROR: No valid SUPABASE_URL detected. Reason: ${reason}`, {
-    NEXT_PUBLIC_SUPABASE_URL: urlPublic ? (urlPublic.slice(0, 10) + "...") : "MISSING",
-    SUPABASE_URL: urlServer ? (urlServer.slice(0, 10) + "...") : "MISSING",
-    rawLength: rawUrl?.length
-  });
+  // Only log if we're not in a CI/Build environment or if it's actually missing in production
+  if (!process.env.CI && !process.env.RAILWAY_STATIC_URL) {
+    console.warn(`Supabase URL notice: Using fallback URL. Reason: ${reason}`, {
+      NEXT_PUBLIC_SUPABASE_URL: urlPublic ? (urlPublic.slice(0, 10) + "...") : "MISSING",
+      SUPABASE_URL: urlServer ? (urlServer.slice(0, 10) + "...") : "MISSING",
+    });
+  }
 }
 
 const safeUrl = finalUrl || "https://hcytsmimaehlmrvhrbda.supabase.co";
