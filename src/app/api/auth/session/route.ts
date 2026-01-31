@@ -19,3 +19,8 @@ export async function DELETE() {
   );
   return new NextResponse(JSON.stringify({ ok: true }), { headers });
 }
+
+export async function GET() {
+  // Return an empty session to satisfy NextAuth's useSession hook if it's being used
+  return NextResponse.json(null);
+}

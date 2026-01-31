@@ -6,6 +6,7 @@ import Navbar from "../components/Navbar";
 import StatusLinksCard from "../components/StatusLinksCard";
 import FooterBanner from "../components/FooterBanner";
 import AIAgent from "../components/AIAgent";
+import { NextAuthProvider } from "./providers";
 
 export const metadata: Metadata = {
   title: {
@@ -64,6 +65,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
       <body className="bg-white text-black safe-area">
+        <NextAuthProvider>
           <Navbar />
           <div id="status-links-wrapper" className="sticky top-[3.75rem] z-40 bg-white">
             <Suspense fallback={<div className="h-10" />}>
@@ -85,6 +87,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           {process.env.NEXT_PUBLIC_GA_ID && (
             <GoogleAnalytics gaId={process.env.NEXT_PUBLIC_GA_ID} />
           )}
+        </NextAuthProvider>
       </body>
     </html>
   );
