@@ -21,6 +21,7 @@ export async function DELETE() {
 }
 
 export async function GET() {
-  // Return an empty session to satisfy NextAuth's useSession hook if it's being used
-  return NextResponse.json(null);
+  // Return an empty object to satisfy NextAuth's useSession hook.
+  // Returning null causes "Cannot convert undefined or null to object" on the client.
+  return NextResponse.json({});
 }
