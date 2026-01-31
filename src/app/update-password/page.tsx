@@ -43,8 +43,15 @@ export default function UpdatePasswordPage() {
       if (password !== confirm) throw new Error("Passwords do not match");
       const { error } = await supabasePublic.auth.updateUser({ password });
       if (error) throw new Error("Failed to update password");
-      await supabasePublic.auth.signOut();
-      await fetch("/api/auth/session", { method: "DELETE" });
+      
+      try {
+        await fetch("/api/auth/session", { method: "DELETE", keepalive: true });
+      } catch {}
+      
+      try {
+        await supabasePublic.auth.signOut({ scope: "local" });
+      } catch {}
+
       router.replace("/4120626");
     } catch (err: any) {
       setError(err.message || "Failed to update password");

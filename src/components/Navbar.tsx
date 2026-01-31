@@ -171,7 +171,31 @@ export default function Navbar() {
                       <Link prefetch={false} href="/dashboard/profile" onClick={()=>setOpen(false)} className="block mx-2 my-1 px-3 py-2 text-sm rounded-md hover:bg-teal-200 hover:text-black">Profile</Link>
                       <Link prefetch={false} href="/dashboard/properties" onClick={()=>setOpen(false)} className="block mx-2 my-1 px-3 py-2 text-sm rounded-md hover:bg-teal-200 hover:text-black">My Properties</Link>
                       <Link prefetch={false} href="/contact" onClick={()=>setOpen(false)} className="block mx-2 my-1 px-3 py-2 text-sm rounded-md hover:bg-teal-200 hover:text-black">Add Property</Link>
-                      <button className="block w-[calc(100%-1rem)] mx-2 my-1 text-left px-3 py-2 text-sm rounded-md hover:bg-teal-200 hover:text-black" onClick={async () => { setOpen(false); await supabasePublic.auth.signOut({ scope: "local" } as any); try { await fetch("/api/auth/session", { method: "DELETE", keepalive: true }); } catch {} window.location.href = "/"; }}>Log out</button>
+                      <button 
+                        className="block w-[calc(100%-1rem)] mx-2 my-1 text-left px-3 py-2 text-sm rounded-md hover:bg-teal-200 hover:text-black" 
+                        onClick={async () => { 
+                          setOpen(false); 
+                          try {
+                            // First, clear the server-side session
+                            await fetch("/api/auth/session", { method: "DELETE", keepalive: true });
+                          } catch (err) {
+                            console.error("Failed to clear server session:", err);
+                          }
+                          
+                          try {
+                            // Then sign out from Supabase
+                            const { error } = await supabasePublic.auth.signOut({ scope: "local" });
+                            if (error) console.error("Supabase signOut error:", error);
+                          } catch (err) {
+                            console.error("Supabase signOut exception:", err);
+                          }
+
+                          // Finally, redirect. Using window.location.href to force a full state clear
+                          window.location.href = "/"; 
+                        }}
+                      >
+                        Log out
+                      </button>
                     </div>
                   </div>
                 )}
