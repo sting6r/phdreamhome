@@ -6,8 +6,20 @@ export const maxDuration = 30;
 
 async function getPythonAIResponse(message: string, sessionId: string = "default_session") {
   try {
-    const pythonApiUrl = process.env.PYTHON_API_URL || "http://localhost:8000";
-    const response = await fetch(`${pythonApiUrl}/chat`, {
+    let baseUrl = process.env.PYTHON_API_URL || "http://localhost:8000";
+    
+    // Remove trailing slashes and /chat suffix to normalize
+    baseUrl = baseUrl.replace(/\/+$/, "").replace(/\/chat$/, "");
+
+    // Ensure the URL has a protocol
+    if (!baseUrl.startsWith('http://') && !baseUrl.startsWith('https://')) {
+      baseUrl = `https://${baseUrl}`;
+    }
+
+    const apiUrl = `${baseUrl}/chat`;
+    console.log(`[Chat API] Connecting to: ${apiUrl}`);
+
+    const response = await fetch(apiUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -16,17 +28,29 @@ async function getPythonAIResponse(message: string, sessionId: string = "default
         message,
         session_id: sessionId
       }),
+      // Add a timeout to avoid hanging requests
+      signal: AbortSignal.timeout(10000) 
     });
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.detail || `FastAPI error: ${response.status}`);
+      const errorText = await response.text().catch(() => "No error body");
+      console.error(`[Chat API] FastAPI error (${response.status}):`, errorText);
+      throw new Error(`AI Agent responded with ${response.status}: ${errorText}`);
     }
 
     const data = await response.json();
     return data.response;
   } catch (error: any) {
-    console.error("Error calling FastAPI agent:", error);
+    console.error("[Chat API] Connection Error:", {
+      message: error.message,
+      stack: error.stack,
+      cause: error.cause
+    });
+    
+    if (error.name === 'TimeoutError') {
+      throw new Error("AI Agent request timed out. Please check if the service is awake.");
+    }
+    
     throw new Error(`AI Agent connection failed: ${error.message}`);
   }
 }

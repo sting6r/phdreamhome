@@ -50,6 +50,11 @@ function PropertiesByStatusPageContent({ params }: { params: Promise<{ status: s
   const [inqLoading, setInqLoading] = React.useState(false);
   const [inqEmailSuggestion, setInqEmailSuggestion] = React.useState<string | null>(null);
 
+  const clearInqMessages = () => {
+    setInqSent(null);
+    setInqError(null);
+  };
+
   const getEmailSuggestion = (email: string) => {
     const commonDomains: Record<string, string> = {
       "gmial.com": "gmail.com",
@@ -75,6 +80,7 @@ function PropertiesByStatusPageContent({ params }: { params: Promise<{ status: s
 
   const handleInqEmailChange = (val: string) => {
     setInqEmail(val);
+    clearInqMessages();
     setInqEmailSuggestion(getEmailSuggestion(val));
   };
 
@@ -305,7 +311,7 @@ function PropertiesByStatusPageContent({ params }: { params: Promise<{ status: s
       mapObjRef.current.fitBounds(bounds, { padding: [20, 20] });
       setTimeout(() => { isProgrammaticMoveRef.current = false; }, 0);
     }
-  }, [viewMode, filtered, geocodes, leafletReady]);
+  }, [viewMode, filtered, geocodes, leafletReady, mounted]);
 
   const isRentView = normalizedStatus === "for rent";
   const title = statusTitle ? `Properties for ${statusTitle}` : "Properties";
@@ -595,8 +601,7 @@ function PropertiesByStatusPageContent({ params }: { params: Promise<{ status: s
             <form
               onSubmit={async (e)=>{
                 e.preventDefault();
-                setInqError(null);
-                setInqSent(null);
+                clearInqMessages();
                 setInqLoading(true);
                 try {
                   if (!inqEmail || !inqMessage) {
@@ -611,18 +616,21 @@ function PropertiesByStatusPageContent({ params }: { params: Promise<{ status: s
                     setInqDev(Boolean(d?.dev));
                     if (!r.ok || d?.error) {
                       setInqError(d?.error || "Failed to send inquiry");
+                      setTimeout(() => setInqError(null), 5000);
                     } else if (d?.alreadyExists) {
                       setInqSent(d.message || "You have already submitted an inquiry with this email.");
                       setInqName("");
                       setInqEmail("");
                       setInqPhone("");
                       setInqMessage("");
+                      setTimeout(() => setInqSent(null), 5000);
                     } else {
                       setInqSent("Inquiry sent successfully");
                       setInqName("");
                       setInqEmail("");
                       setInqPhone("");
                       setInqMessage("");
+                      setTimeout(() => setInqSent(null), 5000);
                     }
                   }
                 } finally {
@@ -631,7 +639,7 @@ function PropertiesByStatusPageContent({ params }: { params: Promise<{ status: s
               }}
               className="space-y-2"
             >
-              <input className="input" placeholder="Your Name" value={inqName} onChange={e=>setInqName(e.target.value)} />
+              <input className="input" placeholder="Your Name" value={inqName} onChange={e=>{setInqName(e.target.value); clearInqMessages();}} />
               <div className="space-y-1">
                 <input 
                   className="input" 
@@ -641,17 +649,17 @@ function PropertiesByStatusPageContent({ params }: { params: Promise<{ status: s
                 />
                 {inqEmailSuggestion && (
                   <div className="text-[10px] text-blue-600 px-1">
-                    Did you mean <button type="button" className="font-bold underline" onClick={() => { setInqEmail(inqEmailSuggestion); setInqEmailSuggestion(null); }}>{inqEmailSuggestion}</button>?
+                    Did you mean <button type="button" className="font-bold underline" onClick={() => { setInqEmail(inqEmailSuggestion); setInqEmailSuggestion(null); clearInqMessages(); }}>{inqEmailSuggestion}</button>?
                   </div>
                 )}
               </div>
               <div className="space-y-1">
-                <input className="input" placeholder="Phone Number" value={inqPhone} onChange={e=>setInqPhone(autoCorrectPhone(e.target.value))} />
+                <input className="input" placeholder="Phone Number" value={inqPhone} onChange={e=>{setInqPhone(autoCorrectPhone(e.target.value)); clearInqMessages();}} />
                 <div className="text-[10px] text-slate-500 px-1">Format: 09XXXXXXXXX</div>
               </div>
               <div className="space-y-1">
                 <label className="text-sm font-semibold text-black">Subject *</label>
-                <select className="input" required value={inqSubject} onChange={e=>setInqSubject(e.target.value)}>
+                <select className="input" required value={inqSubject} onChange={e=>{setInqSubject(e.target.value); clearInqMessages();}}>
                   <option value="">Select a topic</option>
                   <option>Buying</option>
                   <option>Selling</option>
@@ -667,11 +675,12 @@ function PropertiesByStatusPageContent({ params }: { params: Promise<{ status: s
                   const v = e.target.value;
                   const ws = v.trim().split(/\s+/).filter(Boolean);
                   setInqMessage(ws.length > 300 ? ws.slice(0, 300).join(" ") : v);
+                  clearInqMessages();
                 }}
               />
               <div className={msgWordCount >= 270 ? "text-xs text-red-600 text-right" : "text-xs text-slate-500 text-right"}>{msgWordCount}/300 words</div>
-              {inqError && <div className="text-red-600 text-xs">{inqError}</div>}
-              {inqSent && <div className="text-green-600 text-xs">{inqSent}</div>}
+              {inqError && <div className="text-red-600 text-xs cursor-pointer hover:opacity-70 transition-opacity" onClick={() => setInqError(null)} title="Click to dismiss">{inqError}</div>}
+              {inqSent && <div className="text-green-600 text-xs cursor-pointer hover:opacity-70 transition-opacity" onClick={() => setInqSent(null)} title="Click to dismiss">{inqSent}</div>}
               {inqDev && <div className="text-orange-600 text-xs">Emails are not delivered in development. Configure SMTP to enable delivery.</div>}
               <button type="submit" className="btn-blue w-full text-center" disabled={inqLoading}>{inqLoading ? "Sending..." : "Send Inquiry"}</button>
             </form>

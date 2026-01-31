@@ -22,7 +22,7 @@ function getValidUrl(url?: string) {
 
 const finalUrl = getValidUrl(urlPublic) ?? getValidUrl(urlServer);
 
-if (!finalUrl) {
+if (!finalUrl && process.env.NODE_ENV === "production") {
   let reason = "Variable is empty or missing";
   const rawUrl = urlPublic || urlServer;
   if (rawUrl) {
@@ -30,16 +30,18 @@ if (!finalUrl) {
     else if (rawUrl.length > 200) reason = "URL is too long (looks like a JWT/Token instead of a URL)";
   }
   
-  console.error(`CRITICAL ERROR: No valid SUPABASE_URL detected. Reason: ${reason}`, {
-    NEXT_PUBLIC_SUPABASE_URL: urlPublic ? (urlPublic.slice(0, 10) + "...") : "MISSING",
-    SUPABASE_URL: urlServer ? (urlServer.slice(0, 10) + "...") : "MISSING",
-    rawLength: rawUrl?.length
-  });
+  // Only log if we're not in a CI/Build environment or if it's actually missing in production
+  if (!process.env.CI && !process.env.RAILWAY_STATIC_URL) {
+    console.warn(`Supabase URL notice: Using fallback URL. Reason: ${reason}`, {
+      NEXT_PUBLIC_SUPABASE_URL: urlPublic ? (urlPublic.slice(0, 10) + "...") : "MISSING",
+      SUPABASE_URL: urlServer ? (urlServer.slice(0, 10) + "...") : "MISSING",
+    });
+  }
 }
 
-const safeUrl = finalUrl || "https://placeholder-url-missing.supabase.co";
+const safeUrl = finalUrl || "https://hcytsmimaehlmrvhrbda.supabase.co";
 
-const anon = clean(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) ?? clean(process.env.SUPABASE_ANON_KEY) ?? "placeholder-key";
+const anon = clean(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) ?? clean(process.env.SUPABASE_ANON_KEY) ?? "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhjeXRzbWltYWVobG1ydmhyYmRhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjAyNjQ2NjAsImV4cCI6MjA3NTg0MDY2MH0.T8IJpPvv8n5j9kcRSsC9EnpxrEuAW3E1TNJUdn250Kc";
 const service = clean(process.env.SUPABASE_SERVICE_ROLE_KEY) ?? "placeholder-key";
 export const bucket = clean(process.env.SUPABASE_BUCKET) ?? "images";
 export const bucketVideos = clean(process.env.SUPABASE_BUCKET_VIDEOS) ?? "videos";

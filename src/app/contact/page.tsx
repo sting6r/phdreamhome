@@ -33,8 +33,14 @@ export default function ContactPage() {
     return suggestion ? `${local}@${suggestion}` : null;
   };
 
+  const updateForm = (updates: Partial<typeof form>) => {
+    setForm(prev => ({ ...prev, ...updates }));
+    setSent(null);
+    setError(null);
+  };
+
   const handleEmailChange = (val: string) => {
-    setForm({ ...form, email: val });
+    updateForm({ email: val });
     setEmailSuggestion(getEmailSuggestion(val));
   };
 
@@ -55,9 +61,29 @@ export default function ContactPage() {
     try {
       if (!form.name || !form.email || !form.subject || !form.message) {
         setError("Please fill all required fields");
+        setTimeout(() => setError(null), 5000);
+        return;
+      }
+
+      const res = await fetch("/api/rental-inquiry", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || data.error) {
+        setError(data.error || "Failed to send message");
+        setTimeout(() => setError(null), 5000);
       } else {
         setSent("Message sent successfully");
+        setForm({ name: "", email: "", phone: "", subject: "", message: "" });
+        setTimeout(() => setSent(null), 5000);
       }
+    } catch (err) {
+      setError("An unexpected error occurred");
+      setTimeout(() => setError(null), 5000);
     } finally {
       setLoading(false);
     }
@@ -98,7 +124,7 @@ export default function ContactPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="label">Full Name *</label>
-                  <input className="input" placeholder="Your full name" value={form.name} onChange={e=>setForm({...form, name: e.target.value})} />
+                  <input className="input" placeholder="Your full name" value={form.name} onChange={e=>updateForm({ name: e.target.value})} />
                   <div className="text-[10px] text-slate-500 px-1 mt-1">Please enter your first and last name.</div>
                 </div>
                 <div>
@@ -121,12 +147,12 @@ export default function ContactPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="label">Phone Number</label>
-                  <input className="input" placeholder="09XXXXXXXXX" value={form.phone} onChange={e=>setForm({...form, phone: autoCorrectPhone(e.target.value)})} />
+                  <input className="input" placeholder="09XXXXXXXXX" value={form.phone} onChange={e=>updateForm({ phone: autoCorrectPhone(e.target.value)})} />
                   <div className="text-[10px] text-slate-500 px-1 mt-1">Format: 09XXXXXXXXX</div>
                 </div>
                 <div>
                   <label className="label">Subject *</label>
-                  <select className="input" value={form.subject} onChange={e=>setForm({...form, subject: e.target.value})}>
+                  <select className="input" value={form.subject} onChange={e=>updateForm({ subject: e.target.value})}>
                     <option value="">Select a topic</option>
                     <option>Buying</option>
                     <option>Selling</option>
@@ -146,13 +172,13 @@ export default function ContactPage() {
                     const v = e.target.value;
                     const ws = v.trim().split(/\s+/).filter(Boolean);
                     const msg = ws.length > 300 ? ws.slice(0, 300).join(" ") : v;
-                    setForm({...form, message: msg});
+                    updateForm({ message: msg});
                   }}
                 />
                 <div className={msgWordCount >= 270 ? "text-xs text-red-600 text-right" : "text-xs text-slate-500 text-right"}>{msgWordCount}/300 words</div>
               </div>
-              {error && <div className="text-red-600 text-sm">{error}</div>}
-              {sent && <div className="text-green-600 text-sm">{sent}</div>}
+              {error && <div className="text-red-600 text-sm cursor-pointer hover:opacity-70 transition-opacity" onClick={() => setError(null)} title="Click to dismiss">{error}</div>}
+              {sent && <div className="text-green-600 text-sm cursor-pointer hover:opacity-70 transition-opacity" onClick={() => setSent(null)} title="Click to dismiss">{sent}</div>}
               <button type="submit" className="btn-blue w-full sm:w-auto" disabled={loading}>{loading ? "Sending..." : "Send Message"}</button>
             </form>
           </div>

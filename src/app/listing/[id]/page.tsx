@@ -149,6 +149,7 @@ export default async function ListingPage({ params, searchParams }: { params: Pr
     return q;
   })();
   const pageUrlCanonical = `https://www.phdreamhome.com/listing/${id}`;
+  const description = listing.seoDescription || listing.description?.slice(0, 160) || `Check out this ${listing.type} in ${listing.city}, ${listing.state}.`;
 
   const jsonLd = {
     "@context": "https://schema.org",
@@ -180,199 +181,200 @@ export default async function ListingPage({ params, searchParams }: { params: Pr
       />
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-4">
-        {items.length ? <GalleryViewer items={items} title={listing.title} address={[listing.address, listing.city, listing.country].filter(Boolean).join(", ")} price={Number(listing.price)} /> : (
-          <div className="relative w-full h-72 rounded-md overflow-hidden">
-            <div className="absolute inset-0 bg-slate-200 rounded flex items-center justify-center">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-16 h-16 text-gray-500"><path d="M3 9.5l9-7 9 7V20a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9.5Z"/><path d="M9 22V12h6v10"/></svg>
-            </div>
-          </div>
-        )}
-        <div className="rounded-md bg-[#FAF7FD] p-3 sm:p-4 border border-slate-300 shadow-lg">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-3">
-            <div className="text-lg sm:text-xl font-bold tracking-wide">OVERVIEW</div>
-            <Link href="/contact" className="inline-flex items-center rounded border border-red-500 text-red-600 px-3 py-1 text-sm w-full sm:w-auto justify-center">Do you want this Property?</Link>
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {Number(listing.bathrooms) > 0 && (
-            <div className="rounded-lg bg-white shadow-sm px-3 py-3">
-              <div className="flex items-center justify-between text-sm text-slate-700"><span>Bathroom</span>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5 text-sky-700">
-                  <path d="M4 11h16v5a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-5Z"/>
-                  <path d="M8 11V8a3 3 0 0 1 3-3h2a3 3 0 0 1 3 3v3"/>
-                  <path d="M5 18v2"/>
-                  <path d="M19 18v2"/>
-                  <path d="M9 6h6"/>
-                  <path d="M15 6l2 2"/>
-                  <path d="M14 10v2"/>
-                  <path d="M16 10v2"/>
-                  <path d="M18 10v2"/>
-                </svg>
+          {items.length ? <GalleryViewer items={items} title={listing.title} address={[listing.address, listing.city, listing.country].filter(Boolean).join(", ")} price={Number(listing.price)} /> : (
+            <div className="relative w-full h-72 rounded-md overflow-hidden">
+              <div className="absolute inset-0 bg-slate-200 rounded flex items-center justify-center">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-16 h-16 text-gray-500"><path d="M3 9.5l9-7 9 7V20a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9.5Z"/><path d="M9 22V12h6v10"/></svg>
               </div>
-              <div className="text-lg font-semibold">{listing.bathrooms}</div>
             </div>
-            )}
-            {Number(listing.bedrooms) > 0 && (
-            <div className="rounded-lg bg-white shadow-sm px-3 py-3">
-              <div className="flex items-center justify-between text-sm text-slate-700"><span>Bedroom</span>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5 text-sky-700">
-                  <path d="M3 7v11"/>
-                  <rect x="7" y="11" width="14" height="7" rx="2"/>
-                  <path d="M7 11V9a3 3 0 0 1 3-3h6a3 3 0 0 1 3 3v2"/>
-                </svg>
-              </div>
-              <div className="text-lg font-semibold">{listing.bedrooms}</div>
+          )}
+          <div className="rounded-md bg-[#FAF7FD] p-3 sm:p-4 border border-slate-300 shadow-lg">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-3">
+              <div className="text-lg sm:text-xl font-bold tracking-wide">OVERVIEW</div>
+              <Link href="/contact" className="inline-flex items-center rounded border border-red-500 text-red-600 px-3 py-1 text-sm w-full sm:w-auto justify-center">Do you want this Property?</Link>
             </div>
-            )}
-            {Number(listing.floorArea) > 0 && (
-            <div className="rounded-lg bg-white shadow-sm px-3 py-3">
-              <div className="flex items-center justify-between text-sm text-slate-700"><span>Floor Area</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5 text-sky-700"><path d="M3 3h18v18H3z"/><path d="M9 9l6 6M15 9l-6 6"/></svg></div>
-              <div className="flex items-baseline gap-2"><div className="text-lg font-semibold">{listing.floorArea}</div><div className="text-xs text-slate-500">SQ.M.</div></div>
-            </div>
-            )}
-            {Number(listing.lotArea) > 0 && (
-            <div className="rounded-lg bg-white shadow-sm px-3 py-3">
-              <div className="flex items-center justify-between text-sm text-slate-700"><span>Lot Area</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5 text-sky-700"><path d="M3 3h18v18H3z"/></svg></div>
-              <div className="flex items-baseline gap-2"><div className="text-lg font-semibold">{listing.lotArea}</div><div className="text-xs text-slate-500">SQ.M.</div></div>
-            </div>
-            )}
-          </div>
-          <div className="mt-4">
-            <div className="bg-[#223B55] text-white text-center font-semibold px-3 py-2">About {listing.title}</div>
-            <p className="text-sm mt-2">{listing.description}</p>
-          </div>
-          <div className="mt-4">
-            <div className="text-xs text-slate-500 mb-1">Property Type</div>
-            <div className="text-sm">{typeText}</div>
-          </div>
-          <div className="mt-4">
-            <div className="text-sm font-semibold text-black mb-2">Property Features</div>
-            {indoor.length ? (
-              <>
-                <div className="text-xs text-slate-500 mb-1">Indoor Features</div>
-                <div className="space-y-1">
-                  {indoor.map((f, i) => (
-                    <span key={`in-${i}`} className="block text-sm text-[#DE6A4A]"><span className="inline-block w-2 h-2 bg-[#DE6A4A] mr-2 align-middle"></span><span>{f}</span></span>
-                  ))}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {Number(listing.bathrooms) > 0 && (
+                <div className="rounded-lg bg-white shadow-sm px-3 py-3">
+                  <div className="flex items-center justify-between text-sm text-slate-700"><span>Bathroom</span>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5 text-sky-700">
+                      <path d="M4 11h16v5a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-5Z"/>
+                      <path d="M8 11V8a3 3 0 0 1 3-3h2a3 3 0 0 1 3 3v3"/>
+                      <path d="M5 18v2"/>
+                      <path d="M19 18v2"/>
+                      <path d="M9 6h6"/>
+                      <path d="M15 6l2 2"/>
+                      <path d="M14 10v2"/>
+                      <path d="M16 10v2"/>
+                      <path d="M18 10v2"/>
+                    </svg>
+                  </div>
+                  <div className="text-lg font-semibold">{listing.bathrooms}</div>
                 </div>
-              </>
-            ) : null}
-            {outdoor.length ? (
-              <>
-                <div className="text-xs text-slate-500 mt-3 mb-1">Outdoor Features</div>
-                <div className="space-y-1">
-                  {outdoor.map((f, i) => (
-                    <span key={`out-${i}`} className="block text-sm text-[#DE6A4A]"><span className="inline-block w-2 h-2 bg-[#DE6A4A] mr-2 align-middle"></span><span>{f}</span></span>
-                  ))}
+              )}
+              {Number(listing.bedrooms) > 0 && (
+                <div className="rounded-lg bg-white shadow-sm px-3 py-3">
+                  <div className="flex items-center justify-between text-sm text-slate-700"><span>Bedroom</span>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5 text-sky-700">
+                      <path d="M3 7v11"/>
+                      <rect x="7" y="11" width="14" height="7" rx="2"/>
+                      <path d="M7 11V9a3 3 0 0 1 3-3h6a3 3 0 0 1 3 3v2"/>
+                    </svg>
+                  </div>
+                  <div className="text-lg font-semibold">{listing.bedrooms}</div>
                 </div>
-              </>
-            ) : null}
-          </div>
-          <div className="mt-6">
-            <div className="text-sm font-bold text-[#223B55] uppercase tracking-wide border-b-2 border-[#223B55] pb-1">Property Summary</div>
-            <div className="mt-3 space-y-2">
-              <div className="flex flex-col sm:flex-row items-start sm:items-baseline gap-1 sm:gap-6">
-                <div className="text-sm text-slate-700 w-full sm:w-24">Price:</div>
-                <div className="text-sm font-bold">{new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP" }).format(priceCalc)}</div>
-              </div>
-              <div className="flex flex-col sm:flex-row items-start sm:items-baseline gap-1 sm:gap-6">
-                <div className="text-sm text-slate-700 w-full sm:w-24">Location:</div>
-                <div className="text-sm font-bold">{locationText || "N/A"}</div>
-              </div>
-              <div className="flex flex-col sm:flex-row items-start sm:items-baseline gap-1 sm:gap-6">
-                <div className="text-sm text-slate-700 w-full sm:w-24">Floor Area:</div>
-                <div className="text-sm font-bold">{floorAreaText}</div>
+              )}
+              {Number(listing.floorArea) > 0 && (
+                <div className="rounded-lg bg-white shadow-sm px-3 py-3">
+                  <div className="flex items-center justify-between text-sm text-slate-700"><span>Floor Area</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5 text-sky-700"><path d="M3 3h18v18H3z"/><path d="M9 9l6 6M15 9l-6 6"/></svg></div>
+                  <div className="flex items-baseline gap-2"><div className="text-lg font-semibold">{listing.floorArea}</div><div className="text-xs text-slate-500">SQ.M.</div></div>
+                </div>
+              )}
+              {Number(listing.lotArea) > 0 && (
+                <div className="rounded-lg bg-white shadow-sm px-3 py-3">
+                  <div className="flex items-center justify-between text-sm text-slate-700"><span>Lot Area</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5 text-sky-700"><path d="M3 3h18v18H3z"/></svg></div>
+                  <div className="flex items-baseline gap-2"><div className="text-lg font-semibold">{listing.lotArea}</div><div className="text-xs text-slate-500">SQ.M.</div></div>
+                </div>
+              )}
+            </div>
+            <div className="mt-4">
+              <div className="bg-[#223B55] text-white text-center font-semibold px-3 py-2">About {listing.title}</div>
+              <p className="text-sm mt-2">{listing.description}</p>
+            </div>
+            <div className="mt-4">
+              <div className="text-xs text-slate-500 mb-1">Property Type</div>
+              <div className="text-sm">{typeText}</div>
+            </div>
+            <div className="mt-4">
+              <div className="text-sm font-semibold text-black mb-2">Property Features</div>
+              {indoor.length ? (
+                <>
+                  <div className="text-xs text-slate-500 mb-1">Indoor Features</div>
+                  <div className="space-y-1">
+                    {indoor.map((f, i) => (
+                      <span key={`in-${i}`} className="block text-sm text-[#DE6A4A]"><span className="inline-block w-2 h-2 bg-[#DE6A4A] mr-2 align-middle"></span><span>{f}</span></span>
+                    ))}
+                  </div>
+                </>
+              ) : null}
+              {outdoor.length ? (
+                <>
+                  <div className="text-xs text-slate-500 mt-3 mb-1">Outdoor Features</div>
+                  <div className="space-y-1">
+                    {outdoor.map((f, i) => (
+                      <span key={`out-${i}`} className="block text-sm text-[#DE6A4A]"><span className="inline-block w-2 h-2 bg-[#DE6A4A] mr-2 align-middle"></span><span>{f}</span></span>
+                    ))}
+                  </div>
+                </>
+              ) : null}
+            </div>
+            <div className="mt-6">
+              <div className="text-sm font-bold text-[#223B55] uppercase tracking-wide border-b-2 border-[#223B55] pb-1">Property Summary</div>
+              <div className="mt-3 space-y-2">
+                <div className="flex flex-col sm:flex-row items-start sm:items-baseline gap-1 sm:gap-6">
+                  <div className="text-sm text-slate-700 w-full sm:w-24">Price:</div>
+                  <div className="text-sm font-bold">{new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP" }).format(priceCalc)}</div>
+                </div>
+                <div className="flex flex-col sm:flex-row items-start sm:items-baseline gap-1 sm:gap-6">
+                  <div className="text-sm text-slate-700 w-full sm:w-24">Location:</div>
+                  <div className="text-sm font-bold">{locationText || "N/A"}</div>
+                </div>
+                <div className="flex flex-col sm:flex-row items-start sm:items-baseline gap-1 sm:gap-6">
+                  <div className="text-sm text-slate-700 w-full sm:w-24">Floor Area:</div>
+                  <div className="text-sm font-bold">{floorAreaText}</div>
+                </div>
               </div>
             </div>
-          </div>
-          <div className="mt-6">
-            <div className="text-sm font-bold text-[#223B55] uppercase tracking-wide border-b-2 border-[#223B55] pb-1">Property on Map</div>
-            <div className="mt-3 rounded overflow-hidden border">
-              <iframe title="Property Map" src={mapUrl} className="w-full h-64" loading="lazy" />
-            </div>
-          </div>
-          <div className="mt-6">
-            <div className="text-sm font-bold text-[#223B55] uppercase tracking-wide mb-3">Interested on this property?</div>
-            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-              <Link href="/contact?subject=Interested" className="flex-1 sm:flex-none inline-flex items-center justify-center rounded border border-[#DE6A4A] text-[#DE6A4A] px-3 py-1 text-sm whitespace-nowrap">Interested</Link>
-              <Link href="/contact?subject=Question" className="flex-1 sm:flex-none inline-flex items-center justify-center rounded border border-[#DE6A4A] text-[#DE6A4A] px-3 py-1 text-sm whitespace-nowrap">Question</Link>
-              <Link href="/contact?subject=Visit" className="flex-1 sm:flex-none inline-flex items-center justify-center rounded border border-[#DE6A4A] text-[#DE6A4A] px-3 py-1 text-sm whitespace-nowrap">Visit</Link>
-            </div>
-          </div>
-          <div className="mt-6">
-            <div className="text-sm font-bold text-[#223B55] uppercase tracking-wide border-b-2 border-[#223B55] pb-1">Affordability Checker</div>
-            <div className="mt-3">
-              <div className="text-sm text-slate-700">Property Price: <span className="font-bold">{new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP" }).format(priceCalc)}</span></div>
-              <div className="text-sm text-slate-700 mt-1">Suggested Gross Household Income/Salary</div>
-              <div className="text-xl font-bold">{new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP" }).format(grossMonthlySuggested)}</div>
-              <div className="text-sm text-slate-700">{termYears} years to pay at {ratePercent}% interest</div>
-            </div>
-            <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div className="rounded border border-[#DE6A4A] px-3 py-2">
-                <div className="text-sm text-slate-700">Monthly Payment</div>
-                <div className="text-lg font-bold">{new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP" }).format(monthlyPayment)}</div>
-              </div>
-              <div className="rounded border border-[#DE6A4A] px-3 py-2">
-                <div className="text-sm text-slate-700">{Math.round(dpPercent)}% Down Payment</div>
-                <div className="text-lg font-bold">{new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP" }).format(dpAmount)}</div>
-              </div>
-              <div className="rounded border border-[#DE6A4A] px-3 py-2">
-                <div className="text-sm font-bold">{ratePercent}% Interest Rate</div>
-              </div>
-              <div className="rounded border border-[#DE6A4A] px-3 py-2">
-                <div className="text-sm text-slate-700">Loanable Amount</div>
-                <div className="text-lg font-bold">{new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP" }).format(loanable)}</div>
+            <div className="mt-6">
+              <div className="text-sm font-bold text-[#223B55] uppercase tracking-wide border-b-2 border-[#223B55] pb-1">Property on Map</div>
+              <div className="mt-3 rounded overflow-hidden border">
+                <iframe title="Property Map" src={mapUrl} className="w-full h-64" loading="lazy" />
               </div>
             </div>
-          </div>
-          <div className="mt-6">
-            <div className="text-sm font-bold text-[#223B55] uppercase tracking-wide border-b-2 border-[#223B55] pb-1">Property Calculator</div>
-            <PropertyCalculator 
-              id={listing.id} 
-              initialPrice={priceCalc} 
-              initialDp={dpStr} 
-              initialRate={ratePercent} 
-              initialTerm={termYears} 
-            />
-          </div>
-          <div className="mt-4"><Link href="/" className="btn-outline">Back to Listings</Link></div>
-          <div className="mt-10">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mb-4">
-              <div className="text-xl sm:text-2xl font-semibold">Similar Properties</div>
-              <div className="text-xs text-slate-500 font-medium px-2 py-1 bg-slate-100 rounded">Total: {totalSimilar}</div>
+            <div className="mt-6">
+              <div className="text-sm font-bold text-[#223B55] uppercase tracking-wide mb-3">Interested on this property?</div>
+              <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                <Link href="/contact?subject=Interested" className="flex-1 sm:flex-none inline-flex items-center justify-center rounded border border-[#DE6A4A] text-[#DE6A4A] px-3 py-1 text-sm whitespace-nowrap">Interested</Link>
+                <Link href="/contact?subject=Question" className="flex-1 sm:flex-none inline-flex items-center justify-center rounded border border-[#DE6A4A] text-[#DE6A4A] px-3 py-1 text-sm whitespace-nowrap">Question</Link>
+                <Link href="/contact?subject=Visit" className="flex-1 sm:flex-none inline-flex items-center justify-center rounded border border-[#DE6A4A] text-[#DE6A4A] px-3 py-1 text-sm whitespace-nowrap">Visit</Link>
+              </div>
             </div>
-            <SimilarCarousel items={similar} />
+            <div className="mt-6">
+              <div className="text-sm font-bold text-[#223B55] uppercase tracking-wide border-b-2 border-[#223B55] pb-1">Affordability Checker</div>
+              <div className="mt-3">
+                <div className="text-sm text-slate-700">Property Price: <span className="font-bold">{new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP" }).format(priceCalc)}</span></div>
+                <div className="text-sm text-slate-700 mt-1">Suggested Gross Household Income/Salary</div>
+                <div className="text-xl font-bold">{new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP" }).format(grossMonthlySuggested)}</div>
+                <div className="text-sm text-slate-700">{termYears} years to pay at {ratePercent}% interest</div>
+              </div>
+              <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="rounded border border-[#DE6A4A] px-3 py-2">
+                  <div className="text-sm text-slate-700">Monthly Payment</div>
+                  <div className="text-lg font-bold">{new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP" }).format(monthlyPayment)}</div>
+                </div>
+                <div className="rounded border border-[#DE6A4A] px-3 py-2">
+                  <div className="text-sm text-slate-700">{Math.round(dpPercent)}% Down Payment</div>
+                  <div className="text-lg font-bold">{new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP" }).format(dpAmount)}</div>
+                </div>
+                <div className="rounded border border-[#DE6A4A] px-3 py-2">
+                  <div className="text-sm font-bold">{ratePercent}% Interest Rate</div>
+                </div>
+                <div className="rounded border border-[#DE6A4A] px-3 py-2">
+                  <div className="text-sm text-slate-700">Loanable Amount</div>
+                  <div className="text-lg font-bold">{new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP" }).format(loanable)}</div>
+                </div>
+              </div>
+            </div>
+            <div className="mt-6">
+              <div className="text-sm font-bold text-[#223B55] uppercase tracking-wide border-b-2 border-[#223B55] pb-1">Property Calculator</div>
+              <PropertyCalculator 
+                id={listing.id} 
+                initialPrice={priceCalc} 
+                initialDp={dpStr} 
+                initialRate={ratePercent} 
+                initialTerm={termYears} 
+              />
+            </div>
+            <div className="mt-4"><Link href="/" className="btn-outline">Back to Listings</Link></div>
+            <div className="mt-10">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mb-4">
+                <div className="text-xl sm:text-2xl font-semibold">Similar Properties</div>
+                <div className="text-xs text-slate-500 font-medium px-2 py-1 bg-slate-100 rounded">Total: {totalSimilar}</div>
+              </div>
+              <SimilarCarousel items={similar} />
+            </div>
           </div>
         </div>
-      </div>
-      <div className="space-y-4">
-        <ContactAgentCard listingId={listing.id} listingTitle={listing.title} agent={agent} />
-        <div className="card shadow-md">
-          <div className="text-xs font-semibold text-black">Quick Links</div>
-          <div className="mt-2 flex items-center gap-2">
-            <Link prefetch={false} href="/properties/for-sale" className="inline-flex items-center rounded px-3 py-1 text-xs bg-[#DE6A4A] text-white">For Sale</Link>
-            <Link prefetch={false} href="/properties/for-rent" className="inline-flex items-center rounded px-3 py-1 text-xs bg-slate-200 text-black">For Rent</Link>
-            <Link prefetch={false} href="/properties/preselling" className="inline-flex items-center rounded px-3 py-1 text-xs bg-slate-200 text-black">Preselling</Link>
-          </div>
-          <div className="mt-3">
-            <div className="text-sm font-semibold">Property Category for For Sale</div>
-          </div>
-          <div className="mt-2 space-y-1 text-sm text-black">
-            <div className="flex items-center justify-between">
-              <span>Property Type</span>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4 text-slate-500"><path d="M6 9l6 6 6-6"/></svg>
+        <div className="space-y-4">
+          <ContactAgentCard listingId={listing.id} listingTitle={listing.title} agent={agent} />
+          <div className="card shadow-md">
+            <div className="text-xs font-semibold text-black">Quick Links</div>
+            <div className="mt-2 flex items-center gap-2">
+              <Link prefetch={false} href="/properties/for-sale" className="inline-flex items-center rounded px-3 py-1 text-xs bg-[#DE6A4A] text-white">For Sale</Link>
+              <Link prefetch={false} href="/properties/for-rent" className="inline-flex items-center rounded px-3 py-1 text-xs bg-slate-200 text-black">For Rent</Link>
+              <Link prefetch={false} href="/properties/preselling" className="inline-flex items-center rounded px-3 py-1 text-xs bg-slate-200 text-black">Preselling</Link>
             </div>
-            <Link prefetch={false} href="/properties/for-sale?type=Condominium" className="block">Condominium</Link>
-            <Link prefetch={false} href="/properties/for-sale?type=House%20and%20Lot" className="block">House and Lot</Link>
-            <Link prefetch={false} href="/properties/for-sale?type=Town%20House" className="block">Townhouse</Link>
-            <Link prefetch={false} href="/properties/for-sale?type=Beach%20Property" className="block">Beach Property</Link>
-            <Link prefetch={false} href="/properties/for-sale?type=Lot%20Only" className="block">Lot</Link>
-            <div className="flex items-center justify-between">
-              <Link prefetch={false} href="/properties/for-sale?type=Commercial%20Space" className="block">Commercial Property</Link>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4 text-slate-500"><path d="M9 6l6 6-6 6"/></svg>
+            <div className="mt-3">
+              <div className="text-sm font-semibold">Property Category for For Sale</div>
             </div>
-            <div className="flex items-center justify-between">
-              <Link prefetch={false} href="/properties/for-sale?type=Industrial%20Properties" className="block">Industrial Property</Link>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4 text-slate-500"><path d="M9 6l6 6-6 6"/></svg>
+            <div className="mt-2 space-y-1 text-sm text-black">
+              <div className="flex items-center justify-between">
+                <span>Property Type</span>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4 text-slate-500"><path d="M6 9l6 6 6-6"/></svg>
+              </div>
+              <Link prefetch={false} href="/properties/for-sale?type=Condominium" className="block">Condominium</Link>
+              <Link prefetch={false} href="/properties/for-sale?type=House%20and%20Lot" className="block">House and Lot</Link>
+              <Link prefetch={false} href="/properties/for-sale?type=Town%20House" className="block">Townhouse</Link>
+              <Link prefetch={false} href="/properties/for-sale?type=Beach%20Property" className="block">Beach Property</Link>
+              <Link prefetch={false} href="/properties/for-sale?type=Lot%20Only" className="block">Lot</Link>
+              <div className="flex items-center justify-between">
+                <Link prefetch={false} href="/properties/for-sale?type=Commercial%20Space" className="block">Commercial Property</Link>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4 text-slate-500"><path d="M9 6l6 6-6 6"/></svg>
+              </div>
+              <div className="flex items-center justify-between">
+                <Link prefetch={false} href="/properties/for-sale?type=Industrial%20Properties" className="block">Industrial Property</Link>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4 text-slate-500"><path d="M9 6l6 6-6 6"/></svg>
+              </div>
             </div>
           </div>
         </div>

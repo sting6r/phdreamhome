@@ -19,3 +19,9 @@ export async function DELETE() {
   );
   return new NextResponse(JSON.stringify({ ok: true }), { headers });
 }
+
+export async function GET() {
+  // Return an empty object to satisfy NextAuth's useSession hook.
+  // Returning null causes "Cannot convert undefined or null to object" on the client.
+  return NextResponse.json({});
+}

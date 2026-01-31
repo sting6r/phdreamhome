@@ -28,10 +28,12 @@ export default function EmailOwnerButton({ listingId }: EmailOwnerButtonProps) {
       if (response.ok) {
         setMessage("Email sent successfully!");
         setIsError(false);
+        setTimeout(() => setMessage(null), 5000);
       } else {
         const errorData = await response.json();
         setMessage(errorData.error || "Failed to send email.");
         setIsError(true);
+        setTimeout(() => setMessage(null), 5000);
       }
     } catch (error) {
       setMessage("An unexpected error occurred.");
@@ -52,7 +54,11 @@ export default function EmailOwnerButton({ listingId }: EmailOwnerButtonProps) {
         {isSending ? "Sending..." : "Email Owner"}
       </button>
       {message && (
-        <p className={`mt-2 text-sm ${isError ? "text-red-500" : "text-green-500"}`}>
+        <p 
+          className={`mt-2 text-sm cursor-pointer hover:opacity-70 transition-opacity ${isError ? "text-red-500" : "text-green-500"}`}
+          onClick={() => setMessage(null)}
+          title="Click to dismiss"
+        >
           {message}
         </p>
       )}

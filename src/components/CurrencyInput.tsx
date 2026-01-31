@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 
 interface CurrencyInputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, "onChange" | "value"> {
   value: string | number;
@@ -17,7 +17,7 @@ export default function CurrencyInput({
   allowPercent = false,
   ...props
 }: CurrencyInputProps) {
-  const formatNumber = (val: string | number | undefined | null) => {
+  const formatNumber = useCallback((val: string | number | undefined | null) => {
     if (val === "" || val === undefined || val === null) return "";
     const strVal = val.toString();
     if (allowPercent && strVal.includes("%")) return strVal;
@@ -28,7 +28,7 @@ export default function CurrencyInput({
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     }).format(num);
-  };
+  }, [allowPercent]);
 
   const [mounted, setMounted] = useState(false);
   const [displayValue, setDisplayValue] = useState("");
@@ -36,7 +36,7 @@ export default function CurrencyInput({
   useEffect(() => {
     setMounted(true);
     setDisplayValue(formatNumber(value));
-  }, []);
+  }, [formatNumber, value]);
 
   useEffect(() => {
     if (!mounted) return;
@@ -57,7 +57,7 @@ export default function CurrencyInput({
       // Handle percent case specifically
       setDisplayValue(value);
     }
-  }, [value, mounted]);
+  }, [value, mounted, formatNumber, displayValue, allowPercent]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;

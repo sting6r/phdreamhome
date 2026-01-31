@@ -316,7 +316,7 @@ function HomePageContent() {
       mapObjRef.current.fitBounds(bounds, { padding: [20, 20] });
       setTimeout(() => { isProgrammaticMoveRef.current = false; }, 0);
     }
-  }, [viewMode, filteredListings, geocodes, leafletReady]);
+  }, [viewMode, filteredListings, geocodes, leafletReady, mounted]);
   
   function toStatusSlug(s: string) {
     const v = (s || "").trim().toLowerCase();
