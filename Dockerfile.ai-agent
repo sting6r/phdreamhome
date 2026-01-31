@@ -2,10 +2,14 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-COPY requirements.txt .
+# Copy requirements from the ai-agent directory
+COPY ai-agent/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY . .
+# Copy all files from ai-agent directory to the container
+COPY ai-agent/ .
+# Also copy public folder if needed for favicon/robots (it was at root)
+COPY public/ ./public/
 
 EXPOSE 8000
 
