@@ -6,14 +6,18 @@ export const maxDuration = 30;
 
 async function getPythonAIResponse(message: string, sessionId: string = "default_session") {
   try {
-    let pythonApiUrl = process.env.PYTHON_API_URL || "http://localhost:8000";
+    let baseUrl = process.env.PYTHON_API_URL || "http://localhost:8000";
     
+    // Remove trailing slashes and /chat suffix to normalize
+    baseUrl = baseUrl.replace(/\/+$/, "").replace(/\/chat$/, "");
+
     // Ensure the URL has a protocol
-    if (!pythonApiUrl.startsWith('http://') && !pythonApiUrl.startsWith('https://')) {
-      pythonApiUrl = `https://${pythonApiUrl}`;
+    if (!baseUrl.startsWith('http://') && !baseUrl.startsWith('https://')) {
+      baseUrl = `https://${baseUrl}`;
     }
 
-    const response = await fetch(`${pythonApiUrl}/chat`, {
+    const apiUrl = `${baseUrl}/chat`;
+    const response = await fetch(apiUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
