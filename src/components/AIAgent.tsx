@@ -114,14 +114,15 @@ export default function AIAgent() {
   });
 
   useEffect(() => {
+    const status = (chatInstance as any).status;
     console.log("DEBUG: chatInstance full keys:", Object.keys(chatInstance));
     console.log("DEBUG: useChat available methods:", { 
       hasSendMessage: typeof (chatInstance as any).sendMessage === 'function',
       hasReload: typeof (chatInstance as any).reload === 'function',
       hasRegenerate: typeof (chatInstance as any).regenerate === 'function',
-      status: (chatInstance as any).status
+      status: status
     });
-  }, [(chatInstance as any).status]);
+  }, [chatInstance]);
   
   const aiLoading = chatInstance.status === 'submitted' || chatInstance.status === 'streaming';
 
@@ -225,7 +226,7 @@ export default function AIAgent() {
     }
   };
 
-  const syncTranscriptToDb = async (msgs: Message[], id?: string | null) => {
+  const syncTranscriptToDb = useCallback(async (msgs: Message[], id?: string | null) => {
     const targetId = id || inquiryIdRef.current;
     if (!targetId || targetId === "undefined" || targetId === "null" || msgs.length === 0) {
       console.log("Sync skipped: invalid id or no messages", { targetId, msgCount: msgs.length });
@@ -270,7 +271,7 @@ export default function AIAgent() {
         }, 5000);
       } catch {}
     }
-  };
+  }, []);
 
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -374,7 +375,7 @@ export default function AIAgent() {
     return () => {
       try { controller.abort(); } catch {}
     };
-  }, [chatInstance.setMessages]);
+  }, [chatInstance, syncTranscriptToDb]);
   
   useEffect(() => {
     try {
@@ -527,9 +528,12 @@ export default function AIAgent() {
                 {isVideo ? (
                   <video src={url} controls className="w-full h-auto max-h-64" />
                 ) : (
-                  <img 
+                  <Image 
                     src={url} 
                     alt={alt} 
+                    width={400}
+                    height={300}
+                    unoptimized
                     className="w-full h-auto object-cover max-h-64"
                     onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
                   />
@@ -1416,7 +1420,7 @@ export default function AIAgent() {
       const timeoutId = setTimeout(() => syncTranscriptToDb(chatInstance.messages), 2000); // Debounce 2s
       return () => clearTimeout(timeoutId);
     }
-  }, [chatInstance.messages, currentInquiryId]);
+  }, [chatInstance.messages, currentInquiryId, syncTranscriptToDb]);
 
   const constraintsRef = useRef(null);
   const isDraggingRef = useRef(false);
@@ -2086,9 +2090,11 @@ export default function AIAgent() {
                         >
                         {imagePreview && (
                           <div className="relative mb-2 inline-block">
-                            <img 
+                            <Image 
                               src={imagePreview} 
                               alt="Preview" 
+                              width={80}
+                              height={80}
                               className="h-20 w-20 object-cover rounded-lg border border-slate-200" 
                             />
                             <button
