@@ -49,6 +49,14 @@ def chat_endpoint(request: ChatRequest):
 
 if __name__ == "__main__": 
     # Get port from environment variable for deployment (e.g., Railway)
-    port = int(os.environ.get("PORT", 8000))
+    # Use a more robust way to get the port
+    port_str = os.environ.get("PORT", "8000")
+    try:
+        port = int(port_str)
+    except ValueError:
+        # If PORT is not a valid integer (e.g. "$PORT"), fallback to 8000
+        print(f"Warning: Invalid PORT '{port_str}', falling back to 8000")
+        port = 8000
+        
     # Run the server
     uvicorn.run(app, host="0.0.0.0", port=port)
