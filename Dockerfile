@@ -1,3 +1,4 @@
+# Force redeploy to refresh settings
 FROM node:20-slim
 
 # Install OpenSSL for Prisma
