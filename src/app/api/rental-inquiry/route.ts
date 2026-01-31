@@ -13,27 +13,10 @@ export async function POST(req: Request) {
     const phone = String(body?.phone || "").trim();
     const message = String(body?.message || "").trim();
     const status = String(body?.status || "").trim();
-    const topic = String(body?.subject || "").trim();
+    const topic = String(body?.topic || body?.subject || "").trim();
     const listingId = body?.listingId;
 
     if (!email || !message) return NextResponse.json({ error: "Missing email or message" }, { status: 400 });
-
-    // Check for duplicate inquiry by email within General inquiries
-    const existingInquiry = await prisma.inquiry.findFirst({
-      where: {
-        email: { equals: email, mode: 'insensitive' },
-        type: { not: "AI Lead" }
-      },
-      orderBy: { createdAt: 'desc' }
-    });
-
-    if (existingInquiry) {
-      return NextResponse.json({ 
-        success: true, 
-        message: "You have already submitted an inquiry with this email.",
-        alreadyExists: true 
-      });
-    }
 
     const user = await prisma.user.findFirst({ where: { listings: { some: {} } } }) || await prisma.user.findFirst();
     const agentEmail = process.env.AGENT_EMAIL || user?.email || process.env.SMTP_FROM || email;
