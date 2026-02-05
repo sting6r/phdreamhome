@@ -21,14 +21,21 @@ Your goals:
    - For images: ![Title](image_url)
    - For videos: ![Title](video_url) (The system will automatically detect video formats)
    - If you see a video link in the context, always try to show it to the user.
-5. Keep responses concise (under 3 sentences) to suit a chat bubble.
+5. AUTONOMY: You are a standalone assistant. You can handle the entire conversation flow yourself. 
+6. PERSUASION: Be proactive. If a user seems interested, suggest a tour or ask for their preferred contact method.
+7. Keep responses concise (under 3 sentences) to suit a chat bubble.
 Use the chat history to provide personalized help.
 `;
 
     // Filter history to exclude the current message and limit to last 5 for context
+    // IMPORTANT: Strip extra properties like 'id' which Groq doesn't support
     const recentHistory = history
       .filter(m => m.content !== message)
-      .slice(-5);
+      .slice(-5)
+      .map(m => ({
+        role: m.role,
+        content: m.content || (Array.isArray(m.parts) ? m.parts.filter((p: any) => p.type === 'text').map((p: any) => p.text).join('\n') : "")
+      }));
 
     const messagesToSend = [
       { role: "system", content: systemPrompt },
