@@ -4,7 +4,67 @@ import { createUIMessageStreamResponse } from 'ai';
 export const runtime = 'nodejs';
 export const maxDuration = 30;
 
-async function getPythonAIResponse(message: string, sessionId: string = "default_session") {
+async function getGroqFallbackResponse(message: string, history: any[] = []) {
+  try {
+    const groqKey = process.env.GROQ_API_KEY;
+    if (!groqKey) {
+      throw new Error("GROQ_API_KEY is not set");
+    }
+
+    const systemPrompt = `
+You are a professional Real Estate Assistant for 'PhDreamHome'.
+Your goals:
+1. Answer questions about property listings with enthusiasm.
+2. If a user asks about a specific price or location, provide helpful general ranges if data isn't provided.
+3. IMPORTANT: Always try to capture the user's name or contact info to "schedule a viewing."
+4. MEDIA HANDLING: You can provide images and videos in your responses using Markdown:
+   - For images: ![Title](image_url)
+   - For videos: ![Title](video_url) (The system will automatically detect video formats)
+   - If you see a video link in the context, always try to show it to the user.
+5. Keep responses concise (under 3 sentences) to suit a chat bubble.
+Use the chat history to provide personalized help.
+`;
+
+    // Filter history to exclude the current message and limit to last 5 for context
+    const recentHistory = history
+      .filter(m => m.content !== message)
+      .slice(-5);
+
+    const messagesToSend = [
+      { role: "system", content: systemPrompt },
+      ...recentHistory,
+      { role: "user", content: message }
+    ];
+
+    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${groqKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "llama-3.3-70b-versatile",
+        messages: messagesToSend,
+        temperature: 0.2,
+        max_tokens: 1000,
+      }),
+      signal: AbortSignal.timeout(10000)
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(`Groq API error: ${errorData.error?.message || response.statusText}`);
+    }
+
+    const data = await response.json();
+    return data.choices[0].message.content;
+  } catch (error: any) {
+    console.error("[Chat API] Groq Fallback Error:", error.message);
+    throw error;
+  }
+}
+
+async function getPythonAIResponse(message: string, sessionId: string = "default_session", history: any[] = []) {
   try {
     let baseUrl = (process.env.PYTHON_API_URL || "http://localhost:8000").trim();
     
@@ -38,7 +98,7 @@ async function getPythonAIResponse(message: string, sessionId: string = "default
         session_id: sessionId
       }),
       // Add a timeout to avoid hanging requests
-      signal: AbortSignal.timeout(15000) 
+      signal: AbortSignal.timeout(5000) // Shorter timeout for primary check
     });
 
     if (!response.ok) {
@@ -50,15 +110,22 @@ async function getPythonAIResponse(message: string, sessionId: string = "default
     const data = await response.json();
     return data.response;
   } catch (error: any) {
+    // If it's a connection error or timeout, we try the Groq fallback
+    const isConnectionError = 
+      error.message.includes("fetch failed") || 
+      error.message.includes("ECONNREFUSED") || 
+      error.name === 'TimeoutError';
+
+    if (isConnectionError) {
+      console.warn("[Chat API] Python Agent unreachable, falling back to direct Groq call...");
+      return await getGroqFallbackResponse(message, history);
+    }
+
     console.error("[Chat API] Connection Error:", {
       message: error.message,
       stack: error.stack,
       cause: error.cause
     });
-    
-    if (error.name === 'TimeoutError') {
-      throw new Error("AI Agent request timed out. Please check if the service is awake.");
-    }
     
     throw new Error(`AI Agent connection failed: ${error.message}`);
   }
@@ -101,8 +168,8 @@ export async function POST(req: Request) {
       throw new Error("No message content found");
     }
     
-    // Call the FastAPI server
-    const reply = await getPythonAIResponse(userMessage, sessionId || "default_session");
+    // Call the FastAPI server with history
+    const reply = await getPythonAIResponse(userMessage, sessionId || "default_session", messages);
 
     const messageId = `assistant-${Date.now()}`;
     const stream = new ReadableStream({
