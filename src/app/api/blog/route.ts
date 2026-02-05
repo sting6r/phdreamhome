@@ -94,7 +94,7 @@ export async function GET(req: Request) {
       media,
       published: !!p.published,
       featured: !!p.featured,
-      createdAt: p.createdAt.getTime()
+      createdAt: (p.createdAt instanceof Date ? p.createdAt : new Date(p.createdAt)).getTime()
     };
   });
   return new NextResponse(JSON.stringify({ blogs }), { headers });

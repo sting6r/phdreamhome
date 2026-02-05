@@ -27,18 +27,48 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   function toSlug(s: string) {
     return s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
   }
-  let post = await Promise.race([
-    withRetry(() => prisma.blogPost.findUnique({ where: { id: idOrSlug }, include: { media: { orderBy: { sortOrder: "asc" } } } })),
-    timeout(5000)
-  ]) as any;
-
-  if (!post) {
-    const candidates = await Promise.race([
-      withRetry(() => prisma.blogPost.findMany({ where: { published: true }, include: { media: { orderBy: { sortOrder: "asc" } } } })),
+  let post = null;
+  try {
+    post = await Promise.race([
+      withRetry(() => prisma.blogPost.findUnique({ where: { id: idOrSlug }, include: { media: { orderBy: { sortOrder: "asc" } } } })),
       timeout(5000)
-    ]) as any[];
-    post = candidates.find(p => toSlug(p.title) === idOrSlug) || null;
+    ]) as any;
+
+    if (!post) {
+      const candidates = await Promise.race([
+        withRetry(() => prisma.blogPost.findMany({ where: { published: true }, include: { media: { orderBy: { sortOrder: "asc" } } } })),
+        timeout(5000)
+      ]) as any[];
+      post = candidates.find(p => toSlug(p.title) === idOrSlug) || null;
+    }
+  } catch (dbError) {
+    console.error("Prisma failed in blog detail, attempting Supabase fallback:", dbError);
+    // Fallback to Supabase for the specific post
+    const { data: directPost, error: directError } = await supabaseAdmin
+      .from('BlogPost')
+      .select('*, media:BlogMedia(*)')
+      .eq('id', idOrSlug)
+      .maybeSingle();
+      
+    if (directPost) {
+      post = directPost;
+    } else {
+      // Try slug fallback via all published posts
+      const { data: candidates, error: candidateError } = await supabaseAdmin
+        .from('BlogPost')
+        .select('*, media:BlogMedia(*)')
+        .eq('published', true);
+        
+      if (candidates) {
+        post = candidates.find((p: any) => toSlug(p.title) === idOrSlug) || null;
+      }
+    }
+    
+    if (post && post.media) {
+      post.media.sort((a: any, b: any) => (a.sortOrder || 0) - (b.sortOrder || 0));
+    }
   }
+
   if (!post) return NextResponse.json({ error: "Not found" }, { status: 404 });
   if (!post.published && post.userId !== userId) return NextResponse.json({ error: "Not found" }, { status: 404 });
   const coverUrl = post.coverPath ? `/api/image/proxy?path=${encodeURIComponent(post.coverPath)}` : null;
@@ -54,7 +84,23 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   }));
   const headers = new Headers();
   headers.set("Cache-Control", "no-store");
-  return new NextResponse(JSON.stringify({ post: { id: post.id, userId: post.userId, title: post.title, description: post.description, author: post.author, displayDate: post.displayDate, category: post.category, coverPath: post.coverPath ?? null, coverUrl, media, published: post.published, featured: post.featured, createdAt: post.createdAt } }), { headers });
+  return new NextResponse(JSON.stringify({ 
+    post: { 
+      id: post.id, 
+      userId: post.userId, 
+      title: post.title, 
+      description: post.description, 
+      author: post.author, 
+      displayDate: post.displayDate, 
+      category: post.category, 
+      coverPath: post.coverPath ?? null, 
+      coverUrl, 
+      media, 
+      published: !!post.published, 
+      featured: !!post.featured, 
+      createdAt: (post.createdAt instanceof Date ? post.createdAt : new Date(post.createdAt)).getTime()
+    } 
+  }), { headers });
 }
 
 export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
