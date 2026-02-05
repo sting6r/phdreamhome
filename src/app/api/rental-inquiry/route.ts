@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { sendEmail } from "@lib/mailer";
 import { prisma, withRetry } from "@lib/prisma";
+import { supabaseAdmin } from "@lib/supabase";
 
 const timeout = (ms: number) => new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), ms));
 
@@ -20,20 +21,46 @@ export async function POST(req: Request) {
 
     if (!email || !message) return NextResponse.json({ error: "Missing email or message" }, { status: 400 });
 
-    const user = (await Promise.race([
-      withRetry(() => prisma.user.findFirst({ where: { listings: { some: {} } } })),
-      timeout(5000)
-    ]) || await Promise.race([
-      withRetry(() => prisma.user.findFirst()),
-      timeout(5000)
-    ])) as any;
+    let user: any = null;
+    try {
+      user = (await Promise.race([
+        withRetry(() => prisma.user.findFirst({ where: { listings: { some: {} } } })),
+        timeout(5000)
+      ]) || await Promise.race([
+        withRetry(() => prisma.user.findFirst()),
+        timeout(5000)
+      ])) as any;
+    } catch (dbError) {
+      console.error("Prisma failed to find user for rental inquiry, attempting Supabase fallback:", dbError);
+      const { data } = await supabaseAdmin.from('User').select('*').limit(1).maybeSingle();
+      user = data;
+    }
+
     const agentEmail = process.env.AGENT_EMAIL || user?.email || process.env.SMTP_FROM || email;
     const targetEmail = "deladonesadlawan@gmail.com";
 
     // Save inquiry to database
-    await Promise.race([
-      withRetry(() => prisma.inquiry.create({
-        data: {
+    try {
+      await Promise.race([
+        withRetry(() => prisma.inquiry.create({
+          data: {
+            name,
+            email,
+            phone,
+            message,
+            status: status || "Pending",
+            subject: topic,
+            listingId: listingId || null,
+            recipientEmail: agentEmail
+          }
+        })),
+        timeout(5000)
+      ]);
+    } catch (dbError) {
+      console.error("Prisma failed to save rental inquiry, attempting Supabase fallback:", dbError);
+      const { error: insertError } = await supabaseAdmin
+        .from('Inquiry')
+        .insert({
           name,
           email,
           phone,
@@ -42,10 +69,12 @@ export async function POST(req: Request) {
           subject: topic,
           listingId: listingId || null,
           recipientEmail: agentEmail
-        }
-      })),
-      timeout(5000)
-    ]);
+        });
+      
+      if (insertError) {
+        console.error("Supabase fallback failed for rental inquiry:", insertError);
+      }
+    }
 
     const subject = topic ? `Rental Inquiry - ${topic}` : "Rental Inquiry";
     const html = `

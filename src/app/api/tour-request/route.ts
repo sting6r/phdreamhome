@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { sendEmail } from "@lib/mailer";
 import { prisma, withRetry } from "@lib/prisma";
+import { supabaseAdmin } from "@lib/supabase";
 
 const timeout = (ms: number) => new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), ms));
 
@@ -24,13 +25,30 @@ export async function POST(req: Request) {
     }
 
     // Check for duplicate tour request by email
-    const existingTour = await prisma.inquiry.findFirst({
-      where: {
-        email: { equals: email, mode: 'insensitive' },
-        type: "Tour"
-      },
-      orderBy: { createdAt: 'desc' }
-    });
+    let existingTour;
+    try {
+      existingTour = await Promise.race([
+        withRetry(() => prisma.inquiry.findFirst({
+          where: {
+            email: { equals: email, mode: 'insensitive' },
+            type: "Tour"
+          },
+          orderBy: { createdAt: 'desc' }
+        })),
+        timeout(3000)
+      ]);
+    } catch (dbError) {
+      console.error("Prisma failed to check duplicate tour, attempting Supabase fallback:", dbError);
+      const { data } = await supabaseAdmin
+        .from('Inquiry')
+        .select('id')
+        .ilike('email', email)
+        .eq('type', 'Tour')
+        .order('createdAt', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      existingTour = data;
+    }
 
     if (existingTour) {
       return NextResponse.json({ 
@@ -40,20 +58,49 @@ export async function POST(req: Request) {
       });
     }
 
-    const user = (await Promise.race([
-      withRetry(() => prisma.user.findFirst({ where: { listings: { some: {} } } })),
-      timeout(5000)
-    ]) || await Promise.race([
-      withRetry(() => prisma.user.findFirst()),
-      timeout(5000)
-    ])) as any;
+    let user: any = null;
+    try {
+      user = (await Promise.race([
+        withRetry(() => prisma.user.findFirst({ where: { listings: { some: {} } } })),
+        timeout(5000)
+      ]) || await Promise.race([
+        withRetry(() => prisma.user.findFirst()),
+        timeout(5000)
+      ])) as any;
+    } catch (dbError) {
+      console.error("Prisma failed to find user for tour, attempting Supabase fallback:", dbError);
+      const { data } = await supabaseAdmin.from('User').select('*').limit(1).maybeSingle();
+      user = data;
+    }
+
     const agentEmail = process.env.AGENT_EMAIL || user?.email || process.env.SMTP_FROM || email;
     const targetEmail = "deladonesadlawan@gmail.com";
 
     // Save tour request as an Inquiry with type "Tour"
-    await Promise.race([
-      withRetry(() => prisma.inquiry.create({
-        data: {
+    try {
+      await Promise.race([
+        withRetry(() => prisma.inquiry.create({
+          data: {
+            name,
+            email,
+            phone,
+            message,
+            status: "Pending",
+            subject: `Tour Request: ${listingTitle || "Property"}`,
+            listingId: listingId || null,
+            recipientEmail: agentEmail,
+            type: "Tour",
+            tourDate: date,
+            tourTime: time,
+          }
+        })),
+        timeout(5000)
+      ]);
+    } catch (dbError) {
+      console.error("Prisma failed to save tour request, attempting Supabase fallback:", dbError);
+      const { error: insertError } = await supabaseAdmin
+        .from('Inquiry')
+        .insert({
           name,
           email,
           phone,
@@ -65,10 +112,13 @@ export async function POST(req: Request) {
           type: "Tour",
           tourDate: date,
           tourTime: time,
-        }
-      })),
-      timeout(5000)
-    ]);
+        });
+      
+      if (insertError) {
+        console.error("Supabase fallback failed for tour request:", insertError);
+        // We still continue to send email even if DB save fails
+      }
+    }
 
     const subject = `New Tour Request - ${listingTitle || "Property"}`;
     const html = `
