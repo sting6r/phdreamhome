@@ -9,9 +9,21 @@ export const prisma =
     datasources: process.env.DATABASE_URL
       ? {
           db: {
-            url: process.env.DATABASE_URL.includes("connection_limit")
-              ? process.env.DATABASE_URL
-              : `${process.env.DATABASE_URL}${process.env.DATABASE_URL.includes("?") ? "&" : "?"}connection_limit=10&pool_timeout=20`,
+            url: (() => {
+              let url = process.env.DATABASE_URL;
+              
+              // Ensure sslmode=require for Supabase/remote connections
+              if (url.includes("supabase.co") && !url.includes("sslmode=")) {
+                url += (url.includes("?") ? "&" : "?") + "sslmode=require";
+              }
+              
+              // Ensure connection_limit and pool_timeout are set
+              if (!url.includes("connection_limit")) {
+                url += (url.includes("?") ? "&" : "?") + "connection_limit=10&pool_timeout=30";
+              }
+              
+              return url;
+            })(),
           },
         }
       : undefined,
