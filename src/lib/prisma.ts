@@ -1,0 +1,50 @@
+import { PrismaClient } from "@prisma/client";
+
+const globalForPrisma = global as unknown as { prisma: PrismaClient | undefined };
+
+export const prisma =
+  globalForPrisma.prisma ??
+  new PrismaClient({
+    log: process.env.NODE_ENV === "development" ? ["query", "error", "warn"] : ["error"],
+    datasources: process.env.DATABASE_URL
+      ? {
+          db: {
+            url: process.env.DATABASE_URL.includes("connection_limit")
+              ? process.env.DATABASE_URL
+              : `${process.env.DATABASE_URL}${process.env.DATABASE_URL.includes("?") ? "&" : "?"}connection_limit=10&pool_timeout=20`,
+          },
+        }
+      : undefined,
+  });
+
+if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
+
+/**
+ * Executes a database operation with retry logic to handle transient connection errors
+ * like "Connection reset by peer" or "Database is starting up".
+ */
+export async function withRetry<T>(
+  operation: () => Promise<T>,
+  retries = 3,
+  delay = 1000
+): Promise<T> {
+  let lastError: any;
+  for (let i = 0; i < retries; i++) {
+    try {
+      return await operation();
+    } catch (error: any) {
+      lastError = error;
+      const isTransient = 
+        error.message?.includes("Connection reset by peer") || 
+        error.message?.includes("Can't reach database server") ||
+        error.message?.includes("Timed out fetching a connection from the pool");
+      
+      if (!isTransient || i === retries - 1) throw error;
+      
+      console.warn(`Database operation failed (attempt ${i + 1}/${retries}), retrying in ${delay}ms...`, error.message);
+      await new Promise((resolve) => setTimeout(resolve, delay));
+      delay *= 2; // Exponential backoff
+    }
+  }
+  throw lastError;
+}

@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+pydantic
+psycopg[binary]
+psycopg-pool
+langchain-groq
+langchain-postgres
+langchain-core
+langgraph
+python-dotenv
