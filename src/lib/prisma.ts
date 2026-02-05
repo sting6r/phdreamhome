@@ -16,10 +16,17 @@ export const prisma =
               if (url.includes("supabase.co") && !url.includes("sslmode=")) {
                 url += (url.includes("?") ? "&" : "?") + "sslmode=require";
               }
+
+              // Add pgbouncer=true if using Supabase Transaction Pooler (port 6543)
+              // This is critical for Prisma to work correctly with transaction mode pooling
+              if (url.includes(":6543") && !url.includes("pgbouncer=")) {
+                url += (url.includes("?") ? "&" : "?") + "pgbouncer=true";
+              }
               
               // Ensure connection_limit and pool_timeout are set
+              // Increased connect_timeout to handle slow network handshakes
               if (!url.includes("connection_limit")) {
-                url += (url.includes("?") ? "&" : "?") + "connection_limit=10&pool_timeout=30";
+                url += (url.includes("?") ? "&" : "?") + "connection_limit=10&pool_timeout=30&connect_timeout=15";
               }
               
               return url;

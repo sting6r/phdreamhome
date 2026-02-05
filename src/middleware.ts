@@ -1,5 +1,6 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import { safeUrl, anon } from '@/lib/supabase'
 
 export async function middleware(request: NextRequest) {
   const host = request.headers.get("host") || "";
@@ -21,14 +22,10 @@ export async function middleware(request: NextRequest) {
     },
   });
 
-  // Safe Supabase credentials with fallbacks (matching src/lib/supabase.ts)
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://hcytsmimaehlmrvhrbda.supabase.co";
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhjeXRzbWltYWVobG1ydmhyYmRhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjAyNjQ2NjAsImV4cCI6MjA3NTg0MDY2MH0.T8IJpPvv8n5j9kcRSsC9EnpxrEuAW3E1TNJUdn250Kc";
-
   try {
     const supabase = createServerClient(
-      supabaseUrl,
-      supabaseAnonKey,
+      safeUrl,
+      anon,
       {
         cookies: {
           get(name: string) {
@@ -78,14 +75,25 @@ export async function middleware(request: NextRequest) {
     // Protect /dashboard and its subroutes
     if (pathname.startsWith('/dashboard')) {
       if (!user) {
-        return NextResponse.redirect(new URL('/4120626', request.url))
+        const redirectResponse = NextResponse.redirect(new URL('/4120626', request.url))
+        // Copy all cookies from the updated response object to the redirect response
+        // This ensures that any session refresh cookies are preserved
+        response.cookies.getAll().forEach(cookie => {
+          redirectResponse.cookies.set(cookie)
+        })
+        return redirectResponse
       }
     }
   } catch (error) {
     // If Supabase initialization or getUser fails, we log it but don't crash the whole site
     console.error("Middleware Supabase Error:", error);
     if (pathname.startsWith('/dashboard')) {
-      return NextResponse.redirect(new URL('/4120626', request.url))
+      const redirectResponse = NextResponse.redirect(new URL('/4120626', request.url))
+      // Even on error, try to preserve whatever cookies we might have
+      response.cookies.getAll().forEach(cookie => {
+        redirectResponse.cookies.set(cookie)
+      })
+      return redirectResponse
     }
   }
 

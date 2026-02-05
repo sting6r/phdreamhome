@@ -167,7 +167,26 @@ export default async function ListingPage({ params, searchParams }: { params: Pr
       ...(listing.type ? [{ type: listing.type }] : [])
     ]
   };
-  const totalSimilar = await prisma.listing.count({ where: similarWhere });
+
+  let totalSimilar = 0;
+  try {
+    const timeout = (ms: number) => new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), ms));
+    totalSimilar = await Promise.race([
+      withRetry(() => prisma.listing.count({ where: similarWhere }), 1, 0),
+      timeout(2000)
+    ]) as number;
+  } catch (e) {
+    console.error("Similar listings count Prisma error, fallback:", e);
+    const { count, error } = await supabaseAdmin
+      .from('Listing')
+      .select('*', { count: 'exact', head: true })
+      .match({ published: true })
+      .not('id', 'eq', listing.id)
+      .or(`city.eq.${listing.city},type.eq.${listing.type}`);
+    
+    if (!error) totalSimilar = count || 0;
+  }
+
   let similarRaw = [];
   try {
     const timeout = (ms: number) => new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), ms));
