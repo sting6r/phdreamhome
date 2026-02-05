@@ -34,7 +34,7 @@ export async function GET(req: Request) {
     if (!userId) return new NextResponse(JSON.stringify({ blogs: [] }), { headers });
   }
   const where: Prisma.BlogPostWhereInput = mine ? { userId: userId! } : { published: true };
-  let rows;
+  let rows: any[] = [];
   try {
     rows = await Promise.race([
       withRetry(() => prisma.blogPost.findMany({
@@ -43,7 +43,7 @@ export async function GET(req: Request) {
         orderBy: { createdAt: "desc" }
       }), 1, 0),
       timeout(5000)
-    ]);
+    ]) as any[];
   } catch (dbError) {
     console.error("Prisma failed, attempting Supabase fallback:", dbError);
     let query = supabaseAdmin

@@ -429,7 +429,7 @@ export default function AIAgent() {
     return () => {
       try { controller.abort(); } catch {}
     };
-  }, [syncTranscriptToDb, currentInquiryId]);
+  }, [syncTranscriptToDb, currentInquiryId, chatInstance]);
   
   useEffect(() => {
     try {
@@ -1431,7 +1431,7 @@ export default function AIAgent() {
 
       console.log("Using sendMessage", { sessionId: currentSessionId || currentInquiryId || "default_session" });
       const wantsCtx = /\b(website|this page|this site|your site)\b/i.test(textOnly);
-      const ctx = wantsCtx ? await extractWebsiteContext(chatTransport.signal) : "";
+      const ctx = wantsCtx ? await extractWebsiteContext() : "";
       const payload = ctx ? `${finalContent}\n\n${ctx}` : (finalContent || "Attached a photo for verification.");
       
       console.log("Appending to chat:", { payload, sessionId: currentSessionId || currentInquiryId || "default_session" });

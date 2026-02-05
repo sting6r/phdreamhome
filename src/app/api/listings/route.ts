@@ -19,7 +19,7 @@ export async function GET(req: Request) {
   const { data } = await supabaseAdmin.auth.getUser(token);
   const userId = data.user?.id;
   if (!userId) return NextResponse.json({ listings: [] });
-  let listings;
+  let listings: any[] = [];
   try {
     listings = await Promise.race([
       withRetry(() => prisma.listing.findMany({
@@ -28,7 +28,7 @@ export async function GET(req: Request) {
         orderBy: { createdAt: "desc" }
       })),
       timeout(5000)
-    ]);
+    ]) as any[];
   } catch (dbError) {
     console.error("Prisma failed or timed out, attempting Supabase fallback:", dbError);
     // Fallback to Supabase Client

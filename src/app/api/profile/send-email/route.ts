@@ -52,36 +52,41 @@ export async function POST(req: Request) {
     let verificationLink = "";
     
     // Determine the correct link type
-    // If email is different from current user email, it's an email change
-    let linkType: "magiclink" | "signup" | "email_change_new" = "magiclink";
     const isEmailChange = user?.email && to !== user.email;
     
+    let linkResult;
     if (isEmailChange) {
-      linkType = "email_change_new";
-    } else if (user && !user.email_confirmed_at) {
-      linkType = "signup";
+      linkResult = await supabaseAdmin.auth.admin.generateLink({
+        type: "email_change_new",
+        email: user.email,
+        newEmail: to,
+      });
+    } else {
+      // Use magiclink for both unconfirmed and confirmed users to avoid password requirement
+      linkResult = await supabaseAdmin.auth.admin.generateLink({
+        type: "magiclink",
+        email: to,
+      });
     }
 
-    let { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
-      type: linkType,
-      email: to,
-    });
+    let { data: linkData, error: linkError } = linkResult;
     
     // If email_change_new failed, it might be because the change wasn't initiated yet.
     // Try to initiate the update, then generate the link again.
-    if (linkError && linkType === "email_change_new") {
+    if (linkError && isEmailChange && userId) {
       console.log("Initial link generation failed, attempting to update user email first...");
       const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(userId, { email: to });
       
       if (updateError) {
          console.error("Failed to initiate email change:", updateError);
-         return NextResponse.json({ error: "Failed to update email: " + updateError.message }, { status: 400 });
+         return NextResponse.json({ error: "Failed to initiate email change: " + updateError.message }, { status: 400 });
       }
       
       // Retry generation
       const retry = await supabaseAdmin.auth.admin.generateLink({
         type: "email_change_new",
-        email: to,
+        email: user.email,
+        newEmail: to,
       });
       linkData = retry.data;
       linkError = retry.error;

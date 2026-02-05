@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import Image from "next/image";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
 import { usePathname } from "next/navigation";
 import { supabasePublic, createClientSideClient } from "@lib/supabase";
 
@@ -18,7 +18,7 @@ export default function Navbar() {
   const pathname = usePathname();
   const syncLockRef = useRef<string | null>(null);
   const avatarCacheRef = useRef<string | null>(null);
-  const supabase = createClientSideClient();
+  const supabase = useMemo(() => createClientSideClient(), []);
   
   async function safePost(url: string, body: any) {
     try {
@@ -197,7 +197,7 @@ export default function Navbar() {
       controller.abort();
       sub.subscription.unsubscribe(); 
     };
-  }, []); // Changed from [open] to [] to prevent re-running on menu toggle
+  }, [supabase.auth, pathname]); // Added supabase.auth and pathname to deps to satisfy ESLint and ensure correct re-runs
 
   useEffect(() => {
     function handle(e: MouseEvent) {

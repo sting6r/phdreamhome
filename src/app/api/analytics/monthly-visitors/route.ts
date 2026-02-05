@@ -4,18 +4,23 @@ import { NextResponse } from 'next/server';
 // Initialize the client with credentials from environment variables
 // GA_SERVICE_ACCOUNT_CREDENTIALS should be the stringified JSON of the service account key
 // GA_PROPERTY_ID should be your Google Analytics 4 property ID
-const propertyId = process.env.GA_PROPERTY_ID;
-const credentials = process.env.GA_SERVICE_ACCOUNT_CREDENTIALS 
-  ? JSON.parse(process.env.GA_SERVICE_ACCOUNT_CREDENTIALS) 
-  : null;
-
-const analyticsDataClient = credentials 
-  ? new BetaAnalyticsDataClient({ credentials }) 
-  : null;
-
-const timeout = (ms: number) => new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), ms));
-
 export async function GET() {
+  const timeout = (ms: number) => new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), ms));
+  const propertyId = process.env.GA_PROPERTY_ID;
+  let credentials = null;
+  
+  try {
+    if (process.env.GA_SERVICE_ACCOUNT_CREDENTIALS) {
+      credentials = JSON.parse(process.env.GA_SERVICE_ACCOUNT_CREDENTIALS);
+    }
+  } catch (e) {
+    console.warn("Failed to parse GA_SERVICE_ACCOUNT_CREDENTIALS, using fallback data. Check if it's valid JSON and single-line in .env");
+  }
+
+  const analyticsDataClient = credentials 
+    ? new BetaAnalyticsDataClient({ credentials }) 
+    : null;
+
   if (!analyticsDataClient || !propertyId) {
     console.log('Google Analytics credentials not found, returning fallback data');
     // Fallback data if GA is not configured yet
@@ -68,14 +73,20 @@ export async function GET() {
 
     const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
     
-    const formattedData = (response.rows?.map((row: any) => {
+    interface FormattedEntry {
+      name: string;
+      visitors: number;
+      monthIndex: number;
+    }
+    
+    const formattedData = ((response.rows?.map((row: any) => {
       const monthIndex = parseInt(row.dimensionValues?.[0]?.value || '1') - 1;
       return {
         name: monthNames[monthIndex],
         visitors: parseInt(row.metricValues?.[0]?.value || '0'),
         monthIndex,
       };
-    }) || []).sort((a, b) => a.monthIndex - b.monthIndex);
+    }) || []) as FormattedEntry[]).sort((a, b) => a.monthIndex - b.monthIndex);
 
     return NextResponse.json(formattedData);
   } catch (error) {

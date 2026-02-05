@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@lib/prisma";
+import { prisma, withRetry } from "@lib/prisma";
 import { cookies } from "next/headers";
 import { supabaseAdmin } from "@lib/supabase";
+
+const timeout = (ms: number) => new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), ms));
 
 async function getUserId(req: Request) {
   const cookieStore = await cookies();
@@ -72,7 +74,7 @@ export async function POST(req: Request) {
         }
       })),
       timeout(5000)
-    ]);
+    ]) as any;
 
     return NextResponse.json(sale);
   } catch (err: any) {

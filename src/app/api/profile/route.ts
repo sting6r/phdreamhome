@@ -141,7 +141,7 @@ export async function GET() {
       [user, totalListings] = await Promise.race([
         Promise.all([userTask, countTask]),
         timeout(5000)
-      ]);
+      ]) as [any, number];
       
       // If Prisma returns null (e.g. not found or sync issue), force fallback to Supabase
       if (!user) {

@@ -20,13 +20,13 @@ export async function POST(req: Request) {
 
     if (!email || !message) return NextResponse.json({ error: "Missing email or message" }, { status: 400 });
 
-    const user = await Promise.race([
+    const user = (await Promise.race([
       withRetry(() => prisma.user.findFirst({ where: { listings: { some: {} } } })),
       timeout(5000)
     ]) || await Promise.race([
       withRetry(() => prisma.user.findFirst()),
       timeout(5000)
-    ]);
+    ])) as any;
     const agentEmail = process.env.AGENT_EMAIL || user?.email || process.env.SMTP_FROM || email;
     const targetEmail = "deladonesadlawan@gmail.com";
 

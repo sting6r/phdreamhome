@@ -242,6 +242,7 @@ function PropertiesByStatusPageContent({ params }: { params: Promise<{ status: s
   React.useEffect(() => {
     if (viewMode !== "map") return;
     let alive = true;
+    const controller = new AbortController();
     (async () => {
       const L = await loadLeaflet();
       if (!alive) return;
