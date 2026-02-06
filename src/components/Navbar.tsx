@@ -225,7 +225,7 @@ export default function Navbar() {
           <Image src="/logo.svg" alt="PhDreamHome" width={140} height={70} className="rounded mr-3 shrink-0 mt-1 sm:mt-2 sm:w-[200px]" />
         </Link>
         <div className="flex items-center gap-2 sm:gap-5 h-full">
-          <nav className="flex items-center gap-2 sm:gap-5 self-end mb-1 overflow-x-auto whitespace-nowrap pr-2 no-scrollbar">
+          <nav className="hidden sm:flex items-center gap-2 sm:gap-5 self-end mb-1 overflow-x-auto whitespace-nowrap pr-2 no-scrollbar">
             <Link href="/contact" prefetch={false} className="inline-flex items-center gap-1 sm:gap-2 btn-blue btn-glow-soft px-2 py-1 sm:px-4 sm:py-2 text-xs sm:text-sm">
               <span className="underline-run hidden xs:inline">Sell your Property Today?</span>
               <span className="underline-run xs:hidden">Sell Property</span>
@@ -281,10 +281,12 @@ export default function Navbar() {
                 )}
               </>
             )}
+            {!loggedIn && mounted && (
+              null
+            )}
           </div>
         </div>
       </div>
-      
     </div>
   );
 }

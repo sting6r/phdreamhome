@@ -731,10 +731,10 @@ function PropertiesByStatusPageContent({ params }: { params: Promise<{ status: s
           <div className="card shadow-md">
             <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-3">Quick Links</div>
             <div className="flex items-center rounded-md overflow-x-auto border border-gray-200 mb-4 scrollbar-hide" role="tablist" aria-label="Status Tabs">
-              <button type="button" role="tab" aria-selected={selectedStatus === "for-sale"} aria-controls="property-type-panel-2" onClick={()=>{ setSelectedStatus("for-sale"); router.push("/properties/for-sale"); }} className={`flex-1 min-w-[100px] px-3 py-2 text-sm font-medium transition-colors ${selectedStatus === "for-sale" ? "bg-[#DE6A4A] text-white" : "bg-white text-slate-700 hover:bg-slate-50 border-r border-gray-200 last:border-0"}`}>For Sale</button>
-              <button type="button" role="tab" aria-selected={selectedStatus === "for-rent"} aria-controls="property-type-panel-2" onClick={()=>{ setSelectedStatus("for-rent"); router.push("/properties/for-rent"); }} className={`flex-1 min-w-[100px] px-3 py-2 text-sm font-medium transition-colors ${selectedStatus === "for-rent" ? "bg-[#DE6A4A] text-white" : "bg-white text-slate-700 hover:bg-slate-50 border-r border-gray-200 last:border-0"}`}>For Rent</button>
-              <button type="button" role="tab" aria-selected={selectedStatus === "preselling"} aria-controls="property-type-panel-2" onClick={()=>{ setSelectedStatus("preselling"); router.push("/properties/preselling"); }} className={`flex-1 min-w-[100px] px-3 py-2 text-sm font-medium transition-colors ${selectedStatus === "preselling" ? "bg-[#DE6A4A] text-white" : "bg-white text-slate-700 hover:bg-slate-50 border-r border-gray-200 last:border-0"}`}>Preselling</button>
-              <button type="button" role="tab" aria-selected={selectedStatus === "rfo"} aria-controls="property-type-panel-2" onClick={()=>{ setSelectedStatus("rfo"); router.push("/properties/rfo"); }} className={`flex-1 min-w-[100px] px-3 py-2 text-sm font-medium transition-colors ${selectedStatus === "rfo" ? "bg-[#DE6A4A] text-white" : "bg-white text-slate-700 hover:bg-slate-50 border-r border-gray-200 last:border-0"}`}>RFO</button>
+              <button type="button" role="tab" aria-selected={selectedStatus === "for-sale"} aria-controls="property-type-panel-2" onClick={()=>{ setSelectedStatus("for-sale"); router.push("/properties/for-sale"); }} className={`flex-1 min-w-[70px] px-1.5 py-2 text-sm font-medium transition-colors ${selectedStatus === "for-sale" ? "bg-[#DE6A4A] text-white" : "bg-white text-slate-700 hover:bg-slate-50 border-r border-gray-200 last:border-0"}`}>For Sale</button>
+              <button type="button" role="tab" aria-selected={selectedStatus === "for-rent"} aria-controls="property-type-panel-2" onClick={()=>{ setSelectedStatus("for-rent"); router.push("/properties/for-rent"); }} className={`flex-1 min-w-[70px] px-1.5 py-2 text-sm font-medium transition-colors ${selectedStatus === "for-rent" ? "bg-[#DE6A4A] text-white" : "bg-white text-slate-700 hover:bg-slate-50 border-r border-gray-200 last:border-0"}`}>For Rent</button>
+              <button type="button" role="tab" aria-selected={selectedStatus === "preselling"} aria-controls="property-type-panel-2" onClick={()=>{ setSelectedStatus("preselling"); router.push("/properties/preselling"); }} className={`flex-1 min-w-[70px] px-1.5 py-2 text-sm font-medium transition-colors ${selectedStatus === "preselling" ? "bg-[#DE6A4A] text-white" : "bg-white text-slate-700 hover:bg-slate-50 border-r border-gray-200 last:border-0"}`}>Preselling</button>
+              <button type="button" role="tab" aria-selected={selectedStatus === "rfo"} aria-controls="property-type-panel-2" onClick={()=>{ setSelectedStatus("rfo"); router.push("/properties/rfo"); }} className={`flex-1 min-w-[70px] px-1.5 py-2 text-sm font-medium transition-colors ${selectedStatus === "rfo" ? "bg-[#DE6A4A] text-white" : "bg-white text-slate-700 hover:bg-slate-50 border-r border-gray-200 last:border-0"}`}>RFO</button>
             </div>
             <div className="text-sm font-semibold mb-1">Property Category for {selectedStatusTitle || "Sale"}</div>
             <div
@@ -826,8 +826,8 @@ function PropertiesByStatusPageContent({ params }: { params: Promise<{ status: s
             ) : null}
           </div>
         </div>
-        <MainFooterCards />
       </div>
+      <MainFooterCards />
     </div>
   );
 }

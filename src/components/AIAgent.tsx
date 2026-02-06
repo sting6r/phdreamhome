@@ -399,8 +399,8 @@ export default function AIAgent() {
                 const greeting = {
                   id: 'greeting-' + Date.now(),
                   role: 'assistant' as const,
-                  content: "👋 Hi there! I am your DreamHome Assistant. Let me help you today.",
-                  parts: [{ type: 'text' as const, text: "👋 Hi there! I am your DreamHome Assistant. Let me help you today." }]
+                  content: "👋 Hi there! I am Kyuubi, your PhDreamHome AI Assistant. Let me help you today.",
+                  parts: [{ type: 'text' as const, text: "👋 Hi there! I am Kyuubi, your PhDreamHome AI Assistant. Let me help you today." }]
                 };
                 if (chatInstance.messages.length === 0) {
                   chatInstance.setMessages([greeting]);
@@ -503,8 +503,8 @@ export default function AIAgent() {
             const greeting = {
               id: 'greeting-' + Date.now(),
               role: 'assistant' as const,
-              content: "👋 Hi there! I am your DreamHome Assistant. Let me help you today.",
-              parts: [{ type: 'text' as const, text: "👋 Hi there! I am your DreamHome Assistant. Let me help you today." }]
+              content: "👋 Hi there! I am Kyuubi, your PhDreamHome AI Assistant. Let me help you today.",
+              parts: [{ type: 'text' as const, text: "👋 Hi there! I am Kyuubi, your PhDreamHome AI Assistant. Let me help you today." }]
             };
             chatInstance.setMessages([greeting]);
             
@@ -1387,7 +1387,7 @@ export default function AIAgent() {
           content: textOnly,
           parts: [{ type: 'text' as const, text: textOnly }]
         };
-        const reply = "Hi! How can I help you today? I can search properties, schedule tours, or help you sell or rent a property.";
+        const reply = "Hi! I am Kyuubi, your PhDreamHome AI Assistant. How can I help you today? I can search properties, schedule tours, or help you sell or rent a property.";
         const assistantMsg = { 
           id: (Date.now() + 1).toString(), 
           role: 'assistant' as const, 
@@ -1560,7 +1560,7 @@ export default function AIAgent() {
                       <X size={12} />
                     </button>
                     <p className="text-sm font-medium leading-relaxed">
-                      👋 Hi there! I am your DreamHome Assistant. Let me help you today.
+                      👋 Hi there! I am Kyuubi, your PhDreamHome AI Assistant. Let me help you today.
                     </p>
                   </div>
 
@@ -1687,10 +1687,10 @@ export default function AIAgent() {
                     <ChevronLeft size={14} />
                   </button>
                 )}
-                <Image src="/girl.png" alt="DreamHome Assistant" width={32} height={32} className="rounded-full" />
+                <Image src="/girl.png" alt="PhDreamHome AI Assistant" width={32} height={32} className="rounded-full" />
                 <div className="flex flex-col">
-                  <span className="font-semibold text-sm">DreamHome Assistant</span>
-                  <span className="text-[10px] opacity-90 leading-tight">Hi there! I am your Real Estate Assistant. Let me help you today.</span>
+                  <span className="font-semibold text-sm">PhDreamHome AI Assistant</span>
+                  <span className="text-[10px] opacity-90 leading-tight">Hi there! I am Kyuubi, your PhDreamHome AI Assistant.</span>
                   {providerInfo && (
                     <span className="mt-0.5 inline-flex items-center gap-1 text-[10px] bg-purple-100 text-purple-700 px-2 py-0.5 rounded">
                       <span>Provider:</span>
@@ -1802,7 +1802,7 @@ export default function AIAgent() {
                             }}
                           >
                             <div className="flex items-center gap-2">
-                              <Image src="/girl.png" alt="DreamHome Assistant" width={24} height={24} className="rounded-full" />
+                              <Image src="/girl.png" alt="PhDreamHome AI Assistant" width={24} height={24} className="rounded-full" />
                               <div className="text-xs font-semibold text-slate-800">Chat {chatSessions.length - idx}</div>
                             </div>
                             <div className="text-[10px] text-slate-500">
@@ -1837,8 +1837,8 @@ export default function AIAgent() {
                           const greeting = {
                             id: 'greeting-' + Date.now(),
                             role: 'assistant' as const,
-                            content: "👋 Hi there! I am your DreamHome Assistant. Let me help you today.",
-                            parts: [{ type: 'text' as const, text: "👋 Hi there! I am your DreamHome Assistant. Let me help you today." }]
+                            content: "👋 Hi there! I am Kyuubi, your PhDreamHome AI Assistant. Let me help you today.",
+                            parts: [{ type: 'text' as const, text: "👋 Hi there! I am Kyuubi, your PhDreamHome AI Assistant. Let me help you today." }]
                           };
                           const firstTs = parseInt(String(greeting.id).match(/(\d{13})/)?.[1] || String(Date.now()), 10);
                           const newSessionId = makeSessionId();
@@ -1977,7 +1977,7 @@ export default function AIAgent() {
                           {chatInstance.messages.length === 0 && (
                             <div className="flex flex-col items-center justify-center h-full text-center space-y-2 opacity-60">
                               <Image src="/girl.png" alt="AI" width={48} height={48} className="rounded-full shadow-lg border border-purple-100" />
-                              <p className="text-xs font-medium text-slate-600">Start a conversation with DreamHome Assistant</p>
+                              <p className="text-xs font-medium text-slate-600">Start a conversation with PhDreamHome AI Assistant</p>
                             </div>
                           )}
 
@@ -2044,7 +2044,7 @@ export default function AIAgent() {
                                         <div className="flex items-center gap-1 mb-1 opacity-70">
                                           {m.role === "user" ? <User size={12} /> : <Image src="/girl.png" alt="AI" width={16} height={16} className="rounded-full" />}
                                           <span className="font-bold uppercase tracking-wider text-[8px]">
-                                            {m.role === "user" ? "You" : "DreamHome Assistant"}
+                                            {m.role === "user" ? "You" : "PhDreamHome AI Assistant"}
                                           </span>
                                         </div>
                                         {

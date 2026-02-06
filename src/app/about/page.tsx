@@ -87,7 +87,7 @@ export default function AboutPage() {
               </div>
             </div>
           </div>
-          <div className="card relative overflow-hidden min-h-16 w-full h-full">
+          <div className="card relative overflow-hidden min-h-16 md:min-h-[300px] lg:min-h-16 w-full h-full">
             <div className="absolute inset-0 bg-slate-100" />
             <div className="absolute inset-0 flex items-center justify-center">
               <div className="relative w-[88%] max-w-[420px] aspect-[4/3] rounded-2xl overflow-hidden ring-1 ring-black/10 shadow-xl">
@@ -100,7 +100,7 @@ export default function AboutPage() {
 
       <div className="relative">
         <div className="absolute inset-0 bg-[#E9D5FF]" />
-        <div className="container relative">
+        <div className="container relative py-4 sm:py-8">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-center">
             <div className="lg:col-span-2 card bg-transparent shadow-none">
               <div className="text-2xl font-bold text-[#32004A]">Our Story</div>

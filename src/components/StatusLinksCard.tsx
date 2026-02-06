@@ -182,7 +182,13 @@ export default function StatusLinksCard() {
       ref={containerRef}
       className={`relative border-b border-gray-200 ${isClient && scrolled ? "bg-[#F4DDFF]" : "bg-white"} w-full z-[100]`}
     >
-      <div className="px-3 py-1 mx-auto flex items-center justify-start sm:justify-center gap-4 sm:gap-[2ch] whitespace-nowrap text-center overflow-x-visible">
+      <div className="sm:hidden w-full bg-[#E5AFFF] border-b border-black/5 py-1.5 px-4 flex justify-center">
+        <Link href="/contact" prefetch={false} className="inline-flex items-center gap-1.5 btn-blue btn-glow-soft px-3 py-1.5 text-xs">
+          <span className="underline-run">Sell Property</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3.5 h-3.5"><path d="M21 15a2 2 0 0 1-2 2h-3l-4 4v-4H7a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v9z"/></svg>
+        </Link>
+      </div>
+      <div className="px-3 py-1.5 mx-auto flex flex-wrap items-center justify-center sm:justify-center gap-x-6 gap-y-1.5 sm:gap-[2ch] text-center overflow-x-visible">
         <Link prefetch={false} href="/" className="text-base font-semibold leading-tight text-[#32004A] hover:text-blue-600">
           Home
         </Link>

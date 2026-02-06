@@ -1268,11 +1268,11 @@ export default function EditBlogPage({ params }: { params: Promise<{ id: string 
               >
                 <div
                   id="blog-tools-bar"
-                  className="flex items-center justify-between px-4 py-2 whitespace-nowrap shadow-sm border rounded-md w-full"
+                  className="flex flex-wrap sm:flex-nowrap items-center justify-between px-4 py-2 shadow-sm border rounded-md w-full sm:overflow-x-auto no-scrollbar"
                   style={{ backgroundColor: "#EFDCEC" }}
                 >
-                    <div className="text-xs font-semibold text-slate-700">Tools</div>
-                    <div className="flex items-center gap-1">
+                    <div className="text-xs font-semibold text-slate-700 mr-4">Tools</div>
+                    <div className="flex flex-wrap items-center gap-1">
                       <button
                         type="button"
                         className="px-3 py-1 rounded-md text-xs hover:bg-white/40 transition-colors"
@@ -1336,7 +1336,7 @@ export default function EditBlogPage({ params }: { params: Promise<{ id: string 
                     {showIconMenu && (
                       <div
                         ref={iconMenuRef}
-                        className="absolute top-full right-0 mt-1 bg-white border rounded-md shadow-lg z-50 min-w-[280px] flex flex-col"
+                        className="absolute top-full right-0 sm:right-0 -mr-[150px] sm:mr-0 mt-1 bg-white border rounded-md shadow-lg z-50 min-w-[280px] flex flex-col"
                       >
                         <div className="flex border-b overflow-x-auto no-scrollbar bg-slate-50 rounded-t-md p-1 gap-1">
                           {BLOG_ICON_CATEGORIES.map(cat => (
