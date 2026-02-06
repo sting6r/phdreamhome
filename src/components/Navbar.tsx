@@ -20,6 +20,25 @@ export default function Navbar() {
   const avatarCacheRef = useRef<string | null>(null);
   const supabase = useMemo(() => createClientSideClient(), []);
   
+  // Handle OAuth code exchange
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const sp = new URLSearchParams(window.location.search);
+      const code = sp.get("code");
+      if (code) {
+        supabase.auth.exchangeCodeForSession(code).then(({ data, error }) => {
+          if (!error && data.session) {
+            setLoggedIn(true);
+            // Remove code from URL
+            const url = new URL(window.location.href);
+            url.searchParams.delete("code");
+            window.history.replaceState({}, document.title, url.pathname + url.search);
+          }
+        });
+      }
+    }
+  }, [supabase.auth]);
+
   async function safePost(url: string, body: any) {
     try {
       if (typeof navigator !== "undefined" && (navigator as any).sendBeacon) {
@@ -226,6 +245,11 @@ export default function Navbar() {
         </Link>
         <div className="flex items-center gap-2 sm:gap-5 h-full">
           <nav className="hidden sm:flex items-center gap-2 sm:gap-5 self-end mb-1 overflow-x-auto whitespace-nowrap pr-2 no-scrollbar">
+            {mounted && loggedIn && (
+              <Link href="/dashboard" prefetch={false} className="inline-flex items-center gap-1 sm:gap-2 btn-blue btn-glow-soft px-2 py-1 sm:px-4 sm:py-2 text-xs sm:text-sm">
+                <span>Dashboard</span>
+              </Link>
+            )}
             <Link href="/contact" prefetch={false} className="inline-flex items-center gap-1 sm:gap-2 btn-blue btn-glow-soft px-2 py-1 sm:px-4 sm:py-2 text-xs sm:text-sm">
               <span className="underline-run hidden xs:inline">Sell your Property Today?</span>
               <span className="underline-run xs:hidden">Sell Property</span>

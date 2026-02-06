@@ -28,9 +28,9 @@ function LoginPageContent() {
     setErr(null);
     try {
       // Use a consistent origin for production to avoid state mismatch
-      const origin = process.env.NODE_ENV === "production" 
+      const origin = typeof window !== "undefined" ? window.location.origin : (process.env.NODE_ENV === "production" 
         ? "https://www.phdreamhome.com" 
-        : window.location.origin;
+        : "http://localhost:3000");
 
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: "google",
