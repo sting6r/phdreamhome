@@ -24,22 +24,21 @@ function LoginPageContent() {
     }
   }, [urlError]);
   async function signInWithGoogle() {
-    setLoading(true);
-    setErr(null);
-    try {
-      // Use a consistent origin for production to avoid state mismatch
-      const origin = process.env.NODE_ENV === "production" 
-  ? "https://www.phdreamhome.com" 
-  : window.location.origin;
+  setLoading(true);
+  setErr(null);
+  try {
+    // Use the environment variable if available, otherwise use current window origin
+    const origin = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin;
 
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: {
-          redirectTo: `${origin}/auth/callback?next=${encodeURIComponent(callbackUrl)}`,
-          skipBrowserRedirect: true,
-          queryParams: { 
-            access_type: "offline", 
-            prompt: "consent" 
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        // Ensure this exact URL is added to Supabase "Redirect URLs"
+        redirectTo: `${origin}/auth/callback?next=${encodeURIComponent(callbackUrl)}`,
+        skipBrowserRedirect: true,
+        queryParams: { 
+          access_type: "offline", 
+          prompt: "consent" 
           }
         }
       });
