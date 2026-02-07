@@ -21,9 +21,6 @@ export default function QuickLinksSelector() {
     { label: "Townhouse", type: "Town House" },
     { label: "Beach Property", type: "Beach Property" },
     { label: "Lot", type: "Lot Only" },
-  ];
-
-  const commercialCategories = [
     { label: "Commercial Property", type: "Commercial Space" },
     { label: "Industrial Property", type: "Industrial Properties" },
   ];
@@ -60,26 +57,15 @@ export default function QuickLinksSelector() {
         </div>
         
         {categories.map((cat) => (
-          <Link
-            key={cat.type}
-            prefetch={false}
-            href={`/properties/${selectedStatus}?type=${encodeURIComponent(cat.type)}`}
-            className="block hover:text-[#DE6A4A] transition-colors"
-          >
-            {cat.label}
-          </Link>
-        ))}
-
-        {commercialCategories.map((cat) => (
-          <div key={cat.type} className="flex items-center justify-between">
+          <div key={cat.type} className="flex items-center justify-between group">
             <Link
               prefetch={false}
               href={`/properties/${selectedStatus}?type=${encodeURIComponent(cat.type)}`}
-              className="block hover:text-[#DE6A4A] transition-colors"
+              className="block flex-1 hover:text-[#DE6A4A] transition-colors"
             >
               {cat.label}
             </Link>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4 text-slate-500">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4 text-slate-500 group-hover:text-[#DE6A4A] transition-colors">
               <path d="M9 6l6 6-6 6" />
             </svg>
           </div>
