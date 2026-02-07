@@ -8,6 +8,7 @@ import GalleryViewer from "@components/GalleryViewer";
 import SimilarCarousel from "@components/SimilarCarousel";
 import ContactAgentCard from "@components/ContactAgentCard";
 import PropertyCalculator from "@components/PropertyCalculator";
+import QuickLinksSelector from "@components/QuickLinksSelector";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params;
@@ -444,45 +445,7 @@ export default async function ListingPage({ params, searchParams }: { params: Pr
         </div>
         <div className="space-y-4">
           <ContactAgentCard listingId={listing.id} listingTitle={listing.title} agent={agent} />
-          <div className="card shadow-md">
-            <div className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">QUICK LINKS</div>
-            <div className="flex items-center border border-slate-200 rounded-md overflow-hidden">
-              <Link prefetch={false} href="/properties/for-sale" className="flex-1 px-2 py-2 text-sm font-semibold bg-[#DE6A4A] text-white text-center border-r border-slate-200">
-                For Sale
-              </Link>
-              <Link prefetch={false} href="/properties/for-rent" className="flex-1 px-2 py-2 text-sm font-semibold bg-white text-[#223B55] text-center border-r border-slate-200">
-                For Rent
-              </Link>
-              <Link prefetch={false} href="/properties/preselling" className="flex-1 px-2 py-2 text-sm font-semibold bg-white text-[#223B55] text-center border-r border-slate-200">
-                Preselling
-              </Link>
-              <Link prefetch={false} href="/properties/rfo" className="flex-1 px-2 py-2 text-sm font-semibold bg-white text-[#223B55] text-center">
-                RFO
-              </Link>
-            </div>
-            <div className="mt-3">
-              <div className="text-sm font-semibold">Property Category for For Sale</div>
-            </div>
-            <div className="mt-2 space-y-1 text-sm text-black">
-              <div className="flex items-center justify-between">
-                <span>Property Type</span>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4 text-slate-500"><path d="M6 9l6 6 6-6"/></svg>
-              </div>
-              <Link prefetch={false} href="/properties/for-sale?type=Condominium" className="block">Condominium</Link>
-              <Link prefetch={false} href="/properties/for-sale?type=House%20and%20Lot" className="block">House and Lot</Link>
-              <Link prefetch={false} href="/properties/for-sale?type=Town%20House" className="block">Townhouse</Link>
-              <Link prefetch={false} href="/properties/for-sale?type=Beach%20Property" className="block">Beach Property</Link>
-              <Link prefetch={false} href="/properties/for-sale?type=Lot%20Only" className="block">Lot</Link>
-              <div className="flex items-center justify-between">
-                <Link prefetch={false} href="/properties/for-sale?type=Commercial%20Space" className="block">Commercial Property</Link>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4 text-slate-500"><path d="M9 6l6 6-6 6"/></svg>
-              </div>
-              <div className="flex items-center justify-between">
-                <Link prefetch={false} href="/properties/for-sale?type=Industrial%20Properties" className="block">Industrial Property</Link>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4 text-slate-500"><path d="M9 6l6 6-6 6"/></svg>
-              </div>
-            </div>
-          </div>
+          <QuickLinksSelector />
         </div>
       </div>
       <MainFooterCards />
