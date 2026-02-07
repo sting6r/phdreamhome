@@ -5,8 +5,12 @@ import Link from "next/link";
 
 type Status = "for-sale" | "for-rent" | "preselling" | "rfo";
 
-export default function QuickLinksSelector() {
-  const [selectedStatus, setSelectedStatus] = useState<Status>("for-sale");
+interface QuickLinksSelectorProps {
+  initialStatus?: Status;
+}
+
+export default function QuickLinksSelector({ initialStatus = "for-sale" }: QuickLinksSelectorProps) {
+  const [selectedStatus, setSelectedStatus] = useState<Status>(initialStatus);
 
   const statusLabels: Record<Status, string> = {
     "for-sale": "For Sale",

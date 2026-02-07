@@ -4,6 +4,7 @@ import MainFooterCards from "../../../components/MainFooterCards";
 import Link from "next/link";
 import Image from "next/image";
 import { useSearchParams, useRouter } from "next/navigation";
+import QuickLinksSelector from "../../../components/QuickLinksSelector";
 
 const fetcher = async (u: string, signal?: AbortSignal) => {
   try {
@@ -116,25 +117,15 @@ function PropertiesByStatusPageContent({ params }: { params: Promise<{ status: s
     return clean.slice(0, 11);
   };
   const [inqDev, setInqDev] = React.useState(false);
-  const [showTypeMenu2, setShowTypeMenu2] = React.useState(true);
-  const [showCommercialMenu2, setShowCommercialMenu2] = React.useState(false);
-  const [showIndustrialMenu2, setShowIndustrialMenu2] = React.useState(false);
   const allowedTypes = React.useMemo(() => (["All Types","Condominium","Town House","House and Lot","Lot Only","Beach Property","Commercial Space","Industrial Properties"] as const), []);
   React.useEffect(() => {
     const t = typeParam;
     if (!t) { setTypeSel("All Types"); return; }
     setTypeSel(allowedTypes.includes(t as any) ? t : "All Types");
   }, [typeParam, allowedTypes]);
-  const [selectedStatus, setSelectedStatus] = React.useState<string>(statusSlug);
   const [commercialSubtypeSel, setCommercialSubtypeSel] = React.useState<string>("");
   const [industrySubtypeSel, setIndustrySubtypeSel] = React.useState<string>("");
-  const selectedStatusTitle = toTitle(selectedStatus);
   const resultsRef = React.useRef<HTMLDivElement | null>(null);
-  React.useEffect(() => {
-    setShowTypeMenu2(true);
-    setShowCommercialMenu2(false);
-    setShowIndustrialMenu2(false);
-  }, [selectedStatus]);
   const [sortSel, setSortSel] = React.useState<string>("Sort by Recently Updated");
   const [viewMode, setViewMode] = React.useState<"list" | "map">("list");
   const [mounted, setMounted] = React.useState(false);
@@ -728,103 +719,7 @@ function PropertiesByStatusPageContent({ params }: { params: Promise<{ status: s
               <button type="submit" className="btn-blue w-full text-center" disabled={inqLoading}>{inqLoading ? "Sending..." : "Send Inquiry"}</button>
             </form>
           </div>
-          <div className="card shadow-md">
-            <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-3">Quick Links</div>
-            <div className="flex items-center rounded-md overflow-x-auto border border-gray-200 mb-4 scrollbar-hide" role="tablist" aria-label="Status Tabs">
-              <button type="button" role="tab" aria-selected={selectedStatus === "for-sale"} aria-controls="property-type-panel-2" onClick={()=>{ setSelectedStatus("for-sale"); router.push("/properties/for-sale"); }} className={`flex-1 min-w-[70px] px-1.5 py-2 text-sm font-medium transition-colors ${selectedStatus === "for-sale" ? "bg-[#DE6A4A] text-white" : "bg-white text-slate-700 hover:bg-slate-50 border-r border-gray-200 last:border-0"}`}>For Sale</button>
-              <button type="button" role="tab" aria-selected={selectedStatus === "for-rent"} aria-controls="property-type-panel-2" onClick={()=>{ setSelectedStatus("for-rent"); router.push("/properties/for-rent"); }} className={`flex-1 min-w-[70px] px-1.5 py-2 text-sm font-medium transition-colors ${selectedStatus === "for-rent" ? "bg-[#DE6A4A] text-white" : "bg-white text-slate-700 hover:bg-slate-50 border-r border-gray-200 last:border-0"}`}>For Rent</button>
-              <button type="button" role="tab" aria-selected={selectedStatus === "preselling"} aria-controls="property-type-panel-2" onClick={()=>{ setSelectedStatus("preselling"); router.push("/properties/preselling"); }} className={`flex-1 min-w-[70px] px-1.5 py-2 text-sm font-medium transition-colors ${selectedStatus === "preselling" ? "bg-[#DE6A4A] text-white" : "bg-white text-slate-700 hover:bg-slate-50 border-r border-gray-200 last:border-0"}`}>Preselling</button>
-              <button type="button" role="tab" aria-selected={selectedStatus === "rfo"} aria-controls="property-type-panel-2" onClick={()=>{ setSelectedStatus("rfo"); router.push("/properties/rfo"); }} className={`flex-1 min-w-[70px] px-1.5 py-2 text-sm font-medium transition-colors ${selectedStatus === "rfo" ? "bg-[#DE6A4A] text-white" : "bg-white text-slate-700 hover:bg-slate-50 border-r border-gray-200 last:border-0"}`}>RFO</button>
-            </div>
-            <div className="text-sm font-semibold mb-1">Property Category for {selectedStatusTitle || "Sale"}</div>
-            <div
-              id="property-type-header-2"
-              aria-label="Tab Header"
-              className="flex items-center justify-between text-sm text-slate-800 mb-2 cursor-pointer select-none"
-              role="button"
-              tabIndex={0}
-              aria-expanded={showTypeMenu2}
-              onClick={(e)=>{ e.preventDefault(); e.stopPropagation(); setShowTypeMenu2(prev=>!prev); }}
-              onKeyDown={(e)=>{ if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); setShowTypeMenu2(prev=>!prev); } }}
-            >
-              <span>Property Type</span>
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                className={showTypeMenu2 ? "w-4 h-4 text-slate-600 transition-transform duration-200 rotate-90" : "w-4 h-4 text-slate-600 transition-transform duration-200"}
-              >
-                <path d="M9 18l6-6-6-6"/>
-              </svg>
-            </div>
-            {showTypeMenu2 ? (
-              <div aria-labelledby="property-type-header-2" id="property-type-panel-2" role="tabpanel">
-                <div className="space-y-2 text-sm text-slate-800">
-                  <Link prefetch={false} href={`/properties/${selectedStatus}?type=Condominium`} className="block">Condominium</Link>
-                  <Link prefetch={false} href={`/properties/${selectedStatus}?type=${encodeURIComponent("House and Lot")}`} className="block">House and Lot</Link>
-                  <Link prefetch={false} href={`/properties/${selectedStatus}?type=${encodeURIComponent("Town House")}`} className="block">Townhouse</Link>
-                  {selectedStatus !== "rfo" && selectedStatus !== "preselling" ? (
-                    <Link prefetch={false} href={`/properties/${selectedStatus}?type=${encodeURIComponent("Beach Property")}`} className="block">Beach Property</Link>
-                  ) : null}
-                  {selectedStatus !== "rfo" ? (
-                    <Link prefetch={false} href={`/properties/${selectedStatus}?type=${encodeURIComponent("Lot Only")}`} className="block">Lot</Link>
-                  ) : null}
-                  {selectedStatus !== "rfo" && selectedStatus !== "preselling" ? (
-                    <>
-                      <div className="border-t my-2" />
-                      <div
-                        className="group flex items-center justify-between text-sm text-slate-800 cursor-pointer select-none transition-colors hover:text-[#7D677E] hover:bg-slate-50 rounded"
-                        role="button"
-                        tabIndex={0}
-                        aria-expanded={showCommercialMenu2}
-                        onClick={(e)=>{ e.preventDefault(); e.stopPropagation(); setShowCommercialMenu2(prev=>!prev); }}
-                        onKeyDown={(e)=>{ if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); setShowCommercialMenu2(prev=>!prev); } }}
-                      >
-                        <span>Commercial Property</span>
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={showCommercialMenu2 ? "w-4 h-4 text-slate-600 transition-transform duration-200 rotate-90 group-hover:text-[#7D677E]" : "w-4 h-4 text-slate-600 transition-transform duration-200 group-hover:text-[#7D677E]"}><path d="M9 18l6-6-6-6"/></svg>
-                      </div>
-                      {selectedStatus !== "rfo" && selectedStatus !== "preselling" && showCommercialMenu2 ? (
-                        <>
-                          <div className="border-t mb-2" />
-                          <div className="space-y-2 text-sm text-slate-800">
-                            <Link prefetch={false} href={`/properties/${selectedStatus}?type=${encodeURIComponent("Commercial Space")}&commercialSubtype=${encodeURIComponent("Commercial Lot")}`} className="block">Commercial Lot</Link>
-                            <Link prefetch={false} href={`/properties/${selectedStatus}?type=${encodeURIComponent("Commercial Space")}&commercialSubtype=${encodeURIComponent("Shop")}`} className="block">Shop</Link>
-                            <Link prefetch={false} href={`/properties/${selectedStatus}?type=${encodeURIComponent("Commercial Space")}&commercialSubtype=${encodeURIComponent("Store")}`} className="block">Store</Link>
-                          </div>
-                        </>
-                      ) : null}
-                    </>
-                  ) : null}
-                  {selectedStatus !== "rfo" && selectedStatus !== "preselling" ? (
-                    <>
-                      <div className="border-t my-2" />
-                      <div
-                        className="group flex items-center justify-between text-sm text-slate-800 cursor-pointer select-none transition-colors hover:text-[#7D677E] hover:bg-slate-50 rounded"
-                        role="button"
-                        tabIndex={0}
-                        aria-expanded={showIndustrialMenu2}
-                        onClick={(e)=>{ e.preventDefault(); e.stopPropagation(); setShowIndustrialMenu2(prev=>!prev); }}
-                        onKeyDown={(e)=>{ if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); setShowIndustrialMenu2(prev=>!prev); } }}
-                      >
-                        <span>Industrial Property</span>
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={showIndustrialMenu2 ? "w-4 h-4 text-slate-600 transition-transform duration-200 rotate-90 group-hover:text-[#7D677E]" : "w-4 h-4 text-slate-600 transition-transform duration-200 group-hover:text-[#7D677E]"}><path d="M9 18l6-6-6-6"/></svg>
-                      </div>
-                      {selectedStatus !== "rfo" && selectedStatus !== "preselling" && showIndustrialMenu2 ? (
-                        <>
-                          <div className="border-t mb-2" />
-                          <div className="space-y-2 text-sm text-slate-800">
-                            <Link prefetch={false} href={`/properties/${selectedStatus}?type=${encodeURIComponent("Industrial Properties")}&industrySubtype=${encodeURIComponent("Office Space")}`} className="block">Office Space</Link>
-                            <Link prefetch={false} href={`/properties/${selectedStatus}?type=${encodeURIComponent("Industrial Properties")}&industrySubtype=${encodeURIComponent("Warehouse")}`} className="block">Warehouse</Link>
-                          </div>
-                        </>
-                      ) : null}
-                    </>
-                  ) : null}
-                </div>
-              </div>
-            ) : null}
-          </div>
+          <QuickLinksSelector initialStatus={statusSlug as any} />
         </div>
       </div>
       <MainFooterCards />
