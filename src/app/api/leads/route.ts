@@ -3,6 +3,10 @@ import { prisma, withRetry } from "@lib/prisma";
 
 const timeout = (ms: number) => new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), ms));
 
+export async function GET(req: Request) {
+  return NextResponse.json({ message: "Leads API is active. Use POST to create a lead." });
+}
+
 export async function POST(req: Request) {
   try {
     const text = await req.text();
