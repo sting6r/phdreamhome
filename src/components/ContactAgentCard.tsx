@@ -133,7 +133,10 @@ export default function ContactAgentCard({
       if (res.ok) {
         setTourSent(true);
         setTourSentMessage(data.message || "Thank you for scheduling a site viewing! Our team has received your request. Please stay tuned for a confirmation from one of our agents, who will reach out to you shortly to finalize the details.");
-        setTimeout(() => setIsTourOpen(false), 3000);
+        setTimeout(() => {
+          setIsTourOpen(false);
+          setTourSent(false);
+        }, 8000);
       }
     } catch (err) {
       console.error(err);

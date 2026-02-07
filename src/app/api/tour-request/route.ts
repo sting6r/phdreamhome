@@ -157,7 +157,11 @@ export async function POST(req: Request) {
     const userInfo = await sendEmail(email, confirmSubject, confirmHtml);
     const dev = !process.env.SMTP_HOST;
 
-    return NextResponse.json({ ok: true, dev });
+    return NextResponse.json({ 
+      ok: true, 
+      dev,
+      message: "Thank you for scheduling a site viewing! Our team has received your request. Please stay tuned for a confirmation from one of our agents, who will reach out to you shortly to finalize the details."
+    });
   } catch (err: any) {
     return NextResponse.json({ error: String(err?.message ?? err) }, { status: 500 });
   }
