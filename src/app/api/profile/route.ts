@@ -4,6 +4,42 @@ import { cookies } from "next/headers";
 import { supabaseAdmin, createSignedUrl } from "@lib/supabase";
 export const runtime = "nodejs";
 
+export async function GET(req: Request) {
+  try {
+    const cookieStore = await cookies();
+    const token = cookieStore.get("sb-access-token")?.value;
+    if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    
+    const { data, error: userError } = await supabaseAdmin.auth.getUser(token);
+    if (userError || !data.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    
+    const userId = data.user.id;
+    const timeout = (ms: number) => new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), ms));
+    
+    let user;
+    try {
+      user = await Promise.race([
+        withRetry(() => prisma.user.findUnique({
+          where: { id: userId }
+        })),
+        timeout(5000)
+      ]);
+    } catch (e) {
+      console.warn("Prisma profile fetch failed, falling back to Supabase", e);
+      const { data: sbUser } = await supabaseAdmin.from('User').select('*').eq('id', userId).maybeSingle();
+      user = sbUser;
+    }
+    
+    if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
+    return NextResponse.json(user);
+  } catch (error) {
+    console.error("Profile GET error:", error);
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+  }
+}
+
 export async function PUT(req: Request) {
   try {
     const cookieStore = await cookies();

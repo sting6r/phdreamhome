@@ -27,11 +27,12 @@ export async function GET(req: Request) {
     if (path.startsWith('http://') || path.startsWith('https://')) {
       try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+        const timeoutId = setTimeout(() => controller.abort(), 15000); // Increased to 15s timeout
         const response = await fetch(path, {
           signal: controller.signal,
           headers: {
-            'User-Agent': 'Mozilla/5.0 (compatible; PhDreamHome/1.0)'
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8'
           }
         });
         clearTimeout(timeoutId);
@@ -42,12 +43,18 @@ export async function GET(req: Request) {
           return new Response(buffer, {
             headers: {
               'Content-Type': contentType,
-              'Cache-Control': 'public, max-age=86400, stale-while-revalidate=43200'
+              'Cache-Control': 'public, max-age=604800, stale-while-revalidate=86400',
+              'Access-Control-Allow-Origin': '*'
             }
           });
+        } else {
+          console.warn(`External image fetch failed with status ${response.status}: ${path}`);
+          // Redirect to the original URL as a fallback if proxy fails
+          return NextResponse.redirect(path);
         }
       } catch (e) {
         console.error(`Proxy fetch error for external URL ${path}:`, e);
+        return NextResponse.redirect(path);
       }
     }
 

@@ -86,6 +86,14 @@ export default function DashboardPage() {
     .filter((s: any) => s.status === "Closed")
     .reduce((acc: number, s: any) => acc + (s.amount || 0), 0);
 
+  const totalSalesRevenue = sales
+    .filter((s: any) => s.status === "Closed" && (s.salesCategory === "Sale" || !s.salesCategory))
+    .reduce((acc: number, s: any) => acc + (s.amount || 0), 0);
+
+  const totalRentRevenue = sales
+    .filter((s: any) => s.status === "Closed" && s.salesCategory === "Rental")
+    .reduce((acc: number, s: any) => acc + (s.amount || 0), 0);
+
   const activeSales = sales.filter((s: any) => s.status !== "Cancelled" && s.status !== "In Progress");
   const totalSalesCount = activeSales.filter((s: any) => s.salesCategory === "Sale" || !s.salesCategory).length;
   const totalRentalsCount = activeSales.filter((s: any) => s.salesCategory === "Rental").length;
@@ -112,12 +120,36 @@ export default function DashboardPage() {
     ? dynamicSalesReportData 
     : salesReportData;
 
+  if (!mounted) {
+    return (
+      <div className="w-full space-y-6 animate-pulse">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+          {[...Array(12)].map((_, i) => (
+            <div key={i} className="card h-24 bg-gray-100 rounded-xl"></div>
+          ))}
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="card h-[400px] bg-gray-100 rounded-xl"></div>
+          <div className="card h-[400px] bg-gray-100 rounded-xl"></div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="w-full space-y-6">
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         <div className="card">
           <div className="text-xs text-gray-500">Total Revenue</div>
           <div className="text-xl sm:text-2xl font-semibold">{mounted ? `₱${totalRevenue.toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ""}</div>
+        </div>
+        <div className="card">
+          <div className="text-xs text-gray-500">Total Sales Revenue</div>
+          <div className="text-xl sm:text-2xl font-semibold">{mounted ? `₱${totalSalesRevenue.toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ""}</div>
+        </div>
+        <div className="card">
+          <div className="text-xs text-gray-500">Total Rent Revenue</div>
+          <div className="text-xl sm:text-2xl font-semibold">{mounted ? `₱${totalRentRevenue.toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ""}</div>
         </div>
         <div className="card">
           <div className="text-xs text-gray-500">Active Now</div>
