@@ -132,11 +132,13 @@ export default function ContactAgentCard({
       const data = await res.json();
       if (res.ok) {
         setTourSent(true);
-        setTourSentMessage(data.message || "Thank you for scheduling a site viewing! Our team has received your request. Please stay tuned for a confirmation from one of our agents, who will reach out to you shortly to finalize the details.");
+        const msg = data.message || "Thank you for scheduling a site viewing! Our team has received your request. Please stay tuned for a confirmation from one of our agents, who will reach out to you shortly to finalize the details.";
+        setTourSentMessage(msg);
+        window.alert(msg);
         setTimeout(() => {
           setIsTourOpen(false);
           setTourSent(false);
-        }, 8000);
+        }, 10000);
       }
     } catch (err) {
       console.error(err);
@@ -277,84 +279,98 @@ export default function ContactAgentCard({
       <div className={`overflow-hidden transition-all duration-300 ease-in-out ${isTourOpen ? "max-h-[1000px] opacity-100 mt-4" : "max-h-0 opacity-0"}`}>
         <div className="p-4 bg-[#F0F9FF] rounded-md border border-sky-200 shadow-sm space-y-4">
           <div className="text-sm font-semibold text-sky-800">Schedule a Tour</div>
-          {tourSent ? (
-            <div className="text-sm text-green-600 bg-green-50 p-2 rounded border border-green-200">
-              {tourSentMessage}
-            </div>
-          ) : (
-            <form onSubmit={handleTourSubmit} className="space-y-3">
-              <div className="grid grid-cols-2 gap-2">
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-slate-500 uppercase">Preferred Date</label>
-                  <input 
-                    type="date" 
-                    className="input text-sm" 
-                    required 
-                    value={tourForm.date}
-                    onChange={e => setTourForm({...tourForm, date: e.target.value})}
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-slate-500 uppercase">Preferred Time</label>
-                  <input 
-                    type="time" 
-                    className="input text-sm" 
-                    required 
-                    value={tourForm.time}
-                    onChange={e => setTourForm({...tourForm, time: e.target.value})}
-                  />
-                </div>
-              </div>
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold text-slate-500 uppercase">Your Details</label>
-                <input 
-                  className="input text-sm" 
-                  placeholder="Full Name" 
-                  required 
-                  value={tourForm.name}
-                  onChange={e => setTourForm({...tourForm, name: e.target.value})}
-                />
-              </div>
-              <div className="space-y-1">
-                <input 
-                  className="input text-sm" 
-                  placeholder="Email Address" 
-                  type="email" 
-                  required 
-                  value={tourForm.email}
-                  onChange={e => handleTourEmailChange(e.target.value)}
-                />
-                {tourEmailSuggestion && (
-                  <div className="text-[10px] text-blue-600 px-1">
-                    Did you mean <button type="button" className="font-bold underline" onClick={() => { setTourForm({...tourForm, email: tourEmailSuggestion}); setTourEmailSuggestion(null); }}>{tourEmailSuggestion}</button>?
+          <form onSubmit={handleTourSubmit} className="space-y-3">
+            {!tourSent && (
+              <>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-500 uppercase">Preferred Date</label>
+                    <input 
+                      type="date" 
+                      className="input text-sm" 
+                      required 
+                      value={tourForm.date}
+                      onChange={e => setTourForm({...tourForm, date: e.target.value})}
+                    />
                   </div>
-                )}
-              </div>
-              <div className="space-y-1">
-                <input 
-                  className="input text-sm" 
-                  placeholder="Phone Number" 
-                  required
-                  value={tourForm.phone}
-                  onChange={e => setTourForm({...tourForm, phone: autoCorrectPhone(e.target.value)})}
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-500 uppercase">Preferred Time</label>
+                    <input 
+                      type="time" 
+                      className="input text-sm" 
+                      required 
+                      value={tourForm.time}
+                      onChange={e => setTourForm({...tourForm, time: e.target.value})}
+                    />
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase">Your Details</label>
+                  <input 
+                    className="input text-sm" 
+                    placeholder="Full Name" 
+                    required 
+                    value={tourForm.name}
+                    onChange={e => setTourForm({...tourForm, name: e.target.value})}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <input 
+                    className="input text-sm" 
+                    placeholder="Email Address" 
+                    type="email" 
+                    required 
+                    value={tourForm.email}
+                    onChange={e => handleTourEmailChange(e.target.value)}
+                  />
+                  {tourEmailSuggestion && (
+                    <div className="text-[10px] text-blue-600 px-1">
+                      Did you mean <button type="button" className="font-bold underline" onClick={() => { setTourForm({...tourForm, email: tourEmailSuggestion}); setTourEmailSuggestion(null); }}>{tourEmailSuggestion}</button>?
+                    </div>
+                  )}
+                </div>
+                <div className="space-y-1">
+                  <input 
+                    className="input text-sm" 
+                    placeholder="Phone Number" 
+                    required
+                    value={tourForm.phone}
+                    onChange={e => setTourForm({...tourForm, phone: autoCorrectPhone(e.target.value)})}
+                  />
+                  <div className="text-[10px] text-slate-500 px-1">Format: 09XXXXXXXXX</div>
+                </div>
+                <textarea 
+                  className="input text-sm h-20" 
+                  placeholder="Additional notes..." 
+                  value={tourForm.message}
+                  onChange={e => setTourForm({...tourForm, message: e.target.value})}
                 />
-                <div className="text-[10px] text-slate-500 px-1">Format: 09XXXXXXXXX</div>
+              </>
+            )}
+            
+            <button 
+              type="submit" 
+              className={`btn-blue w-full text-sm ${tourSent ? "bg-green-600 hover:bg-green-700" : "bg-sky-600 hover:bg-sky-700"}`}
+              disabled={loading || tourSent}
+            >
+              {loading ? "Scheduling..." : tourSent ? "Request Received" : "Confirm Tour Schedule"}
+            </button>
+
+            {tourSent && (
+              <div className="mt-4 p-4 bg-white rounded-lg border-2 border-green-500 shadow-lg animate-in fade-in slide-in-from-top-4 duration-500">
+                <div className="flex items-start gap-3">
+                  <div className="bg-green-100 p-2 rounded-full flex-shrink-0">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="w-5 h-5 text-green-600">
+                      <path d="M20 6L9 17l-5-5" />
+                    </svg>
+                  </div>
+                  <p className="text-sm text-slate-800 font-medium leading-relaxed">
+                    {tourSentMessage}
+                  </p>
+                </div>
               </div>
-              <textarea 
-                className="input text-sm h-20" 
-                placeholder="Additional notes..." 
-                value={tourForm.message}
-                onChange={e => setTourForm({...tourForm, message: e.target.value})}
-              />
-              <button 
-                type="submit" 
-                className="btn-blue w-full text-sm bg-sky-600 hover:bg-sky-700"
-                disabled={loading}
-              >
-                {loading ? "Scheduling..." : "Confirm Tour Schedule"}
-              </button>
-            </form>
-          )}
+            )}
+          </form>
         </div>
       </div>
     </div>
