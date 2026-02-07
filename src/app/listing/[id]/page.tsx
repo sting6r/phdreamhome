@@ -445,11 +445,20 @@ export default async function ListingPage({ params, searchParams }: { params: Pr
         <div className="space-y-4">
           <ContactAgentCard listingId={listing.id} listingTitle={listing.title} agent={agent} />
           <div className="card shadow-md">
-            <div className="text-xs font-semibold text-black">Quick Links</div>
-            <div className="mt-2 flex items-center gap-2">
-              <Link prefetch={false} href="/properties/for-sale" className="inline-flex items-center rounded px-3 py-1 text-xs bg-[#DE6A4A] text-white">For Sale</Link>
-              <Link prefetch={false} href="/properties/for-rent" className="inline-flex items-center rounded px-3 py-1 text-xs bg-slate-200 text-black">For Rent</Link>
-              <Link prefetch={false} href="/properties/preselling" className="inline-flex items-center rounded px-3 py-1 text-xs bg-slate-200 text-black">Preselling</Link>
+            <div className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">QUICK LINKS</div>
+            <div className="flex items-center border border-slate-200 rounded-md overflow-hidden">
+              <Link prefetch={false} href="/properties/for-sale" className="flex-1 px-2 py-2 text-sm font-semibold bg-[#DE6A4A] text-white text-center border-r border-slate-200">
+                For Sale
+              </Link>
+              <Link prefetch={false} href="/properties/for-rent" className="flex-1 px-2 py-2 text-sm font-semibold bg-white text-[#223B55] text-center border-r border-slate-200">
+                For Rent
+              </Link>
+              <Link prefetch={false} href="/properties/preselling" className="flex-1 px-2 py-2 text-sm font-semibold bg-white text-[#223B55] text-center border-r border-slate-200">
+                Preselling
+              </Link>
+              <Link prefetch={false} href="/properties/rfo" className="flex-1 px-2 py-2 text-sm font-semibold bg-white text-[#223B55] text-center">
+                RFO
+              </Link>
             </div>
             <div className="mt-3">
               <div className="text-sm font-semibold">Property Category for For Sale</div>
