@@ -12,7 +12,7 @@ function LoginPageContent() {
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const sp = useSearchParams();
-  const callbackUrl = sp.get("callbackUrl") ?? "/dashboard";
+  const callbackUrl = sp.get("callbackUrl") ?? "/4120626";
   const urlError = sp.get("error");
   const router = useRouter();
   const isPreviewPing = Boolean(sp.get("ide_webview_request_time"));
