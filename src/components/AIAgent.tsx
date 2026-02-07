@@ -746,7 +746,7 @@ export default function AIAgent() {
       return;
     }
 
-    if (text === "Property Visit") {
+    if (text === "Property Visit" || text === "Visit a Property Today") {
       // Add user message and then a specific assistant response with the link
       const userMsg = { 
         id: Date.now().toString(), 
@@ -1568,7 +1568,8 @@ export default function AIAgent() {
                   {[
                     { label: "Rent A Property", href: "/properties/for-rent", action: "Rent A Property" },
                     { label: "Pre Selling Properties", href: "/properties/preselling", action: "Pre Selling Properties" },
-                    { label: "For Sale House and Lot", href: "/properties/for-sale?type=House%20and%20Lot", action: "For Sale House and Lot" }
+                    { label: "For Sale House and Lot", href: "/properties/for-sale?type=House%20and%20Lot", action: "For Sale House and Lot" },
+                    { label: "Visit a Property Today", action: "Property Visit" }
                         ].map((item, i) => (
                     item.href ? (
                       <Link
