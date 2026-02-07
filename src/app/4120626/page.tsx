@@ -27,10 +27,8 @@ function LoginPageContent() {
     setLoading(true);
     setErr(null);
     try {
-      // Use a consistent origin for production to avoid state mismatch
-      const origin = process.env.NODE_ENV === "production" 
-  ? "https://www.phdreamhome.com" 
-  : window.location.origin;
+      // Use the current origin to ensure the redirect matches the domain the user is on
+      const origin = window.location.origin;
 
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: "google",

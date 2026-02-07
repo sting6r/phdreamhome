@@ -8,7 +8,10 @@ export const runtime = "nodejs";
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const code = url.searchParams.get("code");
-  const next = url.searchParams.get("next") || "/dashboard";
+  // Default to /dashboard if next is missing or is just the root
+  let next = url.searchParams.get("next") || "/dashboard";
+  if (next === "/") next = "/dashboard";
+
   if (!code) return NextResponse.redirect(new URL("/4120626", req.url));
 
   const supabase = await createServerSideClient();
@@ -22,7 +25,16 @@ export async function GET(req: Request) {
   });
 
   const { data, error } = await supabase.auth.exchangeCodeForSession(code);
-  const redirect = new URL(next, req.url);
+  
+  // Create the redirect URL
+  let origin = url.origin;
+  // Force https in production for the redirect origin
+  if (process.env.NODE_ENV === "production" && origin.startsWith("http://")) {
+    origin = origin.replace("http://", "https://");
+  }
+  
+  const redirectTo = next.startsWith('http') ? next : `${origin}${next}`;
+  
   if (error || !data.session) {
     console.error("OAuth exchange error:", error?.message || "No session found");
     return NextResponse.redirect(new URL(`/4120626?error=${encodeURIComponent(error?.message || "Auth failed")}`, req.url));
@@ -52,11 +64,13 @@ export async function GET(req: Request) {
     }
   } catch (syncError) {
     console.error("Failed to sync OAuth user to Railway DB after retries:", syncError);
-    // We don't block the login if sync fails, but we log it.
   }
 
-  const res = NextResponse.redirect(redirect);
-  res.cookies.set("sb-access-token", data.session.access_token, { path: "/", httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production" });
-  res.cookies.set("sb-refresh-token", data.session.refresh_token, { path: "/", httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production" });
+  const res = NextResponse.redirect(redirectTo);
+  
+  // Note: createServerSideClient already handles setting cookies on the cookie store.
+  // We don't need to manually set sb-access-token and sb-refresh-token here
+  // as they are not the standard Supabase SSR cookies anyway.
+  
   return res;
 }
