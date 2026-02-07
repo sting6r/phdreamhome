@@ -2,6 +2,10 @@ import { PrismaClient } from "@prisma/client";
 
 const globalForPrisma = global as unknown as { prisma: PrismaClient | undefined };
 
+if (!process.env.DATABASE_URL && process.env.NODE_ENV === "production") {
+  console.warn("WARNING: DATABASE_URL is missing in production environment!");
+}
+
 export const prisma =
   globalForPrisma.prisma ??
   new PrismaClient({
@@ -26,7 +30,7 @@ export const prisma =
               // Ensure connection_limit and pool_timeout are set
               // Increased connect_timeout to handle slow network handshakes
               if (!url.includes("connection_limit")) {
-                url += (url.includes("?") ? "&" : "?") + "connection_limit=10&pool_timeout=30&connect_timeout=15";
+                url += (url.includes("?") ? "&" : "?") + "connection_limit=10&pool_timeout=30&connect_timeout=30";
               }
               
               return url;
