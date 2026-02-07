@@ -132,7 +132,7 @@ export default function ContactAgentCard({
       const data = await res.json();
       if (res.ok) {
         setTourSent(true);
-        setTourSentMessage(data.message || "Your tour request has been sent! Our agent will contact you shortly.");
+        setTourSentMessage(data.message || "Thank you for scheduling a site viewing! Our team has received your request. Please stay tuned for a confirmation from one of our agents, who will reach out to you shortly to finalize the details.");
         setTimeout(() => setIsTourOpen(false), 3000);
       }
     } catch (err) {
