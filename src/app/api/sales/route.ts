@@ -23,21 +23,37 @@ export async function GET(req: Request) {
     const userId = await getUserId(req);
     if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    const sales = await prisma.sale.findMany({
-      where: { userId },
-      include: {
-        listing: {
-          select: {
-            title: true,
+    let sales: any[] = [];
+    try {
+      sales = await withRetry(() => prisma.sale.findMany({
+        where: { userId },
+        include: {
+          listing: {
+            select: {
+              title: true,
+            }
           }
+        },
+        orderBy: {
+          createdAt: "desc"
         }
-      },
-      orderBy: {
-        createdAt: "desc"
-      }
-    });
+      }), 2, 500);
+    } catch (prismaError) {
+      console.warn("Prisma failed to fetch sales, attempting Supabase fallback:", prismaError);
+      
+      const { data, error: sbError } = await supabaseAdmin
+        .from('Sale')
+        .select('*, listing:Listing(title)')
+        .eq('userId', userId)
+        .order('createdAt', { ascending: false });
+
+      if (sbError) throw sbError;
+      sales = data || [];
+    }
+
     return NextResponse.json(sales);
   } catch (err: any) {
+    console.error("Sales API Error:", err);
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }

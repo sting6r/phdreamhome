@@ -22,6 +22,35 @@ export async function GET(req: Request) {
     const url = new URL(req.url);
     const path = url.searchParams.get("path") || "";
     if (!path) return NextResponse.json({ error: "Missing path" }, { status: 400 });
+
+    // Handle absolute URLs (like Google Avatar URLs) directly
+    if (path.startsWith('http://') || path.startsWith('https://')) {
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+        const response = await fetch(path, {
+          signal: controller.signal,
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (compatible; PhDreamHome/1.0)'
+          }
+        });
+        clearTimeout(timeoutId);
+        
+        if (response.ok) {
+          const contentType = response.headers.get('content-type') || 'image/jpeg';
+          const buffer = await response.arrayBuffer();
+          return new Response(buffer, {
+            headers: {
+              'Content-Type': contentType,
+              'Cache-Control': 'public, max-age=86400, stale-while-revalidate=43200'
+            }
+          });
+        }
+      } catch (e) {
+        console.error(`Proxy fetch error for external URL ${path}:`, e);
+      }
+    }
+
     const { bucketName, objectPath } = parseBucketSpec(path);
     let buf: Buffer | null = null;
     let ct: string | null = null;
