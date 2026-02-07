@@ -747,6 +747,11 @@ export default function AIAgent() {
     }
 
     if (text === "Property Visit" || text === "Visit a Property Today") {
+      if (!isFormSubmitted) {
+        setIsOpen(true);
+        setShowChatHistory(false);
+        return;
+      }
       // Add user message and then a specific assistant response with the link
       const userMsg = { 
         id: Date.now().toString(), 
@@ -1593,10 +1598,15 @@ export default function AIAgent() {
                         onClick={(e) => {
                           e.stopPropagation();
                           if (!isDraggingRef.current) {
-                            setIsOpen(true);
-                            setShowChatHistory(false);
-                            if (isFormSubmitted) {
-                              handleQuickAction(item.action!);
+                            if (!isFormSubmitted && (item.action === "Property Visit" || item.action === "Visit a Property Today")) {
+                              setIsOpen(true);
+                              setShowChatHistory(false);
+                            } else {
+                              setIsOpen(true);
+                              setShowChatHistory(false);
+                              if (isFormSubmitted) {
+                                handleQuickAction(item.action!);
+                              }
                             }
                           }
                         }}
