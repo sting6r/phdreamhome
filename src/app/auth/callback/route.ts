@@ -50,13 +50,11 @@ export async function GET(req: Request) {
           update: {
             email: user.email,
             name: user.user_metadata?.full_name || user.user_metadata?.name || undefined,
-            image: user.user_metadata?.avatar_url || undefined,
           },
           create: {
             id: user.id,
             email: user.email,
             name: user.user_metadata?.full_name || user.user_metadata?.name || undefined,
-            image: user.user_metadata?.avatar_url || undefined,
           }
         })
       );

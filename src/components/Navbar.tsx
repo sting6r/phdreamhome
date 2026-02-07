@@ -121,13 +121,13 @@ export default function Navbar() {
         if (u) {
           setName((u as any)?.user_metadata?.name || null);
           setEmail(u.email || null);
-          const mAvatar = u?.user_metadata?.avatar_url || u?.user_metadata?.picture || null;
+          const mAvatar = null; // Do not use u?.user_metadata?.avatar_url or u?.user_metadata?.picture
           console.log("Navbar: Session user avatar:", mAvatar);
           // If we have a cached avatar from the API, prefer that over the session avatar
           if (avatarCacheRef.current) {
             setAvatar(avatarCacheRef.current);
           } else {
-            setAvatar(mAvatar || null);
+            setAvatar(null);
           }
           
           if (u.id && u.email && shouldSync(u.id)) {
@@ -158,13 +158,13 @@ export default function Navbar() {
         if (u) {
           setName(u?.user_metadata?.name || null);
           setEmail(u?.email || null);
-          const mAvatar = u?.user_metadata?.avatar_url || u?.user_metadata?.picture || null;
+          const mAvatar = null; // Do not use u?.user_metadata?.avatar_url or u?.user_metadata?.picture
           console.log("Navbar: Auth state change avatar:", mAvatar);
           // If we have a cached avatar from the API, prefer that over the session avatar
           if (avatarCacheRef.current) {
             setAvatar(avatarCacheRef.current);
           } else {
-            setAvatar(mAvatar || null);
+            setAvatar(null);
           }
           
           if (u.id && u.email && shouldSync(u.id)) {
