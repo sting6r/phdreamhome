@@ -19,8 +19,21 @@ export default async function AIInquiriesPage() {
         type: "AI Lead"
       },
       orderBy: { createdAt: "desc" },
-      take: 50, // Limit to latest 50 for performance
-      include: {
+      take: 50,
+      select: {
+        id: true,
+        createdAt: true,
+        name: true,
+        email: true,
+        phone: true,
+        subject: true,
+        message: true,
+        status: true,
+        recipientEmail: true,
+        type: true,
+        tourDate: true,
+        tourTime: true,
+        transcript: true,
         listing: {
           select: {
             title: true,
@@ -31,7 +44,7 @@ export default async function AIInquiriesPage() {
     }), 2, 500);
 
     const timeoutPromise = new Promise((_, reject) => 
-      setTimeout(() => reject(new Error("Prisma timeout")), 8000)
+      setTimeout(() => reject(new Error("Prisma timeout")), 5000)
     );
 
     inquiries = await Promise.race([prismaPromise, timeoutPromise]) as any[];

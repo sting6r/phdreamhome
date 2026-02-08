@@ -46,10 +46,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 return (
                   <Link
                     key={navItem.href}
-                    href={navItem.href}
+                    href={active ? "#" : navItem.href}
                     prefetch={false}
+                    onClick={(e) => {
+                      if (active) {
+                        e.preventDefault();
+                        window.scrollTo({ top: 0, behavior: "smooth" });
+                      }
+                    }}
                     className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm ${
-                      active ? "bg-sky-50 text-sky-600" : "text-slate-600 hover:bg-slate-50 hover:text-slate-800"
+                      active ? "bg-sky-50 text-sky-600 cursor-default" : "text-slate-600 hover:bg-slate-50 hover:text-slate-800"
                     }`}
                   >
                     {navItem.icon}

@@ -31,7 +31,8 @@ export const prisma =
               }
               
               if (!url.includes("connection_limit")) {
-                url += (url.includes("?") ? "&" : "?") + "connection_limit=10&pool_timeout=30&connect_timeout=15";
+                // Reduced timeouts for faster failover to fallback
+                url += (url.includes("?") ? "&" : "?") + "connection_limit=10&pool_timeout=10&connect_timeout=10";
               }
               
               return url;
