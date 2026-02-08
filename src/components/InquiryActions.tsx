@@ -69,7 +69,7 @@ export default function InquiryActions({ inquiryId, currentStatus }: { inquiryId
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-40 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-50 overflow-hidden">
+        <div className="fixed sm:absolute right-4 sm:right-0 mt-2 w-40 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-[100] overflow-hidden">
           <div className="py-1" role="menu" aria-orientation="vertical">
             <div className="px-3 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100">Change Status</div>
             <button

@@ -6,6 +6,7 @@ import { usePathname, useSearchParams } from "next/navigation";
 export default function StatusLinksCard() {
   const [openStatus, setOpenStatus] = useState<string | null>(null);
   const [openSub, setOpenSub] = useState<string | null>(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isClient, setIsClient] = useState(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [scrolled, setScrolled] = useState(false);
@@ -21,7 +22,7 @@ export default function StatusLinksCard() {
     document.addEventListener("keydown", onKey);
     return () => { document.removeEventListener("mousedown", onDocMouseDown); document.removeEventListener("keydown", onKey); };
   }, []);
-  useEffect(() => { setOpenStatus(null); }, [pathname, params]);
+  useEffect(() => { setOpenStatus(null); setMobileMenuOpen(false); }, [pathname, params]);
   useEffect(() => { setOpenSub(null); }, [openStatus]);
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 10);
@@ -182,13 +183,27 @@ export default function StatusLinksCard() {
       ref={containerRef}
       className={`relative border-b border-gray-200 ${isClient && scrolled ? "bg-[#F4DDFF]" : "bg-white"} w-full z-[100]`}
     >
-      <div className="sm:hidden w-full bg-[#E5AFFF] border-b border-black/5 py-1.5 px-4 flex justify-center">
+      <div className="sm:hidden w-full bg-[#E5AFFF] border-b border-black/5 py-1.5 px-4 flex justify-between items-center">
+        <button 
+          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          className="p-2 rounded-md hover:bg-black/5 transition-colors focus:outline-none"
+          aria-label="Toggle Menu"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-6 h-6 text-[#32004A]">
+            {mobileMenuOpen ? (
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            ) : (
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+            )}
+          </svg>
+        </button>
+
         <Link href="/contact" prefetch={false} className="inline-flex items-center gap-1.5 btn-blue btn-glow-soft px-3 py-1.5 text-xs">
           <span className="underline-run">Sell Property</span>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3.5 h-3.5"><path d="M21 15a2 2 0 0 1-2 2h-3l-4 4v-4H7a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v9z"/></svg>
         </Link>
       </div>
-      <div className="px-3 py-1.5 mx-auto flex flex-wrap items-center justify-center sm:justify-center gap-x-6 gap-y-1.5 sm:gap-[2ch] text-center overflow-x-visible">
+      <div className={`${mobileMenuOpen ? "flex" : "hidden"} sm:flex px-3 py-1.5 mx-auto flex-col sm:flex-row flex-wrap items-center justify-center sm:justify-center gap-x-6 gap-y-3 sm:gap-y-1.5 sm:gap-[2ch] text-center overflow-x-visible pb-4 sm:pb-1.5`}>
         <Link prefetch={false} href="/" className="text-base font-semibold leading-tight text-[#32004A] hover:text-blue-600">
           Home
         </Link>
