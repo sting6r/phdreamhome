@@ -59,7 +59,7 @@ function LoginPageContent() {
     }
   }
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
+    supabase.auth.getSession().then(({ data }: { data: any }) => {
       if (data.session && !isPreviewPing) router.replace(callbackUrl);
     });
   }, [callbackUrl, isPreviewPing, router, supabase]);

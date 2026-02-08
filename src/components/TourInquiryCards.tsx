@@ -191,7 +191,7 @@ export default function TourInquiryCards({ inquiries }: { inquiries: any[] }) {
                     {inquiry.transcript ? "Latest Message (AI Chat)" : "Message"}
                   </div>
                   <p className="text-xs text-black line-clamp-3 italic leading-relaxed">
-                    "{getDisplayMessage(inquiry)}"
+                    &quot;{getDisplayMessage(inquiry)}&quot;
                   </p>
                 </div>
               </div>

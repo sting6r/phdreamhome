@@ -15,10 +15,10 @@ export default function UpdatePasswordPage() {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    const { data: sub } = supabase.auth.onAuthStateChange((event, _session) => {
+    const { data: sub } = supabase.auth.onAuthStateChange((event: any, _session: any) => {
       if (event === "PASSWORD_RECOVERY") setReady(true);
     });
-    supabase.auth.getSession().then(({ data }) => { if (data.session) setReady(true); });
+    supabase.auth.getSession().then(({ data }: { data: any }) => { if (data.session) setReady(true); });
     try {
       const sp = new URLSearchParams(window.location.search);
       const code = sp.get("code");
@@ -26,7 +26,7 @@ export default function UpdatePasswordPage() {
       const type = sp.get("type");
       if (type === "recovery") setReady(true);
       if (code) {
-        supabase.auth.exchangeCodeForSession(code).then(({ data, error }) => { if (!error && data.session) setReady(true); });
+        supabase.auth.exchangeCodeForSession(code).then(({ data, error }: { data: any, error: any }) => { if (!error && data.session) setReady(true); });
       } else if (token_hash && type === "recovery") {
         (supabase.auth as any).verifyOtp({ type: "recovery", token_hash }).then((res: any) => { if (!res?.error) setReady(true); });
       }

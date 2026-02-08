@@ -433,7 +433,7 @@ export default function AIAgent() {
     return () => {
       try { controller.abort(); } catch {}
     };
-  }, [mounted, syncTranscriptToDb]);
+  }, [mounted, syncTranscriptToDb, chatInstance, currentInquiryId]);
   
   useEffect(() => {
     try {
