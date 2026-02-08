@@ -45,13 +45,29 @@ const salesReportData = [
   { name: "Nov", sales: 5800000 },
   { name: "Dec", sales: 8500000 },
 ];
-const fetcher = async (u:string)=>{
+const fetcher = async (u: string) => {
   const { data } = await supabasePublic.auth.getSession();
   const token = data.session?.access_token;
-  const headers: Record<string,string> = {};
+  const headers: Record<string, string> = {};
   if (token) headers["Authorization"] = `Bearer ${token}`;
-  const r = await fetch(u, { headers });
-  return r.json();
+  
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+
+  try {
+    const r = await fetch(u, { 
+      headers,
+      signal: controller.signal
+    });
+    clearTimeout(timeoutId);
+    if (!r.ok) throw new Error(`Fetch failed: ${r.status}`);
+    return r.json();
+  } catch (err: any) {
+    if (err.name === 'AbortError') {
+      console.warn(`Fetch to ${u} timed out`);
+    }
+    throw err;
+  }
 };
 
 export default function DashboardPage() {

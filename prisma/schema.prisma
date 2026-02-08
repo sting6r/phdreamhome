@@ -177,6 +177,9 @@ model Inquiry {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   listing   Listing? @relation(fields: [listingId], references: [id], onDelete: SetNull)
+
+  @@index([type])
+  @@index([createdAt(sort: Desc)])
 }
 
 model Sale {

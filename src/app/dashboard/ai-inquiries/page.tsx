@@ -10,12 +10,16 @@ export default async function AIInquiriesPage() {
   let fetchError: any = null;
 
   try {
-    // Attempt Prisma fetch with retry
-    inquiries = await withRetry(() => prisma.inquiry.findMany({
+    console.log("Fetching AI inquiries via Prisma...");
+    const start = Date.now();
+    
+    // Add a local timeout for the Prisma operation to prevent RSC hanging
+    const prismaPromise = withRetry(() => prisma.inquiry.findMany({
       where: {
         type: "AI Lead"
       },
       orderBy: { createdAt: "desc" },
+      take: 50, // Limit to latest 50 for performance
       include: {
         listing: {
           select: {
@@ -25,19 +29,30 @@ export default async function AIInquiriesPage() {
         }
       }
     }), 2, 500);
-  } catch (error) {
-    console.warn("Prisma failed to fetch AI inquiries, attempting Supabase fallback:", error);
+
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error("Prisma timeout")), 8000)
+    );
+
+    inquiries = await Promise.race([prismaPromise, timeoutPromise]) as any[];
+    console.log(`Prisma AI fetch successful in ${Date.now() - start}ms`);
+  } catch (error: any) {
+    console.warn(`Prisma AI failed or timed out: ${error.message}, attempting Supabase fallback...`);
     
     // Supabase Fallback
     try {
+      console.log("Fetching AI inquiries via Supabase fallback...");
+      const start = Date.now();
       const { data, error: sbError } = await supabaseAdmin
         .from('Inquiry')
         .select('*, listing:Listing(title, slug)')
         .eq('type', 'AI Lead')
-        .order('createdAt', { ascending: false });
+        .order('createdAt', { ascending: false })
+        .limit(50);
     
       if (sbError) throw sbError;
       inquiries = data || [];
+      console.log(`Supabase AI fetch successful in ${Date.now() - start}ms`);
     } catch (fallbackError) {
       console.error("Both Prisma and Supabase failed to fetch AI inquiries:", fallbackError);
       fetchError = fallbackError;

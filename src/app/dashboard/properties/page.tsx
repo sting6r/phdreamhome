@@ -4,18 +4,34 @@ import Link from "next/link";
 import { useState, useEffect, useRef } from "react";
 
 import { supabasePublic } from "@lib/supabase";
-const fetcher = async (u:string)=>{
+const fetcher = async (u: string) => {
   const { data } = await supabasePublic.auth.getSession();
   const token = data.session?.access_token;
-  const headers: Record<string,string> = {};
+  const headers: Record<string, string> = {};
   if (token) headers["Authorization"] = `Bearer ${token}`;
-  const r = await fetch(u, { headers });
-  const text = await r.text();
+  
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+
   try {
-    return JSON.parse(text);
-  } catch(e) {
-    console.error("Fetcher parse error:", u, r.status, text.slice(0, 200));
-    throw new Error(`Failed to parse response from ${u}`);
+    const r = await fetch(u, { 
+      headers,
+      signal: controller.signal
+    });
+    clearTimeout(timeoutId);
+    
+    const text = await r.text();
+    try {
+      return JSON.parse(text);
+    } catch (e) {
+      console.error("Fetcher parse error:", u, r.status, text.slice(0, 200));
+      throw new Error(`Failed to parse response from ${u}`);
+    }
+  } catch (err: any) {
+    if (err.name === 'AbortError') {
+      console.warn(`Fetch to ${u} timed out`);
+    }
+    throw err;
   }
 };
 
