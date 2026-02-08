@@ -715,7 +715,7 @@ function PropertiesByStatusPageContent({ params }: { params: Promise<{ status: s
               <div className={msgWordCount >= 270 ? "text-xs text-red-600 text-right" : "text-xs text-slate-500 text-right"}>{msgWordCount}/300 words</div>
               {inqError && <div className="text-red-600 text-xs cursor-pointer hover:opacity-70 transition-opacity" onClick={() => setInqError(null)} title="Click to dismiss">{inqError}</div>}
               {inqSent && <div className="text-green-600 text-xs cursor-pointer hover:opacity-70 transition-opacity" onClick={() => setInqSent(null)} title="Click to dismiss">{inqSent}</div>}
-              {inqDev && <div className="text-orange-600 text-xs">Emails are not delivered in development. Configure SMTP to enable delivery.</div>}
+              {inqDev && !inqSent && <div className="text-orange-600 text-xs">Emails are not delivered in development. Configure SMTP to enable delivery.</div>}
               <button type="submit" className="btn-blue w-full text-center" disabled={inqLoading}>{inqLoading ? "Sending..." : "Send Inquiry"}</button>
             </form>
           </div>
