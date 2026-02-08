@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { supabasePublic } from "@lib/supabase";
+import { supabase } from "@lib/supabase";
 import MainFooterCards from "../../components/MainFooterCards";
 
 export default function UpdatePasswordPage() {
@@ -15,10 +15,10 @@ export default function UpdatePasswordPage() {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    const { data: sub } = supabasePublic.auth.onAuthStateChange((event, _session) => {
+    const { data: sub } = supabase.auth.onAuthStateChange((event, _session) => {
       if (event === "PASSWORD_RECOVERY") setReady(true);
     });
-    supabasePublic.auth.getSession().then(({ data }) => { if (data.session) setReady(true); });
+    supabase.auth.getSession().then(({ data }) => { if (data.session) setReady(true); });
     try {
       const sp = new URLSearchParams(window.location.search);
       const code = sp.get("code");
@@ -26,9 +26,9 @@ export default function UpdatePasswordPage() {
       const type = sp.get("type");
       if (type === "recovery") setReady(true);
       if (code) {
-        supabasePublic.auth.exchangeCodeForSession(code).then(({ data, error }) => { if (!error && data.session) setReady(true); });
+        supabase.auth.exchangeCodeForSession(code).then(({ data, error }) => { if (!error && data.session) setReady(true); });
       } else if (token_hash && type === "recovery") {
-        (supabasePublic.auth as any).verifyOtp({ type: "recovery", token_hash }).then((res: any) => { if (!res?.error) setReady(true); });
+        (supabase.auth as any).verifyOtp({ type: "recovery", token_hash }).then((res: any) => { if (!res?.error) setReady(true); });
       }
     } catch {}
     return () => { sub.subscription.unsubscribe(); };
@@ -41,7 +41,7 @@ export default function UpdatePasswordPage() {
       if (!ready) throw new Error("Reset link invalid or expired");
       if (password.length < 8) throw new Error("Password must be at least 8 characters");
       if (password !== confirm) throw new Error("Passwords do not match");
-      const { error } = await supabasePublic.auth.updateUser({ password });
+      const { error } = await supabase.auth.updateUser({ password });
       if (error) throw new Error("Failed to update password");
       
       try {
@@ -49,7 +49,7 @@ export default function UpdatePasswordPage() {
       } catch {}
       
       try {
-        await supabasePublic.auth.signOut({ scope: "local" });
+        await supabase.auth.signOut({ scope: "local" });
       } catch {}
 
       router.replace("/4120626");

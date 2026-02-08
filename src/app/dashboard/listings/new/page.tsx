@@ -1,7 +1,7 @@
 "use client";
 import { useState, useRef } from "react";
 import Image from "next/image";
-import { supabasePublic } from "@lib/supabase";
+import { supabase } from "@lib/supabase";
 import CurrencyInput from "@components/CurrencyInput";
 
 export default function NewListingPage() {
@@ -86,7 +86,7 @@ export default function NewListingPage() {
     (payload as any).seoTitle = seoTitle;
     (payload as any).seoDescription = seoDescription;
     (payload as any).seoKeyword = seoKeyword;
-    const { data } = await supabasePublic.auth.getSession();
+    const { data } = await supabase.auth.getSession();
     const token = data.session?.access_token;
     const headers: Record<string,string> = { "Content-Type": "application/json" };
     if (token) headers["Authorization"] = `Bearer ${token}`;
@@ -102,7 +102,7 @@ export default function NewListingPage() {
   }
   async function removeAt(i: number) {
     const path = images[i];
-    const { data } = await supabasePublic.auth.getSession();
+    const { data } = await supabase.auth.getSession();
     const token = data.session?.access_token;
     const headers: Record<string,string> = { "Content-Type": "application/json" };
     if (token) headers["Authorization"] = `Bearer ${token}`;

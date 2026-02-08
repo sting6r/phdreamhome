@@ -2,7 +2,7 @@
 import { useEffect, useState, useRef, use } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { supabasePublic } from "@lib/supabase";
+import { supabase } from "@lib/supabase";
 import CurrencyInput from "@components/CurrencyInput";
 
 import { Suspense } from "react";
@@ -53,7 +53,7 @@ function EditListingPageContent({ params }: { params: Promise<{ id: string }> })
   });
   useEffect(() => {
     (async () => {
-      const { data } = await supabasePublic.auth.getSession();
+      const { data } = await supabase.auth.getSession();
       const token = data.session?.access_token;
       const headers: Record<string,string> = {};
       if (token) headers["Authorization"] = `Bearer ${token}`;
@@ -129,7 +129,7 @@ function EditListingPageContent({ params }: { params: Promise<{ id: string }> })
     setSaving(true);
     setSaveProgress(10);
     const timer = setInterval(() => setSaveProgress(p => Math.min(95, p + 5)), 200);
-    const { data } = await supabasePublic.auth.getSession();
+    const { data } = await supabase.auth.getSession();
     const token = data.session?.access_token;
     const headers: Record<string,string> = { "Content-Type": "application/json" };
     if (token) headers["Authorization"] = `Bearer ${token}`;
@@ -147,7 +147,7 @@ function EditListingPageContent({ params }: { params: Promise<{ id: string }> })
   async function removeAt(i: number) {
     const path = images[i];
     const imgId = imageIds[i] || undefined;
-    const { data } = await supabasePublic.auth.getSession();
+    const { data } = await supabase.auth.getSession();
     const token = data.session?.access_token;
     const headers: Record<string,string> = { "Content-Type": "application/json" };
     if (token) headers["Authorization"] = `Bearer ${token}`;

@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState, useCallback } from "react";
 import Image from "next/image";
-import { supabasePublic } from "@lib/supabase";
+import { supabase } from "@lib/supabase";
 
 export default function ProfilePage() {
   const [form, setForm] = useState({ name: "", email: "", address: "", phone: "", image: "", role: "", licenseNo: "", dhsudAccredNo: "", facebook: "", whatsapp: "", viber: "", instagram: "", telegram: "", youtube: "", twitter: "" });
@@ -139,7 +139,7 @@ export default function ProfilePage() {
       const email = form.email;
       if (!email) throw new Error("User email not found. Please refresh the page.");
 
-      const { error: signInError } = await supabasePublic.auth.signInWithPassword({
+      const { error: signInError } = await supabase.auth.signInWithPassword({
         email: email,
         password: pw.current,
       });
@@ -147,7 +147,7 @@ export default function ProfilePage() {
       if (signInError) throw new Error("Incorrect current password");
 
       // Update password
-      const { error } = await supabasePublic.auth.updateUser({ password: pw.next });
+      const { error } = await supabase.auth.updateUser({ password: pw.next });
       if (error) throw new Error(error.message || "Failed to change password");
 
       setPwMsg("Password changed successfully");

@@ -695,6 +695,7 @@ function PropertiesByStatusPageContent({ params }: { params: Promise<{ status: s
                 <label className="text-sm font-semibold text-black">Subject *</label>
                 <select className="input" required value={inqSubject} onChange={e=>{setInqSubject(e.target.value); clearInqMessages();}}>
                   <option value="">Select a topic</option>
+                  <option>Tour/Site Viewing</option>
                   <option>Buying</option>
                   <option>Selling</option>
                   <option>Renting</option>

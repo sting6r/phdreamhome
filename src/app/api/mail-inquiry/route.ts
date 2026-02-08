@@ -18,6 +18,8 @@ export async function POST(req: Request) {
     const status = String(body?.status || "").trim();
     const topic = String(body?.topic || body?.subject || "").trim();
     const listingId = body?.listingId;
+    const tourDate = body?.tourDate;
+    const tourTime = body?.tourTime;
 
     const type = String(body?.type || "General").trim();
 
@@ -53,6 +55,8 @@ export async function POST(req: Request) {
             status: status || "Pending",
             subject: topic,
             type: type,
+            tourDate: tourDate || null,
+            tourTime: tourTime || null,
             listingId: listingId || null,
             recipientEmail: agentEmail
           }
@@ -71,6 +75,8 @@ export async function POST(req: Request) {
           status: status || "Pending",
           subject: topic,
           type: type,
+          tourDate: tourDate || null,
+          tourTime: tourTime || null,
           listingId: listingId || null,
           recipientEmail: agentEmail
         });
@@ -80,10 +86,15 @@ export async function POST(req: Request) {
       }
     }
 
-    const subject = topic ? `Rental Inquiry - ${topic}` : "Rental Inquiry";
+    const subject = type === "Tour" ? `Tour Request - ${topic || "Property"}` : (topic ? `Inquiry - ${topic}` : "Inquiry");
     const html = `
       <div style="font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; color:#111">
-        <h2 style="margin:0 0 12px">Rental Inquiry</h2>
+        <h2 style="margin:0 0 12px">${type === "Tour" ? "Tour Request" : "Inquiry"}</h2>
+        <div style="margin:0 0 8px"><strong>Type:</strong> ${type}</div>
+        ${type === "Tour" ? `
+          <div style="margin:0 0 8px"><strong>Tour Date:</strong> ${tourDate || "N/A"}</div>
+          <div style="margin:0 0 8px"><strong>Tour Time:</strong> ${tourTime || "N/A"}</div>
+        ` : ""}
         <div style="margin:0 0 8px"><strong>Subject:</strong> ${topic || "N/A"}</div>
         <div style="margin:0 0 8px"><strong>Status:</strong> ${status || "N/A"}</div>
         <div style="margin:0 0 8px"><strong>Name:</strong> ${name || "N/A"}</div>
@@ -101,11 +112,16 @@ export async function POST(req: Request) {
       targetInfo = await sendEmail(targetEmail, subject, html, email);
     }
 
-    const confirmSubject = "Your Rental Inquiry Received";
+    const confirmSubject = type === "Tour" ? "Your Tour Request Received" : "Your Inquiry Received";
     const confirmHtml = `
       <div style="font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; color:#111">
-        <h2 style="margin:0 0 12px">Thank you for your inquiry</h2>
-        <p style="margin:0 0 12px">We received your inquiry and will get back to you shortly.</p>
+        <h2 style="margin:0 0 12px">Thank you for your ${type === "Tour" ? "tour request" : "inquiry"}</h2>
+        <p style="margin:0 0 12px">We received your request and will get back to you shortly.</p>
+        <div style="margin:0 0 8px"><strong>Type:</strong> ${type}</div>
+        ${type === "Tour" ? `
+          <div style="margin:0 0 8px"><strong>Tour Date:</strong> ${tourDate || "N/A"}</div>
+          <div style="margin:0 0 8px"><strong>Tour Time:</strong> ${tourTime || "N/A"}</div>
+        ` : ""}
         <div style="margin:0 0 8px"><strong>Subject:</strong> ${topic || "N/A"}</div>
         <div style="margin:0 0 8px"><strong>Status:</strong> ${status || "N/A"}</div>
         <div style="margin:0 0 8px"><strong>Name:</strong> ${name || "N/A"}</div>

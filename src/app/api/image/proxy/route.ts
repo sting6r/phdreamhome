@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createSignedUrl, parseBucketSpec, supabasePublic, supabaseAdmin } from "@lib/supabase";
+import { createSignedUrl, parseBucketSpec, supabaseAdmin } from "@lib/supabase";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -129,7 +129,7 @@ export async function GET(req: Request) {
     if (!buf) {
       let direct: string | null = null;
       try {
-        const { data } = supabasePublic.storage.from(bucketName).getPublicUrl(objectPath);
+        const { data } = supabaseAdmin.storage.from(bucketName).getPublicUrl(objectPath);
         direct = data.publicUrl || null;
       } catch {}
       if (!direct) direct = await createSignedUrl(path);

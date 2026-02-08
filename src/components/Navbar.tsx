@@ -3,7 +3,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useEffect, useState, useRef, useMemo } from "react";
 import { usePathname } from "next/navigation";
-import { supabasePublic, createClientSideClient } from "@lib/supabase";
+import { createClientSideClient } from "@lib/supabase";
 
 export default function Navbar() {
   const [mounted, setMounted] = useState(false);
@@ -108,7 +108,7 @@ export default function Navbar() {
     // Use the same client for everything
     const auth = supabase.auth;
 
-    auth.getSession().then(({ data }) => {
+    auth.getSession().then(({ data }: { data: { session: any } }) => {
       if (controller.signal.aborted) return;
       const session = data.session;
       setLoggedIn(!!session);
@@ -146,7 +146,7 @@ export default function Navbar() {
       loadProfileAvatar(controller.signal);
     });
 
-    const { data: sub } = auth.onAuthStateChange((_e, session) => {
+    const { data: sub } = auth.onAuthStateChange((_e: any, session: any) => {
       console.log("Navbar: Auth state change:", _e);
       setLoggedIn(!!session);
       if (session) {

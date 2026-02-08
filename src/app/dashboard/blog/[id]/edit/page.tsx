@@ -2,7 +2,7 @@
 import Image from "next/image";
 import { type ReactNode, useEffect, useRef, useState, use } from "react";
 import { useRouter } from "next/navigation";
-import { supabasePublic } from "@lib/supabase";
+import { supabase } from "@lib/supabase";
 type MediaItem = {
   id?: string;
   path: string;
@@ -853,7 +853,7 @@ export default function EditBlogPage({ params }: { params: Promise<{ id: string 
     let alive = true;
     (async () => {
       try {
-        const { data } = await supabasePublic.auth.getSession();
+        const { data } = await supabase.auth.getSession();
         const token = data.session?.access_token;
         const headers: Record<string, string> = {};
         if (token) headers["Authorization"] = `Bearer ${token}`;
@@ -1119,7 +1119,7 @@ export default function EditBlogPage({ params }: { params: Promise<{ id: string 
     setSaveErr(null);
     setSaveMsg(null);
     try {
-      const { data } = await supabasePublic.auth.getSession();
+      const { data } = await supabase.auth.getSession();
       const token = data.session?.access_token;
       const headers: Record<string, string> = { "Content-Type": "application/json" };
       if (token) headers["Authorization"] = `Bearer ${token}`;

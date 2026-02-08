@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { supabasePublic } from "@lib/supabase";
+import { supabase } from "@lib/supabase";
 import MainFooterCards from "../../components/MainFooterCards";
 
 export default function RegisterPage() {
@@ -22,7 +22,7 @@ export default function RegisterPage() {
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setErr(null); setMsg(null); setLoading(true);
-    const { data, error } = await supabasePublic.auth.signUp({ email: form.email, password: form.password });
+    const { data, error } = await supabase.auth.signUp({ email: form.email, password: form.password });
     setLoading(false);
     if (error || !data.user) { 
       setErr(getFriendlyError(error?.message || "Registration failed")); 
@@ -48,7 +48,7 @@ export default function RegisterPage() {
         setResendStatus("error");
         return; 
       }
-      const { error } = await supabasePublic.auth.resend({ type: "signup", email });
+      const { error } = await supabase.auth.resend({ type: "signup", email });
       if (error) {
         console.error("Resend error:", error);
         setResendMsg(getFriendlyError(error.message || "Failed to send verification email"));

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import InquiryActions from "./InquiryActions";
@@ -36,7 +36,12 @@ export default function InquiriesTable({
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedInquiry, setSelectedInquiry] = useState<Inquiry | null>(null);
+  const [mounted, setMounted] = useState(false);
   const router = useRouter();
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const toggleSelectAll = () => {
     if (selectedIds.length === inquiries.length) {
@@ -141,6 +146,7 @@ export default function InquiriesTable({
                 </th>
                 <th className="px-4 py-3 font-semibold">Date</th>
                 <th className="px-4 py-3 font-semibold">Time</th>
+                <th className="px-4 py-3 font-semibold">Type</th>
                 <th className="px-4 py-3 font-semibold">Name</th>
                 <th className="px-4 py-3 font-semibold">Email</th>
                 <th className="px-4 py-3 font-semibold">Phone</th>
@@ -155,7 +161,7 @@ export default function InquiriesTable({
             <tbody className="divide-y divide-slate-100">
               {inquiries.length === 0 ? (
                 <tr>
-                  <td colSpan={11} className="px-4 py-8 text-center text-slate-500">
+                  <td colSpan={13} className="px-4 py-8 text-center text-slate-500">
                     No inquiries received yet.
                   </td>
                 </tr>
@@ -176,10 +182,23 @@ export default function InquiriesTable({
                       />
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap text-slate-500">
-                      {new Date(inquiry.createdAt).toLocaleDateString()}
+                      {!mounted ? "..." : new Date(inquiry.createdAt).toLocaleDateString()}
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap text-slate-500 text-xs">
-                      {new Date(inquiry.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      {!mounted ? "..." : new Date(inquiry.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
+                        inquiry.type === "Tour" ? "bg-purple-100 text-purple-700" : 
+                        inquiry.type === "Contact" ? "bg-blue-100 text-blue-700" :
+                        inquiry.type === "Listing" || inquiry.type === "For Sale" ? "bg-green-100 text-green-700" :
+                        inquiry.type === "For Rent" ? "bg-amber-100 text-amber-700" :
+                        inquiry.type === "Preselling" ? "bg-cyan-100 text-cyan-700" :
+                        inquiry.type === "RFO" ? "bg-indigo-100 text-indigo-700" :
+                        "bg-slate-100 text-slate-700"
+                      }`}>
+                        {inquiry.type || "General"}
+                      </span>
                     </td>
                     <td className="px-4 py-3">
                       <div className="font-medium text-slate-900">{inquiry.name}</div>
@@ -198,18 +217,6 @@ export default function InquiriesTable({
                       </td>
                     )}
                     <td className="px-4 py-3">
-                      <div className="flex flex-wrap gap-1 mb-1">
-                        {inquiry.type && inquiry.type !== "Inquiry" && inquiry.type !== "General" && (
-                          <span className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
-                            inquiry.type === "Tour" ? "bg-purple-100 text-purple-700" : 
-                            inquiry.type === "Contact" ? "bg-blue-100 text-blue-700" :
-                            inquiry.type === "Listing" ? "bg-green-100 text-green-700" :
-                            "bg-slate-100 text-slate-700"
-                          }`}>
-                            {inquiry.type}
-                          </span>
-                        )}
-                      </div>
                       <div className="font-medium text-slate-900 text-xs">{inquiry.subject || (type === "ai" ? "AI Inquiry" : "General Inquiry")}</div>
                       {type === "general" && inquiry.type === "Tour" && inquiry.tourDate && (
                         <div className="mt-1 flex items-center gap-1.5">
@@ -292,8 +299,12 @@ export default function InquiriesTable({
               <div>
                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Date Received</label>
                 <p className="text-slate-900 font-medium">
-                  {new Date(selectedInquiry.createdAt).toLocaleDateString()} @ {new Date(selectedInquiry.createdAt).toLocaleTimeString()}
+                  {!mounted ? "..." : new Date(selectedInquiry.createdAt).toLocaleDateString()} @ {!mounted ? "..." : new Date(selectedInquiry.createdAt).toLocaleTimeString()}
                 </p>
+              </div>
+              <div>
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Classification</label>
+                <p className="text-slate-900 font-medium">{selectedInquiry.type || "General Inquiry"}</p>
               </div>
             </div>
 

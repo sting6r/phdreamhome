@@ -10,7 +10,7 @@ import Image from "next/image";
 import Script from "next/script";
 import { X, Send, User, Minimize2, Maximize2, Loader2, ExternalLink, Image as ImageIcon, ChevronLeft, Undo2, GripHorizontal } from "lucide-react";
 import Link from "next/link";
-import { supabasePublic } from "@/lib/supabase";
+import { supabase } from "@/lib/supabase";
 
 export default function AIAgent() {
   const pathname = usePathname();
@@ -56,6 +56,7 @@ export default function AIAgent() {
   const chatInputRef = useRef<HTMLInputElement>(null);
   const messagesRef = useRef<Message[]>([]);
   const inquiryIdRef = useRef<string | null>(null);
+  const hasFetchedProfile = useRef(false);
   const propertyFormJustSubmittedRef = useRef<boolean>(false);
   const syncAbortControllerRef = useRef<AbortController | null>(null);
 
@@ -308,6 +309,9 @@ export default function AIAgent() {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    if (!mounted || hasFetchedProfile.current) return;
+    hasFetchedProfile.current = true;
+
     const controller = new AbortController();
     const sig = controller.signal;
     const fetchProfileAndHistory = async () => {
@@ -429,7 +433,7 @@ export default function AIAgent() {
     return () => {
       try { controller.abort(); } catch {}
     };
-  }, [syncTranscriptToDb, currentInquiryId, chatInstance]);
+  }, [mounted, syncTranscriptToDb]);
   
   useEffect(() => {
     try {
@@ -557,8 +561,8 @@ export default function AIAgent() {
     const t = match ? parseInt(match[1], 10) : Date.now();
     return new Date(t);
   };
-  const formatDate = (d: Date) => d.toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" });
-  const formatTime = (d: Date) => d.toLocaleTimeString("en-PH", { hour: "numeric", minute: "2-digit" });
+  const formatDate = (d: Date) => !mounted ? "..." : d.toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" });
+  const formatTime = (d: Date) => !mounted ? "..." : d.toLocaleTimeString("en-PH", { hour: "numeric", minute: "2-digit" });
   const makeSessionId = () => {
     try {
       const rnd = (typeof crypto !== 'undefined' && (crypto as any).randomUUID) ? (crypto as any).randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2,8)}`;
@@ -1415,7 +1419,7 @@ export default function AIAgent() {
         const fileName = `${Math.random().toString(36).substring(2)}_${Date.now()}.${fileExt}`;
         const filePath = `ai-inquiries/${fileName}`;
 
-        const { error } = await supabasePublic.storage
+        const { error } = await supabase.storage
           .from('images')
           .upload(filePath, imageFile);
 
@@ -1424,7 +1428,7 @@ export default function AIAgent() {
           throw error;
         }
 
-        const { data: { publicUrl } } = supabasePublic.storage
+        const { data: { publicUrl } } = supabase.storage
           .from('images')
           .getPublicUrl(filePath);
 

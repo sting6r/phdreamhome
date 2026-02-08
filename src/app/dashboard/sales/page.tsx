@@ -1,11 +1,11 @@
 "use client";
 import { useState, useEffect } from "react";
 import useSWR from "swr";
-import { supabasePublic } from "@lib/supabase";
+import { supabase } from "@lib/supabase";
 import CurrencyInput from "@components/CurrencyInput";
 
 const fetcher = async (u: string) => {
-  const { data } = await supabasePublic.auth.getSession();
+  const { data } = await supabase.auth.getSession();
   const token = data.session?.access_token;
   const headers: Record<string, string> = {};
   if (token) headers["Authorization"] = `Bearer ${token}`;
@@ -148,7 +148,7 @@ export default function SalesPage() {
   const handleDelete = async (id: string) => {
     if (!confirm("Are you sure you want to delete this sale record?")) return;
     try {
-      const { data } = await supabasePublic.auth.getSession();
+      const { data } = await supabase.auth.getSession();
       const token = data.session?.access_token;
       const headers: Record<string, string> = {};
       if (token) headers["Authorization"] = `Bearer ${token}`;
@@ -211,7 +211,7 @@ export default function SalesPage() {
     const payload = { ...formData, amount: amountValue, status: activeTab };
     
     try {
-      const { data } = await supabasePublic.auth.getSession();
+      const { data } = await supabase.auth.getSession();
       const token = data.session?.access_token;
       const headers: Record<string, string> = { "Content-Type": "application/json" };
       if (token) headers["Authorization"] = `Bearer ${token}`;

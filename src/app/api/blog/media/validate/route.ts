@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { prisma } from "@lib/prisma";
-import { supabaseAdmin, supabasePublic, bucketBlogImages, bucketBlogVideos, createSignedUrl, parseBucketSpec } from "@lib/supabase";
+import { supabaseAdmin, bucketBlogImages, bucketBlogVideos, createSignedUrl, parseBucketSpec } from "@lib/supabase";
 export const runtime = "nodejs";
 
 async function exists(bucketName: string, objectPath: string): Promise<boolean> {
@@ -10,7 +10,7 @@ async function exists(bucketName: string, objectPath: string): Promise<boolean> 
     if (dl.data) return true;
   } catch {}
   try {
-    const { data } = supabasePublic.storage.from(bucketName).getPublicUrl(objectPath);
+    const { data } = supabaseAdmin.storage.from(bucketName).getPublicUrl(objectPath);
     const url = data.publicUrl || null;
     if (url) {
       const r = await fetch(url, { method: "HEAD", cache: "no-store" });

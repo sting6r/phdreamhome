@@ -18,11 +18,31 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       transcriptCount: Array.isArray(transcript) ? transcript.length : (transcript ? 1 : 0) 
     });
 
+    // Check if transcript indicates a tour request
+    let tourUpdate = {};
+    if (Array.isArray(transcript)) {
+      const fullText = transcript.map(m => (m as any).content || "").join(" ").toLowerCase();
+      const hasTourRequest = 
+        fullText.includes("schedule a tour") || 
+        fullText.includes("site viewing") || 
+        fullText.includes("visit the property") ||
+        fullText.includes("book a tour") ||
+        fullText.includes("want to see the property");
+
+      if (hasTourRequest) {
+        tourUpdate = {
+          type: "Tour",
+          subject: "Tour Request from AI Agent"
+        };
+      }
+    }
+
     const updated = await withRetry(() => prisma.inquiry.update({
       where: { id },
       data: { 
         ...(status !== undefined && { status }),
-        ...(transcript !== undefined && { transcript })
+        ...(transcript !== undefined && { transcript }),
+        ...tourUpdate
       }
     }));
 

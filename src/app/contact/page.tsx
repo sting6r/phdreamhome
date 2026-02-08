@@ -154,6 +154,7 @@ export default function ContactPage() {
                   <label className="label">Subject *</label>
                   <select className="input" value={form.subject} onChange={e=>updateForm({ subject: e.target.value})}>
                     <option value="">Select a topic</option>
+                    <option>Tour/Site Viewing</option>
                     <option>Buying</option>
                     <option>Selling</option>
                     <option>Renting</option>

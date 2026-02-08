@@ -54,11 +54,12 @@ export const bucketBlogImages = clean(process.env.SUPABASE_BUCKET_BLOG_IMAGES) ?
 export const bucketBlogVideos = clean(process.env.SUPABASE_BUCKET_BLOG_VIDEOS) ?? "blog video";
 
 // Legacy client for compatibility - try to avoid using this for auth in Next.js
+// Persistence disabled to prevent conflicts with the SSR client
 export const supabasePublic = createClient(safeUrl, anon, { 
   auth: { 
-    persistSession: true, 
-    autoRefreshToken: true, 
-    detectSessionInUrl: true 
+    persistSession: false, 
+    autoRefreshToken: false, 
+    detectSessionInUrl: false 
   } 
 });
 
@@ -68,9 +69,18 @@ export const supabaseAdmin = typeof window === "undefined"
   : (undefined as unknown as ReturnType<typeof createClient>);
 
 // Recommended way to create clients in Next.js
+let browserClient: ReturnType<typeof createBrowserClient> | undefined;
+
 export function createClientSideClient() {
-  return createBrowserClient(safeUrl, anon);
+  if (typeof window === "undefined") return createBrowserClient(safeUrl, anon);
+  if (!browserClient) {
+    browserClient = createBrowserClient(safeUrl, anon);
+  }
+  return browserClient;
 }
+
+// Export a single instance for easier use
+export const supabase = typeof window !== "undefined" ? createClientSideClient() : supabasePublic;
 
 export function parseBucketSpec(p: string) {
   const i = p.indexOf(":");

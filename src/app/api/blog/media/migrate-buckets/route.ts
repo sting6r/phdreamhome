@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { prisma } from "@lib/prisma";
-import { supabaseAdmin, supabasePublic, bucket, bucketVideos, bucketBlogImages, bucketBlogVideos, createSignedUrl, parseBucketSpec } from "@lib/supabase";
+import { supabaseAdmin, bucket, bucketVideos, bucketBlogImages, bucketBlogVideos, createSignedUrl, parseBucketSpec } from "@lib/supabase";
 
 export const runtime = "nodejs";
 
@@ -64,7 +64,7 @@ export async function POST(req: Request) {
                 const pub = `${base}/storage/v1/object/public/${encodeURIComponent(sourceBucket)}/${objectPath}`;
                 direct = pub;
               } else {
-                const { data } = supabasePublic.storage.from(sourceBucket).getPublicUrl(objectPath);
+                const { data } = supabaseAdmin.storage.from(sourceBucket).getPublicUrl(objectPath);
                 direct = data.publicUrl || null;
               }
             } catch {}
@@ -119,7 +119,7 @@ export async function POST(req: Request) {
                     const pub = `${base}/storage/v1/object/public/${encodeURIComponent(bucketName || bucket)}/${objectPath}`;
                     direct = pub;
                   } else {
-                    const { data } = supabasePublic.storage.from(bucketName || bucket).getPublicUrl(objectPath);
+                    const { data } = supabaseAdmin.storage.from(bucketName || bucket).getPublicUrl(objectPath);
                     direct = data.publicUrl || null;
                   }
                 } catch {}

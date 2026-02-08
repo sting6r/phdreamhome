@@ -2,7 +2,7 @@
 import Image from "next/image";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { supabasePublic } from "@lib/supabase";
+import { supabase } from "@lib/supabase";
 
 function renderInlineFormatting(text: string) {
   if (typeof text !== "string") return text;
@@ -230,7 +230,7 @@ export default function NewBlogPage() {
       try {
         setMyBlogsLoading(true);
         setMyBlogsErr(null);
-        const { data } = await supabasePublic.auth.getSession();
+        const { data } = await supabase.auth.getSession();
         const token = data.session?.access_token;
         const headers: Record<string, string> = {};
         if (token) headers["Authorization"] = `Bearer ${token}`;
@@ -259,7 +259,7 @@ export default function NewBlogPage() {
   async function publishExisting(id: string) {
     try {
       setActionBusyId(id);
-      const { data } = await supabasePublic.auth.getSession();
+      const { data } = await supabase.auth.getSession();
       const token = data.session?.access_token;
       const headers: Record<string, string> = { "Content-Type": "application/json" };
       if (token) headers["Authorization"] = `Bearer ${token}`;
@@ -281,7 +281,7 @@ export default function NewBlogPage() {
   async function deleteExisting(id: string) {
     try {
       setActionBusyId(id);
-      const { data } = await supabasePublic.auth.getSession();
+      const { data } = await supabase.auth.getSession();
       const token = data.session?.access_token;
       const headers: Record<string, string> = {};
       if (token) headers["Authorization"] = `Bearer ${token}`;
@@ -991,7 +991,7 @@ export default function NewBlogPage() {
     setSaveErr(null);
     setSaveMsg(null);
     try {
-      const { data } = await supabasePublic.auth.getSession();
+      const { data } = await supabase.auth.getSession();
       const token = data.session?.access_token;
       const headers: Record<string, string> = { "Content-Type": "application/json" };
       if (token) headers["Authorization"] = `Bearer ${token}`;

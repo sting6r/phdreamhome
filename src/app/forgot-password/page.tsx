@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { supabasePublic } from "@lib/supabase";
+import { supabase } from "@lib/supabase";
 import MainFooterCards from "../../components/MainFooterCards";
 
 export default function ForgotPasswordPage() {
@@ -15,7 +15,7 @@ export default function ForgotPasswordPage() {
     setError("");
     setMessage("");
     try {
-      const { error } = await supabasePublic.auth.resetPasswordForEmail(email, { redirectTo: `${location.origin}/update-password` });
+      const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: `${location.origin}/update-password` });
       if (error) throw new Error("Failed to send reset email");
       setMessage("If an account with that email exists, a password reset link has been sent.");
     } catch (err: any) {

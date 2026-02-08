@@ -121,13 +121,17 @@ export default function ContactAgentCard({
     e.preventDefault();
     setLoading(true);
     try {
-      const res = await fetch("/api/tour-request", {
+      const res = await fetch("/api/mail-inquiry", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...tourForm,
           listingId,
-          listingTitle
+          topic: `Tour Request: ${listingTitle}`,
+          type: "Tour",
+          tourDate: tourForm.date,
+          tourTime: tourForm.time,
+          status: "Interested"
         })
       });
       const data = await res.json();
@@ -248,9 +252,24 @@ export default function ContactAgentCard({
                   className="input text-sm" 
                   required
                   value={form.subject}
-                  onChange={e => setForm({...form, subject: e.target.value})}
+                  onChange={e => {
+                    const val = e.target.value;
+                    if (val === "Tour/Site Viewing") {
+                      setIsTourOpen(true);
+                      setIsOpen(false);
+                      setTourForm(prev => ({
+                        ...prev,
+                        name: form.name || prev.name,
+                        email: form.email || prev.email,
+                        phone: form.phone || prev.phone
+                      }));
+                    } else {
+                      setForm({...form, subject: val});
+                    }
+                  }}
                 >
                   <option value="">Select a topic</option>
+                  <option>Tour/Site Viewing</option>
                   <option>Buying</option>
                   <option>Selling</option>
                   <option>Renting</option>

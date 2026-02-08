@@ -14,7 +14,7 @@ import {
   Area
 } from "recharts";
 
-import { supabasePublic } from "@lib/supabase";
+import { supabase } from "@lib/supabase";
 
 const visitorData = [
   { name: "Jan", visitors: 4500 },
@@ -46,7 +46,7 @@ const salesReportData = [
   { name: "Dec", sales: 8500000 },
 ];
 const fetcher = async (u: string) => {
-  const { data } = await supabasePublic.auth.getSession();
+  const { data } = await supabase.auth.getSession();
   const token = data.session?.access_token;
   const headers: Record<string, string> = {};
   if (token) headers["Authorization"] = `Bearer ${token}`;

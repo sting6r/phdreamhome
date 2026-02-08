@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { supabasePublic, createClientSideClient } from "@lib/supabase";
+import { createClientSideClient } from "@lib/supabase";
 
 import { Suspense } from "react";
 

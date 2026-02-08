@@ -3,9 +3,9 @@ import useSWR from "swr";
 import Link from "next/link";
 import { useState, useEffect, useRef } from "react";
 
-import { supabasePublic } from "@lib/supabase";
+import { supabase } from "@lib/supabase";
 const fetcher = async (u: string) => {
-  const { data } = await supabasePublic.auth.getSession();
+  const { data } = await supabase.auth.getSession();
   const token = data.session?.access_token;
   const headers: Record<string, string> = {};
   if (token) headers["Authorization"] = `Bearer ${token}`;
@@ -44,7 +44,7 @@ export default function PropertiesPage() {
   const menuRef = useRef<HTMLDivElement | null>(null);
 
   async function setStatus(id: string, status: string) {
-    const { data } = await supabasePublic.auth.getSession();
+    const { data } = await supabase.auth.getSession();
     const token = data.session?.access_token;
     const headers: Record<string,string> = { "Content-Type": "application/json" };
     if (token) headers["Authorization"] = `Bearer ${token}`;
@@ -54,7 +54,7 @@ export default function PropertiesPage() {
   }
 
   async function setFeatured(id: string, featured: boolean) {
-    const { data } = await supabasePublic.auth.getSession();
+    const { data } = await supabase.auth.getSession();
     const token = data.session?.access_token;
     const headers: Record<string,string> = { "Content-Type": "application/json" };
     if (token) headers["Authorization"] = `Bearer ${token}`;
@@ -63,7 +63,7 @@ export default function PropertiesPage() {
   }
 
   async function setFeaturedPreselling(id: string, featuredPreselling: boolean) {
-    const { data } = await supabasePublic.auth.getSession();
+    const { data } = await supabase.auth.getSession();
     const token = data.session?.access_token;
     const headers: Record<string,string> = { "Content-Type": "application/json" };
     if (token) headers["Authorization"] = `Bearer ${token}`;
@@ -72,7 +72,7 @@ export default function PropertiesPage() {
   }
 
   async function setPublished(id: string, published: boolean) {
-    const { data } = await supabasePublic.auth.getSession();
+    const { data } = await supabase.auth.getSession();
     const token = data.session?.access_token;
     const headers: Record<string,string> = { "Content-Type": "application/json" };
     if (token) headers["Authorization"] = `Bearer ${token}`;
