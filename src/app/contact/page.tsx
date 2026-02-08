@@ -65,10 +65,10 @@ export default function ContactPage() {
         return;
       }
 
-      const res = await fetch("/api/rental-inquiry", {
+      const res = await fetch("/api/mail-inquiry", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify({ ...form, type: "Contact" }),
       });
 
       const data = await res.json();

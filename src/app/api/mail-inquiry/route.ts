@@ -19,6 +19,8 @@ export async function POST(req: Request) {
     const topic = String(body?.topic || body?.subject || "").trim();
     const listingId = body?.listingId;
 
+    const type = String(body?.type || "General").trim();
+
     if (!email || !message) return NextResponse.json({ error: "Missing email or message" }, { status: 400 });
 
     let user: any = null;
@@ -50,6 +52,7 @@ export async function POST(req: Request) {
             message,
             status: status || "Pending",
             subject: topic,
+            type: type,
             listingId: listingId || null,
             recipientEmail: agentEmail
           }
@@ -67,6 +70,7 @@ export async function POST(req: Request) {
           message,
           status: status || "Pending",
           subject: topic,
+          type: type,
           listingId: listingId || null,
           recipientEmail: agentEmail
         });

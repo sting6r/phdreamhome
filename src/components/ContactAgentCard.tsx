@@ -93,14 +93,15 @@ export default function ContactAgentCard({
     e.preventDefault();
     setLoading(true);
     try {
-      const res = await fetch("/api/rental-inquiry", {
+      const res = await fetch("/api/mail-inquiry", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...form,
           listingId,
           topic: form.subject || listingTitle,
-          status: "Interested"
+          status: "Interested",
+          type: "Listing"
         })
       });
       const data = await res.json();

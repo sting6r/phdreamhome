@@ -641,10 +641,10 @@ function PropertiesByStatusPageContent({ params }: { params: Promise<{ status: s
                   if (!inqEmail || !inqMessage) {
                     setInqError("Please provide email and message");
                   } else {
-                    const r = await fetch("/api/rental-inquiry", {
+                    const r = await fetch("/api/mail-inquiry", {
                       method: "POST",
                       headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({ name: inqName, email: inqEmail, phone: inqPhone, subject: inqSubject, message: inqMessage, status: statusTitle })
+                      body: JSON.stringify({ name: inqName, email: inqEmail, phone: inqPhone, subject: inqSubject, message: inqMessage, status: statusTitle, type: statusTitle })
                     });
                     const d = await r.json();
                     setInqDev(Boolean(d?.dev));
