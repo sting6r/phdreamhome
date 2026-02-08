@@ -5,7 +5,17 @@ const timeout = (ms: number) => new Promise((_, reject) => setTimeout(() => reje
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
+    const text = await req.text();
+    if (!text) return NextResponse.json({ ok: false, error: "Empty body" }, { status: 400 });
+    
+    let body;
+    try {
+      body = JSON.parse(text);
+    } catch (e) {
+      console.error("sync-user JSON parse error:", e, "Text:", text);
+      return NextResponse.json({ ok: false, error: "Invalid JSON" }, { status: 400 });
+    }
+
     const userId = body?.userId as string | undefined;
     const email = body?.email as string | undefined;
     const name = body?.name as string | undefined;

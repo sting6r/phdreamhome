@@ -22,11 +22,7 @@ export default function Navbar() {
   
   async function safePost(url: string, body: any) {
     try {
-      if (typeof navigator !== "undefined" && (navigator as any).sendBeacon) {
-        const blob = new Blob([JSON.stringify(body)], { type: "application/json" });
-        (navigator as any).sendBeacon(url, blob);
-        return;
-      }
+      // Use fetch with keepalive as primary method - it handles JSON and headers better than sendBeacon
       await fetch(url, { 
         method: "POST", 
         headers: { "Content-Type": "application/json" }, 
@@ -35,7 +31,19 @@ export default function Navbar() {
       });
     } catch (e: any) {
       if (e?.name === "AbortError") return;
-      if (e instanceof TypeError && e.message === "Failed to fetch") return;
+      if (e instanceof TypeError && e.message === "Failed to fetch") {
+        // Fallback to sendBeacon only if fetch fails (e.g. browser doesn't support keepalive or during unload)
+        try {
+          if (typeof navigator !== "undefined" && (navigator as any).sendBeacon) {
+            const blob = new Blob([JSON.stringify(body)], { type: "application/json" });
+            (navigator as any).sendBeacon(url, blob);
+          }
+        } catch (inner) {
+          console.error("safePost fallback error:", inner);
+        }
+        return;
+      }
+      console.error("safePost error:", e);
     }
   }
   function shouldSync(userId: string) {
