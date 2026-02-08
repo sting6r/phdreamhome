@@ -58,6 +58,50 @@ export async function POST(request: Request) {
       </div>
     `;
     const info = await sendEmail(to, subject, html);
+
+    // Save inquiry to database for dashboard visibility
+    try {
+      await Promise.race([
+        withRetry(() => prisma.inquiry.create({
+          data: {
+            name: "Interested Buyer", // Generic name since we don't have user info here
+            email: "visitor@example.com", // Generic email
+            phone: null,
+            message: `Inquiry about listing: ${listing.title}`,
+            status: "Pending",
+            subject: `Listing Inquiry: ${listing.title}`,
+            type: "Listing",
+            listingId: listingId,
+            recipientEmail: to
+          }
+        })),
+        timeout(5000)
+      ]);
+    } catch (dbError) {
+      console.error("Prisma failed to save listing inquiry, attempting Supabase fallback:", dbError);
+      try {
+        const { error: insertError } = await supabaseAdmin
+          .from('Inquiry')
+          .insert({
+            name: "Interested Buyer",
+            email: "visitor@example.com",
+            phone: null,
+            message: `Inquiry about listing: ${listing.title}`,
+            status: "Pending",
+            subject: `Listing Inquiry: ${listing.title}`,
+            type: "Listing",
+            listingId: listingId,
+            recipientEmail: to
+          });
+        
+        if (insertError) {
+          console.error("Supabase fallback failed for listing inquiry:", insertError);
+        }
+      } catch (fallbackErr) {
+        console.error("Supabase fallback exception:", fallbackErr);
+      }
+    }
+
     return NextResponse.json({ message: "Email sent successfully!", messageId: (info as any)?.messageId ?? null });
   } catch {
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });

@@ -1,10 +1,11 @@
 import nodemailer from "nodemailer";
 export function getTransport() {
-  if (!process.env.SMTP_HOST) {
+  const host = process.env.SMTP_HOST;
+  if (!host || host === "smtp.example.com") {
     return nodemailer.createTransport({ streamTransport: true, newline: "unix", buffer: true });
   }
   return nodemailer.createTransport({
-    host: process.env.SMTP_HOST,
+    host: host,
     port: Number(process.env.SMTP_PORT ?? 587),
     secure: false,
     auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
@@ -12,7 +13,10 @@ export function getTransport() {
 }
 export async function sendEmail(to: string, subject: string, html: string, cc?: string | string[]) {
   const transporter = getTransport();
-  console.log(`Mailer: Sending email to ${to}... (SMTP_HOST: ${process.env.SMTP_HOST || "none"})`);
+  const host = process.env.SMTP_HOST;
+  const isDev = !host || host === "smtp.example.com";
+  
+  console.log(`Mailer: Sending email to ${to}... (SMTP_HOST: ${host || "none"})`);
   const info = await transporter.sendMail({
     from: process.env.SMTP_FROM ?? "no-reply@example.com",
     to,
@@ -21,7 +25,7 @@ export async function sendEmail(to: string, subject: string, html: string, cc?: 
     text: html.replace(/\u003c[^\u003e]*\u003e/g, ""),
     html,
   });
-  if (!process.env.SMTP_HOST && (info as any).message) {
+  if (isDev && (info as any).message) {
     console.log("Mailer: DEV MODE (streamTransport). Email content:");
     console.log((info as any).message.toString());
   }

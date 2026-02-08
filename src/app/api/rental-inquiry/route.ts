@@ -112,7 +112,7 @@ export async function POST(req: Request) {
       </div>
     `;
     const userInfo = await sendEmail(email, confirmSubject, confirmHtml);
-    const dev = !process.env.SMTP_HOST;
+    const dev = !process.env.SMTP_HOST || process.env.SMTP_HOST === "smtp.example.com";
     return NextResponse.json({ ok: true, agentMessageId: (agentInfo as any)?.messageId ?? null, userMessageId: (userInfo as any)?.messageId ?? null, dev });
   } catch (err: any) {
     return NextResponse.json({ error: String(err?.message ?? err) }, { status: 500 });
