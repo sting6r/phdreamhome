@@ -198,6 +198,18 @@ export default function InquiriesTable({
                       </td>
                     )}
                     <td className="px-4 py-3">
+                      <div className="flex flex-wrap gap-1 mb-1">
+                        {inquiry.type && inquiry.type !== "Inquiry" && inquiry.type !== "General" && (
+                          <span className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
+                            inquiry.type === "Tour" ? "bg-purple-100 text-purple-700" : 
+                            inquiry.type === "Contact" ? "bg-blue-100 text-blue-700" :
+                            inquiry.type === "Listing" ? "bg-green-100 text-green-700" :
+                            "bg-slate-100 text-slate-700"
+                          }`}>
+                            {inquiry.type}
+                          </span>
+                        )}
+                      </div>
                       <div className="font-medium text-slate-900 text-xs">{inquiry.subject || (type === "ai" ? "AI Inquiry" : "General Inquiry")}</div>
                       {type === "general" && inquiry.type === "Tour" && inquiry.tourDate && (
                         <div className="mt-1 flex items-center gap-1.5">
