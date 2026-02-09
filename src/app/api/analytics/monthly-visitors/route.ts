@@ -39,12 +39,17 @@ export async function GET() {
   const analyticsDataClient = new BetaAnalyticsDataClient({ credentials });
 
   try {
+    // Determine the start date based on today
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const startDate = `${currentYear}-01-01`;
+
     const [response] = await Promise.race([
       analyticsDataClient.runReport({
         property: `properties/${propertyId}`,
         dateRanges: [
           {
-            startDate: '2026-01-01',
+            startDate: startDate,
             endDate: 'today',
           },
         ],
@@ -66,8 +71,8 @@ export async function GET() {
           },
         ],
       }),
-      timeout(5000)
-    ]) as any; // Type assertion needed for Promise.race result mixed with timeout
+      timeout(10000) // Increased timeout to 10s for potentially slow GA response
+    ]) as any;
 
     const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
     
@@ -77,14 +82,23 @@ export async function GET() {
       monthIndex: number;
     }
     
-    const formattedData = ((response.rows?.map((row: any) => {
-      const monthIndex = parseInt(row.dimensionValues?.[0]?.value || '1') - 1;
+    // Safety check for response.rows
+    if (!response || !response.rows || response.rows.length === 0) {
+      console.warn("GA response has no rows. Returning empty array.");
+      return NextResponse.json([]);
+    }
+
+    const formattedData = ((response.rows.map((row: any) => {
+      const monthStr = row.dimensionValues?.[0]?.value || '01';
+      const monthIndex = parseInt(monthStr) - 1;
+      const visitors = parseInt(row.metricValues?.[0]?.value || '0');
+      
       return {
-        name: monthNames[monthIndex],
-        visitors: parseInt(row.metricValues?.[0]?.value || '0'),
+        name: monthNames[monthIndex] || monthStr,
+        visitors: isNaN(visitors) ? 0 : visitors,
         monthIndex,
       };
-    }) || []) as FormattedEntry[]).sort((a, b) => a.monthIndex - b.monthIndex);
+    })) as FormattedEntry[]).sort((a, b) => a.monthIndex - b.monthIndex);
 
     return NextResponse.json(formattedData);
   } catch (error: any) {
