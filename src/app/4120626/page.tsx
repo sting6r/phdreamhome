@@ -27,8 +27,10 @@ function LoginPageContent() {
     setLoading(true);
     setErr(null);
     try {
-      // Use the current origin to ensure the redirect matches the domain the user is on
-      const origin = window.location.origin;
+      // Use the correct origin based on environment
+      const origin = process.env.NODE_ENV === "production" 
+        ? "https://www.phdreamhome.com" 
+        : window.location.origin;
 
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: "google",

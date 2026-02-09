@@ -28,9 +28,13 @@ export async function GET(req: Request) {
   
   // Create the redirect URL
   let origin = url.origin;
-  // Force https in production for the redirect origin
-  if (process.env.NODE_ENV === "production" && origin.startsWith("http://")) {
-    origin = origin.replace("http://", "https://");
+  
+  // Force production domain in production environment to avoid localhost redirects
+  if (process.env.NODE_ENV === "production") {
+    origin = "https://www.phdreamhome.com";
+  } else if (origin.startsWith("http://")) {
+    // Force https in non-local production-like environments if needed
+    // but usually localhost stays http
   }
   
   const redirectTo = next.startsWith('http') ? next : `${origin}${next}`;
