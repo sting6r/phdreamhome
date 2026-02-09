@@ -8,9 +8,9 @@ export const runtime = "nodejs";
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const code = url.searchParams.get("code");
-  // Default to /4120626 if next is missing or is just the root, to ensure we land on the correct path
-  let next = url.searchParams.get("next") || "/4120626";
-  if (next === "/") next = "/4120626";
+  // Default to /dashboard if next is missing or is just the root, to ensure we land on the correct path
+  let next = url.searchParams.get("next") || "/dashboard";
+  if (next === "/") next = "/dashboard";
 
   if (!code) return NextResponse.redirect(new URL("/4120626", req.url));
 
