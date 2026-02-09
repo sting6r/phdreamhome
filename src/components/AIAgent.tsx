@@ -162,7 +162,7 @@ export default function AIAgent() {
     });
   };
 
-  const extractWebsiteContext = async (signal?: AbortSignal) => {
+  const extractWebsiteContext = async (signal?: AbortSignal, query?: string) => {
     try {
       const title = typeof document !== 'undefined' ? (document.title || "") : "";
       const meta = typeof document !== 'undefined' ? document.querySelector('meta[name="description"]') : null;
@@ -173,8 +173,20 @@ export default function AIAgent() {
       const pathname = typeof window !== 'undefined' ? window.location.pathname : "";
       let listingsSnippet = "";
       try {
-        // Fetch more listings to give the AI better context, and include search if applicable
-        const res = await fetch('/api/public-listings?limit=6', { 
+        // Build search URL if we have a query
+        let listingsUrl = '/api/public-listings?limit=20';
+        if (query) {
+          // Extract potential city/location from query
+          const locations = ['cebu', 'manila', 'makati', 'quezon', 'davao', 'taguig', 'pasig', 'mandaluyong', 'pasay', 'paranaque', 'las pinas', 'muntinlupa', 'marikina', 'valenzuela', 'malabon', 'navotas', 'pateros', 'antipolo', 'bacolod', 'baguio', 'batangas', 'cabanatuan', 'calamba', 'calbayog', 'calogcan', 'cavite', 'dagupan', 'general santos', 'iloilo', 'lapu-lapu', 'legazpi', 'lucena', 'mandaue', 'naga', 'olongapo', 'ormoc', 'oroquieta', 'pagadian', 'puerto princesa', 'roxas', 'san fernando', 'san jose del monte', 'san pablo', 'santa rosa', 'surigao', 'tacloban', 'tagaytay', 'tagum', 'tarlac', 'tuguegarao', 'zamboanga'];
+          const lowerQuery = query.toLowerCase();
+          const foundLoc = locations.find(loc => lowerQuery.includes(loc));
+          if (foundLoc) {
+            listingsUrl += `&city=${encodeURIComponent(foundLoc)}`;
+          }
+        }
+
+        // Fetch more listings to give the AI better context
+        const res = await fetch(listingsUrl, { 
           cache: 'no-store',
           signal 
         });
@@ -1334,10 +1346,19 @@ export default function AIAgent() {
     }
 
     console.log("DEBUG: Quick action generic - checking sendMessage:", typeof chatInstance.sendMessage);
+    
+    let hiddenContext = "";
+    if (/\b(property|house|lot|listing|condo|apartment|rent|sale|buy|available|looking for|inventory)\b/i.test(text)) {
+      hiddenContext = await extractWebsiteContext(undefined, text);
+    }
+
     chatInstance.sendMessage({
       text
     }, {
-      body: { sessionId: currentSessionId || currentInquiryId || "default_session" }
+      body: { 
+        sessionId: currentSessionId || currentInquiryId || "default_session",
+        additionalContext: hiddenContext
+      }
     });
   };
 
@@ -1360,10 +1381,17 @@ export default function AIAgent() {
       `[/PROPERTY_DETAILS]`;
     
     console.log("DEBUG: Property form submit - checking sendMessage:", typeof chatInstance.sendMessage);
+    
+    // Always extract context for property form submission
+    const hiddenContext = await extractWebsiteContext(undefined, `${location} ${type}`);
+
     chatInstance.sendMessage({
       text: summary
     }, {
-      body: { sessionId: currentSessionId || currentInquiryId || "default_session" }
+      body: { 
+        sessionId: currentSessionId || currentInquiryId || "default_session",
+        additionalContext: hiddenContext
+      }
     });
     propertyFormJustSubmittedRef.current = true;
     setShowPropertyForm(false);
@@ -1632,9 +1660,9 @@ export default function AIAgent() {
       let hiddenContext = "";
       
       if (wantsCtx) {
-        hiddenContext = await extractWebsiteContext();
+        hiddenContext = await extractWebsiteContext(undefined, textOnly);
       } else if (/\b(property|house|lot|listing|condo|apartment|rent|sale|buy|available|looking for|inventory)\b/i.test(textOnly)) {
-        hiddenContext = await extractWebsiteContext();
+        hiddenContext = await extractWebsiteContext(undefined, textOnly);
       }
 
       console.log("Sending message with context:", { visualMessage, hasContext: !!hiddenContext });
