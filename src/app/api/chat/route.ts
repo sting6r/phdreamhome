@@ -197,21 +197,44 @@ export async function POST(req: Request) {
 
     const lastMessage = messages[messages.length - 1];
     let userMessage = lastMessage.content;
+    let imageParts: any[] = [];
     
-    // If content is empty, try to extract from parts (AI SDK 6.0+)
-    if (!userMessage && lastMessage.parts) {
+    // If content is empty or has parts, try to extract from parts (AI SDK 6.0+)
+    if (lastMessage.parts) {
       userMessage = lastMessage.parts
         .filter((part: any) => part.type === 'text')
         .map((part: any) => part.text)
         .join('\n');
+        
+      imageParts = lastMessage.parts
+        .filter((part: any) => part.type === 'image')
+        .map((part: any) => ({
+          type: "image_url",
+          image_url: { url: part.image instanceof URL ? part.image.toString() : part.image }
+        }));
     }
     
-    if (!userMessage) {
+    if (!userMessage && imageParts.length === 0) {
       throw new Error("No message content found");
+    }
+
+    // If we have images, the message to Python should be structured
+    let finalMessageForPython: any = userMessage;
+    if (imageParts.length > 0) {
+      finalMessageForPython = [
+        { type: "text", text: userMessage || "Analyze this image." },
+        ...imageParts
+      ];
     }
     
     // Call the FastAPI server with history, user data and additional context
-    const reply = await getPythonAIResponse(userMessage, sessionId || "default_session", messages, userData, additionalContext);
+    const reply = await getPythonAIResponse(
+      typeof finalMessageForPython === 'string' ? finalMessageForPython : JSON.stringify(finalMessageForPython), 
+      sessionId || "default_session", 
+      messages, 
+      userData, 
+      additionalContext
+    );
 
     const messageId = `assistant-${Date.now()}`;
     const stream = new ReadableStream({

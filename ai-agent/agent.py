@@ -1,6 +1,7 @@
 import os
 import uuid
 import psycopg
+import json
 from psycopg_pool import ConnectionPool
 from langchain_groq import ChatGroq
 from langchain_postgres import PostgresChatMessageHistory
@@ -25,7 +26,8 @@ if "6543" in DB_URL:
 
 # 2. Initialize Pool and Model
 pool = ConnectionPool(DB_URL, min_size=1, max_size=10)
-model = ChatGroq(model="llama-3.3-70b-versatile", temperature=0.2)
+default_model = ChatGroq(model="llama-3.3-70b-versatile", temperature=0.2)
+vision_model = ChatGroq(model="llama-3.2-11b-vision-preview", temperature=0.2)
 
 # Initialize the table at startup
 def init_db():
@@ -75,8 +77,29 @@ def call_model(state: AgentState):
     messages = list(state["messages"])
     if not has_system:
         messages = [SystemMessage(content=SYSTEM_PROMPT)] + messages
+    
+    # Check if any message contains an image
+    has_image = False
+    for msg in messages:
+        if isinstance(msg.content, list):
+            for part in msg.content:
+                if isinstance(part, dict) and part.get("type") == "image_url":
+                    has_image = True
+                    break
+        elif isinstance(msg.content, str):
+            # Check for Markdown image OR if it's a JSON string with image_url
+            if "![" in msg.content and "](" in msg.content:
+                has_image = True
+            elif '{"type": "image_url"' in msg.content or "'type': 'image_url'" in msg.content:
+                has_image = True
         
-    response = model.invoke(messages)
+        if has_image:
+            break
+
+    model_to_use = vision_model if has_image else default_model
+    print(f"Using model: {'vision' if has_image else 'default'}")
+    
+    response = model_to_use.invoke(messages)
     return {"messages": [response]}
 
 # Define the graph
@@ -97,10 +120,22 @@ def get_clean_session_id(session_id: str):
         NAMESPACE_UUID = uuid.UUID('6ba7b810-9dad-11d1-80b4-00c04fd430c8')
         return str(uuid.uuid5(NAMESPACE_UUID, str(session_id)))
 
+import json
+
 def get_ai_response(message: str, session_id: str = "default_session", user_data: dict = None, additional_context: str = None):
     try:
         clean_id = get_clean_session_id(session_id)
         
+        # Check if message is a JSON string (could contain structured parts with images)
+        try:
+            parsed_message = json.loads(message)
+            if isinstance(parsed_message, (list, dict)):
+                message_content = parsed_message
+            else:
+                message_content = message
+        except (json.JSONDecodeError, TypeError):
+            message_content = message
+
         # Prepare dynamic system prompt components
         user_info = ""
         if user_data:
@@ -114,7 +149,25 @@ def get_ai_response(message: str, session_id: str = "default_session", user_data
         if additional_context:
             context_info = f"\nAdditional Context from the website:\n{additional_context}\n"
 
-        dynamic_system_prompt = SYSTEM_PROMPT + user_info + context_info
+        # Check if we have an image in the current message
+        has_image = False
+        if isinstance(message_content, list):
+            for part in message_content:
+                if isinstance(part, dict) and part.get("type") == "image_url":
+                    has_image = True
+                    break
+        elif isinstance(message_content, str):
+            if "![" in message_content and "](" in message_content:
+                has_image = True
+            elif '{"type": "image_url"' in message_content or "'type': 'image_url'" in message_content:
+                has_image = True
+
+        if has_image:
+            # Special instruction for vision model
+            vision_instruction = "\nIMAGE ANALYSIS: The user has provided an image. Please analyze it carefully to assist with their property sale or inquiry.\n"
+            dynamic_system_prompt = SYSTEM_PROMPT + user_info + context_info + vision_instruction
+        else:
+            dynamic_system_prompt = SYSTEM_PROMPT + user_info + context_info
         
         # Get a connection from the pool
         with pool.connection() as conn:
@@ -133,7 +186,7 @@ def get_ai_response(message: str, session_id: str = "default_session", user_data
             
             # We'll include past messages in the state to ensure the model has context
             # Use the dynamic prompt for this call
-            messages = [SystemMessage(content=dynamic_system_prompt)] + past_messages + [HumanMessage(content=message)]
+            messages = [SystemMessage(content=dynamic_system_prompt)] + past_messages + [HumanMessage(content=message_content)]
             input_state = {"messages": messages}
             
             # Run the workflow
@@ -144,7 +197,7 @@ def get_ai_response(message: str, session_id: str = "default_session", user_data
             response_text = response_message.content
             
             # Save ONLY the new messages to Postgres
-            history.add_user_message(message)
+            history.add_user_message(str(message_content))
             history.add_ai_message(response_text)
             
             return response_text

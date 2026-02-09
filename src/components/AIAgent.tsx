@@ -8,7 +8,7 @@ import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import Script from "next/script";
-import { X, Send, User, Minimize2, Maximize2, Loader2, ExternalLink, Image as ImageIcon, ChevronLeft, Undo2, GripHorizontal, Building2, MapPin, DollarSign, Info, Sparkles, ClipboardList, ChevronRight } from "lucide-react";
+import { X, Send, User, Minimize2, Maximize2, Loader2, ExternalLink, Image as ImageIcon, ChevronLeft, Undo2, GripHorizontal, Building2, MapPin, DollarSign, Info, Sparkles, ClipboardList, ChevronRight, Share2, Copy, Facebook, Twitter, Check } from "lucide-react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 
@@ -47,6 +47,25 @@ export default function AIAgent() {
   const [inquireMaxPrice, setInquireMaxPrice] = useState<number | null>(null);
   const [inquireBedrooms, setInquireBedrooms] = useState<number | null>(null);
   const [providerInfo, setProviderInfo] = useState<{ provider: string; model: string } | null>(null);
+  const [showShareMenu, setShowShareMenu] = useState(false);
+  const [isCopied, setIsCopied] = useState(false);
+  const handleShare = (platform: 'facebook' | 'twitter' | 'copy') => {
+    const url = typeof window !== 'undefined' ? window.location.href : '';
+    const text = "Check out PhDreamHome AI Assistant for the best property listings!";
+    
+    if (platform === 'facebook') {
+      window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`, '_blank');
+    } else if (platform === 'twitter') {
+      window.open(`https://twitter.com/intent/tweet?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`, '_blank');
+    } else if (platform === 'copy') {
+      navigator.clipboard.writeText(url).then(() => {
+        setIsCopied(true);
+        setTimeout(() => setIsCopied(false), 2000);
+      });
+    }
+    setShowShareMenu(false);
+  };
+
   const [propertyFormData, setPropertyFormData] = useState({
     location: "",
     type: "House and Lot",
@@ -65,6 +84,98 @@ export default function AIAgent() {
   const hasFetchedProfile = useRef(false);
   const propertyFormJustSubmittedRef = useRef<boolean>(false);
   const syncAbortControllerRef = useRef<AbortController | null>(null);
+
+  // Define utility functions before they are used in hooks
+  const safeJson = async (res: Response) => {
+    try {
+      const text = await res.text();
+      return text ? JSON.parse(text) : null;
+    } catch (e) {
+      console.error("Failed to parse JSON:", e);
+      return null;
+    }
+  };
+
+  const sanitizeMessages = (msgs: any[]) => {
+    if (!Array.isArray(msgs)) return msgs;
+    return msgs.map((m) => {
+      if (!m || typeof m !== "object") return m;
+      const content = typeof m.content === "string"
+        ? m.content
+        : Array.isArray(m.parts)
+          ? m.parts.filter((p: any) => p?.type === "text" && typeof p.text === "string").map((p: any) => p.text).join("\n")
+          : "";
+      const parts = Array.isArray(m.parts)
+        ? m.parts
+        : content
+          ? [{ type: "text", text: content }]
+          : [];
+      return { ...m, content, parts };
+    });
+  };
+
+  const syncTranscriptToDb = useCallback(async (msgs: Message[], id?: string | null) => {
+    const targetId = id || inquiryIdRef.current;
+    if (!targetId || targetId === "undefined" || targetId === "null" || msgs.length === 0) {
+      console.log("Sync skipped: invalid id or no messages", { targetId, msgCount: msgs.length });
+      return;
+    }
+    
+    // Abort any pending sync request
+    if (syncAbortControllerRef.current) {
+      syncAbortControllerRef.current.abort();
+    }
+    syncAbortControllerRef.current = new AbortController();
+    const signal = syncAbortControllerRef.current.signal;
+    
+    try {
+      console.log(`Syncing ${msgs.length} messages to inquiry ${targetId}`);
+      const origin = typeof window !== "undefined" ? window.location.origin : "";
+      const cleaned = sanitizeMessages(msgs as any[]);
+      const res = await fetch(`${origin}/api/inquiries/${targetId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ transcript: cleaned }),
+        signal,
+      });
+      if (!res.ok) {
+        const errData = await safeJson(res);
+        console.error("Sync failed server-side:", errData);
+        
+        // If record not found, clear the local inquiry ID to prevent further failures
+        if (errData?.error?.includes("Record to update not found")) {
+          console.warn("Inquiry record not found in DB, clearing local ID");
+          setCurrentInquiryId(null);
+          sessionStorage.removeItem("ai_agent_inquiry_id");
+        }
+      } else {
+        console.log("Sync successful");
+      }
+    } catch (error: any) {
+      if (error.name === 'AbortError') {
+        console.log("Sync aborted (superseded by a new request)");
+        return;
+      }
+      
+      console.warn("Error syncing transcript:", error);
+      try {
+        const unsynced = { id: targetId, messages: sanitizeMessages(msgs as any[]), ts: Date.now() };
+        const prev = sessionStorage.getItem("ai_agent_unsynced");
+        const list = prev ? JSON.parse(prev) : [];
+        list.push(unsynced);
+        sessionStorage.setItem("ai_agent_unsynced", JSON.stringify(list));
+      } catch {}
+      try {
+        setTimeout(() => {
+          try { syncTranscriptToDb(msgs, targetId); } catch {}
+        }, 5000);
+      } catch {}
+    } finally {
+      if (syncAbortControllerRef.current?.signal === signal) {
+        syncAbortControllerRef.current = null;
+      }
+    }
+  }, []);
 
   // Sync state to ref
   useEffect(() => {
@@ -144,23 +255,26 @@ export default function AIAgent() {
     messagesRef.current = chatInstance.messages;
   }, [chatInstance.messages]);
 
-  const sanitizeMessages = (msgs: any[]) => {
-    if (!Array.isArray(msgs)) return msgs;
-    return msgs.map((m) => {
-      if (!m || typeof m !== "object") return m;
-      const content = typeof m.content === "string"
-        ? m.content
-        : Array.isArray(m.parts)
-          ? m.parts.filter((p: any) => p?.type === "text" && typeof p.text === "string").map((p: any) => p.text).join("\n")
-          : "";
-      const parts = Array.isArray(m.parts)
-        ? m.parts
-        : content
-          ? [{ type: "text", text: content }]
-          : [];
-      return { ...m, content, parts };
-    });
-  };
+  // Automatically sync transcript to DB when messages change and we have an inquiry ID
+  useEffect(() => {
+    if (currentInquiryId && chatInstance.messages.length > 0) {
+      // Debounce the sync to avoid too many API calls during streaming
+      const timer = setTimeout(() => {
+        // Only sync if the last message is from the assistant and it's finished,
+        // or if the last message is from the user.
+        const lastMsg = chatInstance.messages[chatInstance.messages.length - 1];
+        const isAssistantFinished = lastMsg?.role === 'assistant' && chatInstance.status !== 'streaming';
+        const isUserMsg = lastMsg?.role === 'user';
+
+        if (isAssistantFinished || isUserMsg) {
+          console.log("Auto-syncing transcript due to message change");
+          syncTranscriptToDb(chatInstance.messages, currentInquiryId);
+        }
+      }, 2000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [chatInstance.messages, currentInquiryId, chatInstance.status, syncTranscriptToDb]);
 
   const extractWebsiteContext = async (signal?: AbortSignal, query?: string) => {
     try {
@@ -262,79 +376,6 @@ export default function AIAgent() {
       return next;
     });
   }, [chatInstance.messages, currentSessionId]);
-  const safeJson = async (res: Response) => {
-    try {
-      const text = await res.text();
-      return text ? JSON.parse(text) : null;
-    } catch (e) {
-      console.error("Failed to parse JSON:", e);
-      return null;
-    }
-  };
-
-  const syncTranscriptToDb = useCallback(async (msgs: Message[], id?: string | null) => {
-    const targetId = id || inquiryIdRef.current;
-    if (!targetId || targetId === "undefined" || targetId === "null" || msgs.length === 0) {
-      console.log("Sync skipped: invalid id or no messages", { targetId, msgCount: msgs.length });
-      return;
-    }
-    
-    // Abort any pending sync request
-    if (syncAbortControllerRef.current) {
-      syncAbortControllerRef.current.abort();
-    }
-    syncAbortControllerRef.current = new AbortController();
-    const signal = syncAbortControllerRef.current.signal;
-    
-    try {
-      console.log(`Syncing ${msgs.length} messages to inquiry ${targetId}`);
-      const origin = typeof window !== "undefined" ? window.location.origin : "";
-      const cleaned = sanitizeMessages(msgs as any[]);
-      const res = await fetch(`${origin}/api/inquiries/${targetId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ transcript: cleaned }),
-        signal,
-      });
-      if (!res.ok) {
-        const errData = await safeJson(res);
-        console.error("Sync failed server-side:", errData);
-        
-        // If record not found, clear the local inquiry ID to prevent further failures
-        if (errData?.error?.includes("Record to update not found")) {
-          console.warn("Inquiry record not found in DB, clearing local ID");
-          setCurrentInquiryId(null);
-          sessionStorage.removeItem("ai_agent_inquiry_id");
-        }
-      } else {
-        console.log("Sync successful");
-      }
-    } catch (error: any) {
-      if (error.name === 'AbortError') {
-        console.log("Sync aborted (superseded by a new request)");
-        return;
-      }
-      
-      console.warn("Error syncing transcript:", error);
-      try {
-        const unsynced = { id: targetId, messages: sanitizeMessages(msgs as any[]), ts: Date.now() };
-        const prev = sessionStorage.getItem("ai_agent_unsynced");
-        const list = prev ? JSON.parse(prev) : [];
-        list.push(unsynced);
-        sessionStorage.setItem("ai_agent_unsynced", JSON.stringify(list));
-      } catch {}
-      try {
-        setTimeout(() => {
-          try { syncTranscriptToDb(msgs, targetId); } catch {}
-        }, 5000);
-      } catch {}
-    } finally {
-      if (syncAbortControllerRef.current?.signal === signal) {
-        syncAbortControllerRef.current = null;
-      }
-    }
-  }, []);
-
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -1870,6 +1911,51 @@ export default function AIAgent() {
                 </motion.div>
               )}
             </AnimatePresence>
+            <AnimatePresence>
+              {showShareMenu && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.8, y: 10 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.8, y: 10 }}
+                  className="absolute bottom-32 right-0 flex flex-col gap-2 bg-white p-2 rounded-xl shadow-2xl border border-slate-100 z-[9999]"
+                >
+                  <button
+                    onClick={() => handleShare('facebook')}
+                    className="p-2 hover:bg-blue-50 text-blue-600 rounded-lg transition-colors flex items-center gap-2 text-xs font-medium whitespace-nowrap"
+                    title="Share on Facebook"
+                  >
+                    <Facebook size={16} /> Facebook
+                  </button>
+                  <button
+                    onClick={() => handleShare('twitter')}
+                    className="p-2 hover:bg-sky-50 text-sky-500 rounded-lg transition-colors flex items-center gap-2 text-xs font-medium whitespace-nowrap"
+                    title="Share on Twitter"
+                  >
+                    <Twitter size={16} /> Twitter
+                  </button>
+                  <button
+                    onClick={() => handleShare('copy')}
+                    className="p-2 hover:bg-slate-50 text-slate-600 rounded-lg transition-colors flex items-center gap-2 text-xs font-medium whitespace-nowrap"
+                    title="Copy Link"
+                  >
+                    {isCopied ? <Check size={16} className="text-emerald-500" /> : <Copy size={16} />} 
+                    {isCopied ? 'Copied!' : 'Copy Link'}
+                  </button>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowShareMenu(!showShareMenu);
+              }}
+              className="absolute -top-12 right-0 flex h-10 w-10 items-center justify-center rounded-full bg-white shadow-lg border border-slate-100 text-slate-600 hover:text-purple-600 hover:scale-110 transition-all z-[9998]"
+              title="Share AI Assistant"
+            >
+              <Share2 size={18} />
+            </button>
+
             <button
               onClick={() => {
                 if (!isDraggingRef.current) {
