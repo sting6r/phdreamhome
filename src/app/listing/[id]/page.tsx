@@ -174,7 +174,7 @@ export default async function ListingPage({ params, searchParams }: { params: Pr
     const timeout = (ms: number) => new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), ms));
     totalSimilar = await Promise.race([
       withRetry(() => prisma.listing.count({ where: similarWhere }), 1, 0),
-      timeout(2000)
+      timeout(8000)
     ]) as number;
   } catch (e) {
     console.error("Similar listings count Prisma error, fallback:", e);
@@ -199,7 +199,7 @@ export default async function ListingPage({ params, searchParams }: { params: Pr
         skip,
         take: perPage
       }), 1, 0),
-      timeout(2500)
+      timeout(10000)
     ]) as any[];
   } catch (e) {
     if (e instanceof Error && e.message === "Timeout") {

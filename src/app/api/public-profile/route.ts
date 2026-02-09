@@ -23,13 +23,13 @@ export async function GET() {
             }
           }), 1, 0);
         })(),
-        timeout(4000)
+        timeout(8000)
       ]) as any;
 
       if (user) {
         totalListings = await Promise.race([
           withRetry(() => prisma.listing.count({ where: { userId: user.id } }), 1, 0),
-          timeout(2000)
+          timeout(5000)
         ]) as number;
       }
     } catch (dbError) {

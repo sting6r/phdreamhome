@@ -6,6 +6,16 @@ export async function middleware(request: NextRequest) {
   const host = request.headers.get("host") || "";
   const { pathname, search } = request.nextUrl;
 
+  // Skip middleware for static assets and public files to avoid net::ERR_ABORTED
+  if (
+    pathname.startsWith('/_next') ||
+    pathname.startsWith('/static') ||
+    pathname.includes('.') || // matches images, icons, manifests, etc.
+    pathname === '/favicon.ico'
+  ) {
+    return NextResponse.next();
+  }
+
   // Force www for consistency to prevent OAuth state mismatch in production
   if (process.env.NODE_ENV === "production" && 
       !host.startsWith("www.") && 

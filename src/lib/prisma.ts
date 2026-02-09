@@ -10,32 +10,47 @@ export const prisma =
       ? {
           db: {
             url: (() => {
-              let url = process.env.DATABASE_URL;
-              
-              // Ensure sslmode=require for Supabase/remote connections
-              if (url.includes("supabase.co") && !url.includes("sslmode=")) {
-                url += (url.includes("?") ? "&" : "?") + "sslmode=require";
-              }
+              try {
+                const url = new URL(process.env.DATABASE_URL);
+                
+                // Ensure sslmode=require for Supabase/remote connections
+                if (url.hostname.includes("supabase.co") && !url.searchParams.has("sslmode")) {
+                  url.searchParams.set("sslmode", "require");
+                }
 
-              // Add pgbouncer=true if using Supabase Transaction Pooler (port 6543)
-              // This is critical for Prisma to work correctly with transaction mode pooling
-              if (url.includes(":6543") && !url.includes("pgbouncer=")) {
-                url += (url.includes("?") ? "&" : "?") + "pgbouncer=true";
+                // Add pgbouncer=true if using Supabase Transaction Pooler (port 6543)
+                if (url.port === "6543" && !url.searchParams.has("pgbouncer")) {
+                  url.searchParams.set("pgbouncer", "true");
+                }
+                
+                // Set reasonable connection pool limits and timeouts
+                if (!url.searchParams.has("connection_limit")) {
+                  url.searchParams.set("connection_limit", "10");
+                } else if (url.searchParams.get("connection_limit") === "1") {
+                  url.searchParams.set("connection_limit", "2");
+                }
+                
+                if (!url.searchParams.has("pool_timeout")) {
+                  url.searchParams.set("pool_timeout", "15");
+                }
+
+                if (!url.searchParams.has("connect_timeout")) {
+                  url.searchParams.set("connect_timeout", "15");
+                }
+                
+                return url.toString();
+              } catch (e) {
+                // Fallback to basic string manipulation if URL parsing fails
+                console.warn("Prisma: Failed to parse DATABASE_URL with URL API, falling back to string manipulation", e);
+                let url = process.env.DATABASE_URL;
+                if (url.includes("supabase.co") && !url.includes("sslmode=")) {
+                  url += (url.includes("?") ? "&" : "?") + "sslmode=require";
+                }
+                if (url.includes(":6543") && !url.includes("pgbouncer=")) {
+                  url += (url.includes("?") ? "&" : "?") + "pgbouncer=true";
+                }
+                return url;
               }
-              
-              // Ensure connection_limit and pool_timeout are set
-              // Increased connect_timeout to handle slow network handshakes
-              // If connection_limit is 1, it might be too low for complex queries, we bump it to at least 2
-              if (url.includes("connection_limit=1") && !url.includes("connection_limit=10")) {
-                url = url.replace("connection_limit=1", "connection_limit=2");
-              }
-              
-              if (!url.includes("connection_limit")) {
-                // Reduced timeouts for faster failover to fallback
-                url += (url.includes("?") ? "&" : "?") + "connection_limit=10&pool_timeout=10&connect_timeout=10";
-              }
-              
-              return url;
             })(),
           },
         }
@@ -59,14 +74,24 @@ export async function withRetry<T>(
       return await operation();
     } catch (error: any) {
       lastError = error;
+      const errorMessage = error.message || "";
       const isTransient = 
-        error.message?.includes("Connection reset by peer") || 
-        error.message?.includes("Can't reach database server") ||
-        error.message?.includes("Timed out fetching a connection from the pool");
+        errorMessage.includes("Connection reset by peer") || 
+        errorMessage.includes("Can't reach database server") ||
+        errorMessage.includes("Timed out fetching a connection from the pool") ||
+        errorMessage.includes("PrismaClientInitializationError") ||
+        errorMessage.includes("initialization") ||
+        errorMessage.includes("connect_timeout");
       
-      if (!isTransient || i === retries - 1) throw error;
+      if (!isTransient || i === retries - 1) {
+        // If it's the last retry or not transient, log it clearly
+        if (i === retries - 1) {
+          console.error(`Database operation failed after ${retries} attempts:`, errorMessage);
+        }
+        throw error;
+      }
       
-      console.warn(`Database operation failed (attempt ${i + 1}/${retries}), retrying in ${delay}ms...`, error.message);
+      console.warn(`Database operation failed (attempt ${i + 1}/${retries}), retrying in ${delay}ms...`, errorMessage);
       await new Promise((resolve) => setTimeout(resolve, delay));
       delay *= 2; // Exponential backoff
     }

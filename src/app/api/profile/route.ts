@@ -140,7 +140,7 @@ export async function GET() {
       const countTask = withRetry(() => prisma.listing.count({ where: { userId } }));
       [user, totalListings] = await Promise.race([
         Promise.all([userTask, countTask]),
-        timeout(5000)
+        timeout(10000)
       ]) as [any, number];
       
       // If Prisma returns null (e.g. not found or sync issue), force fallback to Supabase
