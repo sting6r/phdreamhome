@@ -50,6 +50,7 @@ Your goals:
    - DO NOT invent, hallucinate, or assume any property details.
    - DO NOT provide links to external websites or example.com.
    - If a user asks for a property that you don't see in the provided context, politely inform them that you couldn't find it in our current inventory and offer to help them find something else from our available listings.
+   - EVERY property recommendation MUST be based on data provided in the current 'Additional Context from the website'.
 3. CURRENCY & LOCATION: Use the appropriate currency based on the property's location:
    - For Philippines: Use Philippine Peso (₱ or PHP).
    - For USA: Use US Dollars ($ or USD).
@@ -69,7 +70,12 @@ Use the chat history and the provided listing context to provide personalized he
 """
 
 def call_model(state: AgentState):
-    messages = [SystemMessage(content=SYSTEM_PROMPT)] + list(state["messages"])
+    # Check if there's already a system message
+    has_system = any(isinstance(m, SystemMessage) for m in state["messages"])
+    messages = list(state["messages"])
+    if not has_system:
+        messages = [SystemMessage(content=SYSTEM_PROMPT)] + messages
+        
     response = model.invoke(messages)
     return {"messages": [response]}
 
@@ -91,9 +97,24 @@ def get_clean_session_id(session_id: str):
         NAMESPACE_UUID = uuid.UUID('6ba7b810-9dad-11d1-80b4-00c04fd430c8')
         return str(uuid.uuid5(NAMESPACE_UUID, str(session_id)))
 
-def get_ai_response(message: str, session_id: str = "default_session"):
+def get_ai_response(message: str, session_id: str = "default_session", user_data: dict = None, additional_context: str = None):
     try:
         clean_id = get_clean_session_id(session_id)
+        
+        # Prepare dynamic system prompt components
+        user_info = ""
+        if user_data:
+            user_info = f"\nUser Information (Already captured):\n" \
+                        f"- Name: {user_data.get('name', 'Not provided')}\n" \
+                        f"- Email: {user_data.get('email', 'Not provided')}\n" \
+                        f"- Phone: {user_data.get('phone', 'Not provided')}\n" \
+                        f"DO NOT ask for these details again as they have already been provided.\n"
+        
+        context_info = ""
+        if additional_context:
+            context_info = f"\nAdditional Context from the website:\n{additional_context}\n"
+
+        dynamic_system_prompt = SYSTEM_PROMPT + user_info + context_info
         
         # Get a connection from the pool
         with pool.connection() as conn:
@@ -111,7 +132,9 @@ def get_ai_response(message: str, session_id: str = "default_session"):
             config = {"configurable": {"thread_id": clean_id}}
             
             # We'll include past messages in the state to ensure the model has context
-            input_state = {"messages": past_messages + [HumanMessage(content=message)]}
+            # Use the dynamic prompt for this call
+            messages = [SystemMessage(content=dynamic_system_prompt)] + past_messages + [HumanMessage(content=message)]
+            input_state = {"messages": messages}
             
             # Run the workflow
             final_state = app.invoke(input_state, config=config)

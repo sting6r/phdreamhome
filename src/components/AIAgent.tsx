@@ -1330,7 +1330,10 @@ export default function AIAgent() {
       chatInstance.sendMessage({
         text: "No, thank you. That's all for now."
       }, {
-        body: { sessionId: currentSessionId || currentInquiryId || "default_session" }
+        body: { 
+          sessionId: currentSessionId || currentInquiryId || "default_session",
+          userData: formData
+        }
       });
       return;
     }
@@ -1340,7 +1343,10 @@ export default function AIAgent() {
       chatInstance.sendMessage({
         text: "Yes, I have more questions."
       }, {
-        body: { sessionId: currentSessionId || currentInquiryId || "default_session" }
+        body: { 
+          sessionId: currentSessionId || currentInquiryId || "default_session",
+          userData: formData
+        }
       });
       return;
     }
@@ -1357,7 +1363,8 @@ export default function AIAgent() {
     }, {
       body: { 
         sessionId: currentSessionId || currentInquiryId || "default_session",
-        additionalContext: hiddenContext
+        additionalContext: hiddenContext,
+        userData: formData
       }
     });
   };
@@ -1390,7 +1397,8 @@ export default function AIAgent() {
     }, {
       body: { 
         sessionId: currentSessionId || currentInquiryId || "default_session",
-        additionalContext: hiddenContext
+        additionalContext: hiddenContext,
+        userData: formData
       }
     });
     propertyFormJustSubmittedRef.current = true;
@@ -1679,7 +1687,8 @@ export default function AIAgent() {
         }, {
           body: { 
             sessionId: currentSessionId || currentInquiryId || "default_session",
-            additionalContext: hiddenContext
+            additionalContext: hiddenContext,
+            userData: formData
           }
         });
         console.log("sendMessage call finished");

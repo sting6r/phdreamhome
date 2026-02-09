@@ -15,10 +15,15 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       transcriptCount: Array.isArray(transcript) ? transcript.length : (transcript ? 1 : 0) 
     });
 
-    // Check if transcript indicates a tour request
+    // Check if transcript indicates a tour request or latest message
     let tourUpdate = {};
+    let latestMessageUpdate = {};
     if (Array.isArray(transcript)) {
-      const fullText = transcript.map(m => (m as any).content || "").join(" ").toLowerCase();
+      const fullText = transcript.map(m => {
+        if (typeof m.content === 'string') return m.content;
+        if (Array.isArray(m.parts)) return m.parts.map((p: any) => p.text || '').join(' ');
+        return '';
+      }).join(" ").toLowerCase();
       const hasTourRequest = 
         fullText.includes("schedule a tour") || 
         fullText.includes("site viewing") || 
@@ -32,12 +37,34 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
           subject: "Tour Request from AI Agent"
         };
       }
+
+      // Extract the last user message to update the main 'message' field
+      const userMessages = transcript.filter(m => (m as any).role === "user");
+      if (userMessages.length > 0) {
+        const lastUserMsg = userMessages[userMessages.length - 1];
+        let content = (lastUserMsg as any).content || "";
+        
+        // Handle parts if content is missing
+        if (!content && Array.isArray((lastUserMsg as any).parts)) {
+          content = (lastUserMsg as any).parts
+            .filter((p: any) => p.type === 'text')
+            .map((p: any) => p.text)
+            .join(' ');
+        }
+        
+        if (content) {
+          latestMessageUpdate = {
+            message: content.slice(0, 500) // Truncate if too long for display
+          };
+        }
+      }
     }
 
     const data = { 
       ...(status !== undefined && { status }),
       ...(transcript !== undefined && { transcript }),
-      ...tourUpdate
+      ...tourUpdate,
+      ...latestMessageUpdate
     };
 
     try {

@@ -29,6 +29,8 @@ class ChatRequest(BaseModel):
     message: str 
     session_id: Optional[str] = "default_session" # Make it optional with a default
     history: Optional[List[dict]] = [] 
+    user_data: Optional[dict] = None
+    additional_context: Optional[str] = None
 
 @app.get("/", response_class=HTMLResponse)
 def root():
@@ -102,7 +104,12 @@ def chat_endpoint(request: ChatRequest):
         # get_ai_response is a synchronous function that performs DB and LLM I/O.
         # By defining this endpoint with 'def' instead of 'async def', FastAPI
         # will run it in a separate threadpool, preventing the event loop from blocking.
-        response_text = get_ai_response(request.message, session_id=session_id) 
+        response_text = get_ai_response(
+            request.message, 
+            session_id=session_id,
+            user_data=request.user_data,
+            additional_context=request.additional_context
+        ) 
         
         return { 
             "status": "success", 
