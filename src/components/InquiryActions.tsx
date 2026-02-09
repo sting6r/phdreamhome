@@ -60,10 +60,12 @@ export default function InquiryActions({ inquiryId, currentStatus }: { inquiryId
     <div className="relative inline-block text-left" ref={dropdownRef}>
       <button
         onClick={(e) => {
+          e.preventDefault();
           e.stopPropagation();
           setIsOpen(!isOpen);
         }}
-        className="p-1 rounded-full hover:bg-slate-200 transition-colors focus:outline-none"
+        onMouseDown={(e) => e.stopPropagation()}
+        className="p-1 rounded-full hover:bg-slate-200 transition-colors focus:outline-none relative z-10"
         aria-label="Actions"
       >
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5 text-slate-600">
@@ -73,7 +75,7 @@ export default function InquiryActions({ inquiryId, currentStatus }: { inquiryId
 
       {isOpen && (
         <div 
-          className="fixed sm:absolute right-4 sm:right-0 mt-2 w-40 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-[100] overflow-hidden"
+          className="fixed sm:absolute right-4 sm:right-0 mt-2 w-48 rounded-md shadow-xl bg-white ring-1 ring-black ring-opacity-5 z-[999] overflow-hidden"
           onClick={(e) => e.stopPropagation()}
         >
           <div className="py-1" role="menu" aria-orientation="vertical">
