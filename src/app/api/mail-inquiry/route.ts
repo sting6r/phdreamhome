@@ -45,36 +45,38 @@ export async function POST(req: Request) {
 
     // Save inquiry to database
     try {
+      const inquiryData = {
+        name: name || "Interested Buyer",
+        email: email,
+        phone: phone || null,
+        message: message,
+        status: status || "Pending",
+        subject: topic || (type === "Tour" ? "Tour Request" : "General Inquiry"),
+        type: type || "Inquiry",
+        tourDate: tourDate || null,
+        tourTime: tourTime || null,
+        listingId: listingId || null,
+        recipientEmail: agentEmail
+      };
+
       await Promise.race([
         withRetry(() => prisma.inquiry.create({
-          data: {
-            name,
-            email,
-            phone,
-            message,
-            status: status || "Pending",
-            subject: topic,
-            type: type,
-            tourDate: tourDate || null,
-            tourTime: tourTime || null,
-            listingId: listingId || null,
-            recipientEmail: agentEmail
-          }
+          data: inquiryData
         })),
-        timeout(5000)
+        timeout(8000)
       ]);
     } catch (dbError) {
       console.error("Prisma failed to save rental inquiry, attempting Supabase fallback:", dbError);
       const { error: insertError } = await supabaseAdmin
         .from('Inquiry')
         .insert({
-          name,
-          email,
-          phone,
-          message,
+          name: name || "Interested Buyer",
+          email: email,
+          phone: phone || null,
+          message: message,
           status: status || "Pending",
-          subject: topic,
-          type: type,
+          subject: topic || (type === "Tour" ? "Tour Request" : "General Inquiry"),
+          type: type || "Inquiry",
           tourDate: tourDate || null,
           tourTime: tourTime || null,
           listingId: listingId || null,

@@ -61,21 +61,23 @@ export async function POST(request: Request) {
 
     // Save inquiry to database for dashboard visibility
     try {
+      const inquiryData = {
+        name: "Interested Buyer",
+        email: "visitor@example.com",
+        phone: null,
+        message: `Inquiry about listing: ${listing.title}`,
+        status: "Pending",
+        subject: `Listing Inquiry: ${listing.title}`,
+        type: "Listing",
+        listingId: listingId,
+        recipientEmail: to
+      };
+
       await Promise.race([
         withRetry(() => prisma.inquiry.create({
-          data: {
-            name: "Interested Buyer", // Generic name since we don't have user info here
-            email: "visitor@example.com", // Generic email
-            phone: null,
-            message: `Inquiry about listing: ${listing.title}`,
-            status: "Pending",
-            subject: `Listing Inquiry: ${listing.title}`,
-            type: "Listing",
-            listingId: listingId,
-            recipientEmail: to
-          }
+          data: inquiryData
         })),
-        timeout(5000)
+        timeout(8000)
       ]);
     } catch (dbError) {
       console.error("Prisma failed to save listing inquiry, attempting Supabase fallback:", dbError);

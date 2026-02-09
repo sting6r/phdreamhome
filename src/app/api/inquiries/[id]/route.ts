@@ -6,11 +6,7 @@ const timeout = (ms: number) => new Promise((_, reject) => setTimeout(() => reje
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   try {
-    const text = await req.text();
-    if (!text) {
-      return NextResponse.json({ error: "Empty request body" }, { status: 400 });
-    }
-    const body = JSON.parse(text);
+    const body = await req.json();
     const { status, transcript } = body;
 
     console.log(`PATCH inquiry ${id}:`, { 
