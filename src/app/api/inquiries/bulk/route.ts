@@ -17,7 +17,7 @@ export async function DELETE(req: Request) {
           id: { in: ids }
         }
       })),
-      timeout(5000)
+      timeout(8000)
     ]);
 
     return NextResponse.json({ ok: true });
@@ -41,7 +41,7 @@ export async function PATCH(req: Request) {
         },
         data: { status }
       })),
-      timeout(5000)
+      timeout(8000)
     ]);
 
     return NextResponse.json({ ok: true });

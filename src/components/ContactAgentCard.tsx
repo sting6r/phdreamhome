@@ -37,9 +37,11 @@ export default function ContactAgentCard({
   });
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
-  const [tourSent, setTourSent] = useState(false);
   const [sentMessage, setSentMessage] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [tourSent, setTourSent] = useState(false);
   const [tourSentMessage, setTourSentMessage] = useState("");
+  const [tourError, setTourError] = useState<string | null>(null);
   const [emailSuggestion, setEmailSuggestion] = useState<string | null>(null);
   const [tourEmailSuggestion, setTourEmailSuggestion] = useState<string | null>(null);
 
@@ -92,6 +94,7 @@ export default function ContactAgentCard({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setError(null);
     try {
       const res = await fetch("/api/mail-inquiry", {
         method: "POST",
@@ -109,9 +112,12 @@ export default function ContactAgentCard({
         setSent(true);
         setSentMessage(data.message || "Your inquiry has been sent! Our agent will contact you shortly.");
         setTimeout(() => setIsOpen(false), 3000);
+      } else {
+        setError(data.error || "Failed to send inquiry. Please try again.");
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
+      setError("A network error occurred. Please check your connection.");
     } finally {
       setLoading(false);
     }
@@ -120,6 +126,7 @@ export default function ContactAgentCard({
   const handleTourSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setTourError(null);
     try {
       const res = await fetch("/api/mail-inquiry", {
         method: "POST",
@@ -144,9 +151,12 @@ export default function ContactAgentCard({
           setIsTourOpen(false);
           setTourSent(false);
         }, 10000);
+      } else {
+        setTourError(data.error || "Failed to schedule tour. Please try again.");
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
+      setTourError("A network error occurred. Please check your connection.");
     } finally {
       setLoading(false);
     }
@@ -215,6 +225,11 @@ export default function ContactAgentCard({
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-2">
+              {error && (
+                <div className="text-[10px] text-red-600 bg-red-50 p-2 rounded border border-red-200">
+                  {error}
+                </div>
+              )}
               <input 
                 className="input text-sm" 
                 placeholder="Your Name" 
@@ -298,8 +313,13 @@ export default function ContactAgentCard({
       {/* Schedule Tour Form */}
       <div className={`overflow-hidden transition-all duration-300 ease-in-out ${isTourOpen ? "max-h-[1000px] opacity-100 mt-4" : "max-h-0 opacity-0"}`}>
         <div className="p-4 bg-[#F0F9FF] rounded-md border border-sky-200 shadow-sm space-y-4">
-          <div className="text-sm font-semibold text-sky-800">Schedule a Tour</div>
+          <div className="text-sm font-semibold text-black">Schedule Site Viewing</div>
           <form onSubmit={handleTourSubmit} className="space-y-3">
+            {tourError && (
+              <div className="text-[10px] text-red-600 bg-red-50 p-2 rounded border border-red-200">
+                {tourError}
+              </div>
+            )}
             {!tourSent && (
               <>
                 <div className="grid grid-cols-2 gap-2">
