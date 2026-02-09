@@ -783,6 +783,14 @@ export default function AIAgent() {
             const url = imageMatch[2];
             const isVideo = url.toLowerCase().match(/\.(mp4|webm|ogg|mov)(\?.*)?$/i) || url.includes('/videos/') || url.includes('video');
             
+            // Check if there is a listing URL associated with this image in the text
+            let listingUrl: string | null = null;
+            const nextPart = text.split(/(!\[.*?\]\(.*?\)|\[.*?\]\(.*?\)|\[PROPERTY_DETAILS\][\s\S]*?\[\/PROPERTY_DETAILS\])/g)[index + 1];
+            if (nextPart && nextPart.includes('/listing/')) {
+              const match = nextPart.match(/\/listing\/[^\s]+/);
+              if (match) listingUrl = match[0];
+            }
+
             return (
               <div 
                 key={index} 
@@ -819,7 +827,18 @@ export default function AIAgent() {
                     </div>
                   </div>
                 )}
-                {alt && <div className="p-2 text-[10px] text-slate-500 bg-white/80 border-t border-slate-100 font-medium">{alt}</div>}
+                <div className="bg-white/80 border-t border-slate-100 p-2 flex flex-col gap-1.5">
+                  {alt && <div className="text-[10px] text-slate-500 font-medium leading-tight">{alt}</div>}
+                  {listingUrl && (
+                    <Link 
+                      href={listingUrl}
+                      onClick={(e) => e.stopPropagation()}
+                      className="inline-flex items-center justify-center gap-1 bg-purple-600 text-white px-2 py-1 rounded text-[10px] font-semibold hover:bg-purple-700 transition-colors shadow-sm w-fit"
+                    >
+                      View Listing
+                    </Link>
+                  )}
+                </div>
               </div>
             );
           }
@@ -1677,26 +1696,29 @@ export default function AIAgent() {
         return;
       }
       if (imageFile) {
-        console.log("Uploading image...");
-        const fileExt = imageFile.name.split('.').pop();
-        const fileName = `${Math.random().toString(36).substring(2)}_${Date.now()}.${fileExt}`;
-        const filePath = `ai-inquiries/${fileName}`;
+        console.log("Uploading image via API...");
+        const formDataUpload = new FormData();
+        formDataUpload.append("files", imageFile);
+        
+        const uploadRes = await fetch("/api/upload", {
+          method: "POST",
+          body: formDataUpload,
+        });
 
-        const { error } = await supabase.storage
-          .from('images')
-          .upload(filePath, imageFile);
-
-        if (error) {
-          console.error("Supabase upload error:", error);
-          throw error;
+        if (!uploadRes.ok) {
+          const err = await uploadRes.json();
+          throw new Error(err.error || "Failed to upload image");
         }
 
-        const { data: { publicUrl } } = supabase.storage
-          .from('images')
-          .getPublicUrl(filePath);
+        const uploadData = await uploadRes.json();
+        const imageUrl = uploadData.signedUrls?.[0];
 
-        console.log("Image uploaded, publicUrl:", publicUrl);
-        finalContent = chatInput ? `${chatInput}\n\n![Property Image](${publicUrl})` : `![Property Image](${publicUrl})`;
+        if (!imageUrl) {
+          throw new Error("No image URL returned from upload");
+        }
+
+        console.log("Image uploaded successfully:", imageUrl);
+        finalContent = chatInput ? `${chatInput}\n\n![Property Image](${imageUrl})` : `![Property Image](${imageUrl})`;
       }
 
       console.log("Preparing to send content:", finalContent);
@@ -1833,6 +1855,7 @@ export default function AIAgent() {
       >
         <AnimatePresence mode="wait">
         {!isOpen && (
+          <>
           <div className="flex flex-col items-end gap-3">
             <AnimatePresence>
               {showQuickActions && (
@@ -1911,51 +1934,21 @@ export default function AIAgent() {
                 </motion.div>
               )}
             </AnimatePresence>
-            <AnimatePresence>
-              {showShareMenu && (
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.8, y: 10 }}
-                  animate={{ opacity: 1, scale: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.8, y: 10 }}
-                  className="absolute bottom-32 right-0 flex flex-col gap-2 bg-white p-2 rounded-xl shadow-2xl border border-slate-100 z-[9999]"
-                >
-                  <button
-                    onClick={() => handleShare('facebook')}
-                    className="p-2 hover:bg-blue-50 text-blue-600 rounded-lg transition-colors flex items-center gap-2 text-xs font-medium whitespace-nowrap"
-                    title="Share on Facebook"
-                  >
-                    <Facebook size={16} /> Facebook
-                  </button>
-                  <button
-                    onClick={() => handleShare('twitter')}
-                    className="p-2 hover:bg-sky-50 text-sky-500 rounded-lg transition-colors flex items-center gap-2 text-xs font-medium whitespace-nowrap"
-                    title="Share on Twitter"
-                  >
-                    <Twitter size={16} /> Twitter
-                  </button>
-                  <button
-                    onClick={() => handleShare('copy')}
-                    className="p-2 hover:bg-slate-50 text-slate-600 rounded-lg transition-colors flex items-center gap-2 text-xs font-medium whitespace-nowrap"
-                    title="Copy Link"
-                  >
-                    {isCopied ? <Check size={16} className="text-emerald-500" /> : <Copy size={16} />} 
-                    {isCopied ? 'Copied!' : 'Copy Link'}
-                  </button>
-                </motion.div>
-              )}
-            </AnimatePresence>
 
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setShowShareMenu(!showShareMenu);
-              }}
-              className="absolute -top-12 right-0 flex h-10 w-10 items-center justify-center rounded-full bg-white shadow-lg border border-slate-100 text-slate-600 hover:text-purple-600 hover:scale-110 transition-all z-[9998]"
-              title="Share AI Assistant"
-            >
-              <Share2 size={18} />
-            </button>
+            {!showShareMenu && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowShareMenu(true);
+                }}
+                className="flex h-6 w-6 items-center justify-center rounded-full bg-purple-50 shadow-lg border-2 border-blue-400 text-slate-600 hover:text-purple-600 hover:scale-110 transition-all z-[9998]"
+                title="Share AI Assistant"
+              >
+                <Share2 size={10} />
+              </button>
+            )}
 
+            {/* Main AI Button */}
             <button
               onClick={() => {
                 if (!isDraggingRef.current) {
@@ -1979,7 +1972,52 @@ export default function AIAgent() {
               </div>
             </button>
           </div>
-        )}
+
+          <AnimatePresence>
+            {showShareMenu && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.8, y: 10 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.8, y: 10 }}
+                className="absolute bottom-32 right-0 flex flex-col gap-2 bg-white p-2 rounded-xl shadow-2xl border border-slate-100 z-[9999]"
+              >
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowShareMenu(false);
+                  }}
+                  className="absolute -top-2 -right-2 bg-white text-black rounded-full p-1 shadow-md hover:bg-gray-100 transition-colors border border-slate-100 drop-shadow-[0_2px_6px_rgba(126,43,245,0.35)]"
+                  title="Close"
+                >
+                  <X size={12} />
+                </button>
+                <button
+                  onClick={() => handleShare('facebook')}
+                  className="p-2 hover:bg-blue-50 text-blue-600 rounded-lg transition-colors flex items-center gap-2 text-xs font-medium whitespace-nowrap"
+                  title="Share on Facebook"
+                >
+                  <Facebook size={16} /> Facebook
+                </button>
+                <button
+                  onClick={() => handleShare('twitter')}
+                  className="p-2 hover:bg-sky-50 text-sky-500 rounded-lg transition-colors flex items-center gap-2 text-xs font-medium whitespace-nowrap"
+                  title="Share on Twitter"
+                >
+                  <Twitter size={16} /> Twitter
+                </button>
+                <button
+                  onClick={() => handleShare('copy')}
+                  className="p-2 hover:bg-slate-50 text-slate-600 rounded-lg transition-colors flex items-center gap-2 text-xs font-medium whitespace-nowrap"
+                  title="Copy Link"
+                >
+                  {isCopied ? <Check size={16} className="text-emerald-500" /> : <Copy size={16} />} 
+                  {isCopied ? 'Copied!' : 'Copy Link'}
+                </button>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </>
+      )}
 
         {isOpen && (
           <motion.div
