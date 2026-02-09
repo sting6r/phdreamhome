@@ -20,6 +20,10 @@ export default function InquiryActions({ inquiryId, currentStatus }: { inquiryId
   }, []);
 
   const updateStatus = async (newStatus: string) => {
+    if (newStatus === currentStatus) {
+      setIsOpen(false);
+      return;
+    }
     setLoading(true);
     try {
       const res = await fetch(`/api/inquiries/${inquiryId}`, {
@@ -27,11 +31,15 @@ export default function InquiryActions({ inquiryId, currentStatus }: { inquiryId
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: newStatus }),
       });
-      if (res.ok) {
+      const data = await res.json();
+      if (res.ok && !data.error) {
         router.refresh();
+      } else {
+        alert(`Error: ${data.error || "Failed to update status"}`);
       }
     } catch (err) {
       console.error(err);
+      alert("Failed to update status. Please check your internet connection.");
     } finally {
       setLoading(false);
       setIsOpen(false);
@@ -45,11 +53,15 @@ export default function InquiryActions({ inquiryId, currentStatus }: { inquiryId
       const res = await fetch(`/api/inquiries/${inquiryId}`, {
         method: "DELETE",
       });
-      if (res.ok) {
+      const data = await res.json();
+      if (res.ok && !data.error) {
         router.refresh();
+      } else {
+        alert(`Error: ${data.error || "Failed to delete inquiry"}`);
       }
     } catch (err) {
       console.error(err);
+      alert("Failed to delete inquiry. Please check your internet connection.");
     } finally {
       setLoading(false);
       setIsOpen(false);
@@ -65,7 +77,7 @@ export default function InquiryActions({ inquiryId, currentStatus }: { inquiryId
           setIsOpen(!isOpen);
         }}
         onMouseDown={(e) => e.stopPropagation()}
-        className="p-1 rounded-full hover:bg-slate-200 transition-colors focus:outline-none relative z-10"
+        className={`p-1 rounded-full hover:bg-slate-200 transition-colors focus:outline-none relative z-10 ${isOpen ? "bg-slate-200" : ""}`}
         aria-label="Actions"
       >
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5 text-slate-600">
@@ -75,8 +87,9 @@ export default function InquiryActions({ inquiryId, currentStatus }: { inquiryId
 
       {isOpen && (
         <div 
-          className="fixed sm:absolute right-4 sm:right-0 mt-2 w-48 rounded-md shadow-xl bg-white ring-1 ring-black ring-opacity-5 z-[999] overflow-hidden"
+          className="fixed sm:absolute right-4 sm:right-0 mt-2 w-48 rounded-md shadow-xl bg-white ring-1 ring-black ring-opacity-5 z-[9999] overflow-hidden"
           onClick={(e) => e.stopPropagation()}
+          onMouseDown={(e) => e.stopPropagation()}
         >
           <div className="py-1" role="menu" aria-orientation="vertical">
             <div className="px-3 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100">Change Status</div>

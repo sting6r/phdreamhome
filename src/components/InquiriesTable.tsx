@@ -66,12 +66,16 @@ export default function InquiriesTable({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ids: selectedIds }),
       });
-      if (res.ok) {
+      const data = await res.json();
+      if (res.ok && !data.error) {
         setSelectedIds([]);
         router.refresh();
+      } else {
+        alert(`Error: ${data.error || "Failed to delete inquiries"}`);
       }
     } catch (err) {
       console.error(err);
+      alert("Failed to delete inquiries. Please check your internet connection.");
     } finally {
       setLoading(false);
     }
@@ -86,12 +90,16 @@ export default function InquiriesTable({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ids: selectedIds, status }),
       });
-      if (res.ok) {
+      const data = await res.json();
+      if (res.ok && !data.error) {
         setSelectedIds([]);
         router.refresh();
+      } else {
+        alert(`Error: ${data.error || "Failed to update inquiries"}`);
       }
     } catch (err) {
       console.error(err);
+      alert("Failed to update inquiries. Please check your internet connection.");
     } finally {
       setLoading(false);
     }

@@ -17,7 +17,7 @@ export async function middleware(request: NextRequest) {
   }
 
   // Force www for consistency to prevent OAuth state mismatch in production
-  if (process.env.NODE_ENV === "production" && 
+  if ((process.env.NODE_ENV === "production" || host.includes("phdreamhome.com")) && 
       !host.startsWith("www.") && 
       !host.includes("localhost") && 
       !host.includes("railway.app") &&

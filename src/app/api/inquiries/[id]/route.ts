@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma, withRetry } from "@lib/prisma";
+import { supabaseAdmin } from "@lib/supabase";
 
 const timeout = (ms: number) => new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), ms));
 
@@ -33,16 +34,34 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       }
     }
 
-    const updated = await withRetry(() => prisma.inquiry.update({
-      where: { id },
-      data: { 
-        ...(status !== undefined && { status }),
-        ...(transcript !== undefined && { transcript }),
-        ...tourUpdate
-      }
-    }));
+    const data = { 
+      ...(status !== undefined && { status }),
+      ...(transcript !== undefined && { transcript }),
+      ...tourUpdate
+    };
 
-    return NextResponse.json(updated);
+    try {
+      const updated = await Promise.race([
+        withRetry(() => prisma.inquiry.update({
+          where: { id },
+          data
+        })),
+        timeout(8000)
+      ]);
+      return NextResponse.json(updated);
+    } catch (dbError) {
+      console.error(`Prisma PATCH inquiry ${id} failed, trying Supabase fallback:`, dbError);
+      
+      const { data: updated, error: sbError } = await supabaseAdmin
+        .from('Inquiry')
+        .update(data)
+        .eq('id', id)
+        .select()
+        .single();
+      
+      if (sbError) throw sbError;
+      return NextResponse.json(updated);
+    }
   } catch (err: any) {
     console.error(`Error PATCHing inquiry ${id}:`, err);
     return NextResponse.json({ error: err.message }, { status: 500 });
@@ -50,16 +69,27 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 }
 
 export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   try {
-    const { id } = await params;
-    await Promise.race([
-      withRetry(() => prisma.inquiry.delete({
-        where: { id }
-      })),
-      timeout(5000)
-    ]);
+    try {
+      await Promise.race([
+        withRetry(() => prisma.inquiry.delete({
+          where: { id }
+        })),
+        timeout(8000)
+      ]);
+    } catch (dbError) {
+      console.error(`Prisma DELETE inquiry ${id} failed, trying Supabase fallback:`, dbError);
+      const { error: sbError } = await supabaseAdmin
+        .from('Inquiry')
+        .delete()
+        .eq('id', id);
+      
+      if (sbError) throw sbError;
+    }
     return NextResponse.json({ ok: true });
   } catch (err: any) {
+    console.error(`Error deleting inquiry ${id}:`, err);
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }

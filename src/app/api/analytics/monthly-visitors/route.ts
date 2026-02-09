@@ -7,38 +7,36 @@ import { NextResponse } from 'next/server';
 export async function GET() {
   const timeout = (ms: number) => new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), ms));
   const propertyId = process.env.GA_PROPERTY_ID;
-  let credentials = null;
-  
+  const credentialsJson = process.env.GA_SERVICE_ACCOUNT_CREDENTIALS;
+
+  if (!propertyId || !credentialsJson) {
+    console.error("Missing GA environment variables", { propertyId: !!propertyId, credentials: !!credentialsJson });
+    return NextResponse.json({ error: "Analytics configuration missing" }, { status: 500 });
+  }
+
+  let credentials;
   try {
-    if (process.env.GA_SERVICE_ACCOUNT_CREDENTIALS) {
-      credentials = JSON.parse(process.env.GA_SERVICE_ACCOUNT_CREDENTIALS);
+    // Attempt to parse directly, then try to handle potential multi-line/unquoted issues
+    try {
+      credentials = JSON.parse(credentialsJson);
+    } catch (e) {
+      // If it fails, it might be because it's stored as a multi-line string in .env without proper escaping
+      // We can try to reconstruct it if it looks like the start of a JSON object
+      if (credentialsJson.trim().startsWith('{')) {
+        // This is a common issue with multi-line env vars in some environments
+        console.warn("GA_SERVICE_ACCOUNT_CREDENTIALS failed standard JSON.parse, attempting reconstruction");
+        // Replace newlines that are NOT inside the private key string with nothing, 
+        // but this is risky. A better approach for the user is to provide it as a single line.
+        throw e; 
+      }
+      throw e;
     }
-  } catch (e) {
-    console.warn("Failed to parse GA_SERVICE_ACCOUNT_CREDENTIALS, using fallback data. Check if it's valid JSON and single-line in .env");
+  } catch (error) {
+    console.error("Failed to parse GA_SERVICE_ACCOUNT_CREDENTIALS. Ensure it is a single-line stringified JSON in .env", error);
+    return NextResponse.json({ error: "Invalid analytics credentials format" }, { status: 500 });
   }
 
-  const analyticsDataClient = credentials 
-    ? new BetaAnalyticsDataClient({ credentials }) 
-    : null;
-
-  if (!analyticsDataClient || !propertyId) {
-    console.log('Google Analytics credentials not found, returning fallback data');
-    // Fallback data if GA is not configured yet
-    return NextResponse.json([
-      { name: "Jan", visitors: 4500 },
-      { name: "Feb", visitors: 5200 },
-      { name: "Mar", visitors: 4800 },
-      { name: "Apr", visitors: 6100 },
-      { name: "May", visitors: 5900 },
-      { name: "Jun", visitors: 7200 },
-      { name: "Jul", visitors: 8100 },
-      { name: "Aug", visitors: 7800 },
-      { name: "Sep", visitors: 8500 },
-      { name: "Oct", visitors: 9200 },
-      { name: "Nov", visitors: 10500 },
-      { name: "Dec", visitors: 12000 },
-    ]);
-  }
+  const analyticsDataClient = new BetaAnalyticsDataClient({ credentials });
 
   try {
     const [response] = await Promise.race([
@@ -89,8 +87,20 @@ export async function GET() {
     }) || []) as FormattedEntry[]).sort((a, b) => a.monthIndex - b.monthIndex);
 
     return NextResponse.json(formattedData);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching GA data:', error);
+    
+    // Check for permission denied error and provide helpful info
+    if (error.message?.includes('PERMISSION_DENIED') || error.code === 7) {
+      const clientEmail = credentials?.client_email || 'unknown service account email';
+      console.error(`GA Permission Denied: Please add the service account email "${clientEmail}" to your Google Analytics Property ID "${propertyId}" with at least "Viewer" role.`);
+      return NextResponse.json({ 
+        error: 'Permission denied in Google Analytics', 
+        details: `Service account ${clientEmail} needs access to property ${propertyId}`,
+        serviceAccountEmail: clientEmail
+      }, { status: 403 });
+    }
+
     return NextResponse.json({ error: 'Failed to fetch analytics data' }, { status: 500 });
   }
 }
