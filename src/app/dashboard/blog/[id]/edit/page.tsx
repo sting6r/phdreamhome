@@ -3700,6 +3700,7 @@ export default function EditBlogPage({ params }: { params: Promise<{ id: string 
                                   src={upload.url || `/api/image/proxy?path=${encodeURIComponent(upload.path)}`}
                                   className="absolute inset-0 w-full h-full object-contain"
                                   controls
+                                  preload="auto"
                                   controlsList="nodownload"
                                 />
                               );
@@ -3759,6 +3760,7 @@ export default function EditBlogPage({ params }: { params: Promise<{ id: string 
                                   src={upload.url || `/api/image/proxy?path=${encodeURIComponent(upload.path)}`}
                                   className="absolute inset-0 w-full h-full object-contain"
                                   controls
+                                  preload="auto"
                                   controlsList="nodownload"
                                 />
                               );

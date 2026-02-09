@@ -8,7 +8,7 @@ import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import Script from "next/script";
-import { X, Send, User, Minimize2, Maximize2, Loader2, ExternalLink, Image as ImageIcon, ChevronLeft, Undo2, GripHorizontal } from "lucide-react";
+import { X, Send, User, Minimize2, Maximize2, Loader2, ExternalLink, Image as ImageIcon, ChevronLeft, Undo2, GripHorizontal, Building2, MapPin, DollarSign, Info, Sparkles, ClipboardList, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 
@@ -26,6 +26,8 @@ export default function AIAgent() {
   const [showInChatQuickActions, setShowInChatQuickActions] = useState(false);
   const [suppressQuickActions, setSuppressQuickActions] = useState(false);
   const [isFormSubmitted, setIsFormSubmitted] = useState(false);
+  const [isReturningVisitor, setIsReturningVisitor] = useState(false);
+  const [verificationError, setVerificationError] = useState<string | null>(null);
   const [formData, setFormData] = useState({ name: "", email: "", phone: "" });
   const [currentInquiryId, setCurrentInquiryId] = useState<string | null>(null);
   const [chatInput, setChatInput] = useState("");
@@ -52,8 +54,12 @@ export default function AIAgent() {
     amenities: "",
     notes: ""
   });
+  const [previewMedia, setPreviewMedia] = useState<{ url: string; type: 'image' | 'video'; alt?: string } | null>(null);
+  const [allMedia, setAllMedia] = useState<{ url: string; type: 'image' | 'video'; alt?: string }[]>([]);
+  const [currentMediaIndex, setCurrentMediaIndex] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const chatInputRef = useRef<HTMLInputElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
   const messagesRef = useRef<Message[]>([]);
   const inquiryIdRef = useRef<string | null>(null);
   const hasFetchedProfile = useRef(false);
@@ -69,10 +75,15 @@ export default function AIAgent() {
     return new DefaultChatTransport({
       api: "/api/chat",
       body: {
-        sessionId: currentSessionId || currentInquiryId || "default_session"
+        sessionId: currentSessionId || currentInquiryId || "default_session",
+        userData: {
+          name: formData.name,
+          email: formData.email,
+          phone: formData.phone
+        }
       }
     });
-  }, [currentSessionId, currentInquiryId]);
+  }, [currentSessionId, currentInquiryId, formData.name, formData.email, formData.phone]);
 
   const chatInstance = useChat({
     id: "ai-agent-chat",
@@ -162,20 +173,26 @@ export default function AIAgent() {
       const pathname = typeof window !== 'undefined' ? window.location.pathname : "";
       let listingsSnippet = "";
       try {
-        const res = await fetch('/api/public-listings?featured=true', { 
+        // Fetch more listings to give the AI better context, and include search if applicable
+        const res = await fetch('/api/public-listings?limit=6', { 
           cache: 'no-store',
           signal 
         });
         const data = await res.json().catch(() => ({}));
         const listings = Array.isArray((data as any)?.listings) ? (data as any).listings : [];
         const safeListings = Array.isArray(listings) ? listings : [];
-      const top = safeListings.slice(0, 3);
-        if (top.length) {
-          const lines = top.map((l: any, i: number) => {
-            const price = typeof l?.price === 'number' ? `₱${Number(l.price).toLocaleString('en-PH')}` : '';
+        if (safeListings.length) {
+          const lines = safeListings.map((l: any, i: number) => {
+            const country = String(l?.country || "").toLowerCase();
+            let currency = "₱";
+            if (country.includes("usa") || country.includes("united states")) currency = "$";
+            else if (country.includes("dubai") || country.includes("uae") || country.includes("emirates")) currency = "AED ";
+            else if (country.includes("singapore")) currency = "S$";
+
+            const price = typeof l?.price === 'number' ? `${currency}${Number(l.price).toLocaleString('en-PH')}` : '';
             const link = l?.slug ? `/listing/${l.slug}` : `/listing/${l?.id}`;
             const img = l?.images?.[0]?.url ? `![${l.title}](${l.images[0].url})\n` : '';
-            const loc = [l?.city].filter(Boolean).join(', ');
+            const loc = [l?.city, l?.state, l?.country].filter(Boolean).join(', ');
             return `${img}${i + 1}. ${String(l?.title || '')}${price ? ` — ${price}` : ''}${loc ? ` • ${loc}` : ''}\nView: ${link}`;
           }).join('\n\n');
           listingsSnippet = lines;
@@ -311,6 +328,21 @@ export default function AIAgent() {
   useEffect(() => {
     if (!mounted || hasFetchedProfile.current) return;
     hasFetchedProfile.current = true;
+
+    // Check localStorage for returning visitor
+    const visitorData = localStorage.getItem("ai_agent_visitor_data");
+    if (visitorData) {
+      try {
+        const parsed = JSON.parse(visitorData);
+        if (parsed.name && parsed.email) {
+          setIsReturningVisitor(true);
+          // Pre-fill form data but don't set as submitted yet until they verify
+          setFormData(prev => ({ ...prev, name: parsed.name, email: parsed.email, phone: parsed.phone || "" }));
+        }
+      } catch (e) {
+        console.error("Error parsing visitor data:", e);
+      }
+    }
 
     const controller = new AbortController();
     const sig = controller.signal;
@@ -459,7 +491,15 @@ export default function AIAgent() {
 
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (formData.name && formData.email && formData.phone) {
+    setVerificationError(null);
+
+    // Validation logic
+    const isPhoneRequired = !isReturningVisitor;
+    const hasName = !!formData.name.trim();
+    const hasEmail = !!formData.email.trim();
+    const hasPhone = !!formData.phone.trim();
+
+    if (hasName && hasEmail && (!isPhoneRequired || hasPhone)) {
       try {
         const response = await fetch("/api/leads", {
           method: "POST",
@@ -475,6 +515,9 @@ export default function AIAgent() {
           if (data) {
             const inquiryId = data.inquiry?.id || null;
             const transcript = data.inquiry?.transcript;
+            
+            // Save to localStorage for future visits
+            localStorage.setItem("ai_agent_visitor_data", JSON.stringify(formData));
             
             setCurrentInquiryId(inquiryId);
             setIsFormSubmitted(true);
@@ -501,6 +544,16 @@ export default function AIAgent() {
               } catch (e) {
                 console.error("Error parsing existing transcript:", e);
               }
+            } else if (isReturningVisitor && !data.alreadyExists) {
+              // If we thought they were returning but no record found in DB,
+              // we should probably ask them to provide their phone number to register as a new client
+              // or tell them the verification failed.
+              if (!formData.phone) {
+                setIsFormSubmitted(false);
+                setVerificationError("We couldn't find your previous chat history. Please provide your phone number to start a new session.");
+                setIsReturningVisitor(false); // Switch to new visitor mode to show phone field
+                return;
+              }
             }
 
             // Automatically trigger the greeting message if no history
@@ -520,11 +573,11 @@ export default function AIAgent() {
         } else {
           const errData = await safeJson(response);
           console.error("Failed to save lead:", errData);
-          setIsFormSubmitted(true);
+          setVerificationError(errData?.error || "Failed to verify. Please check your details.");
         }
       } catch (error) {
         console.error("Error submitting lead form:", error);
-        setIsFormSubmitted(true);
+        setVerificationError("An error occurred. Please try again.");
       }
     }
   };
@@ -534,10 +587,10 @@ export default function AIAgent() {
   }, []);
 
   useEffect(() => {
-    if (isOpen && isFormSubmitted) {
+    if (isOpen && isFormSubmitted && !currentInquiryId && !currentSessionId) {
       setShowChatHistory(true);
     }
-  }, [isOpen, isFormSubmitted]);
+  }, [isOpen, isFormSubmitted, currentInquiryId, currentSessionId]);
 
   useEffect(() => {
     // Update initialMessages when messages change and persist to sessionStorage
@@ -573,48 +626,163 @@ export default function AIAgent() {
   };
 
   const RenderText = ({ text }: { text: string }) => {
+    // Collect all media items from the current message text
+    const mediaItems = useMemo(() => {
+      const items: { url: string; type: 'image' | 'video'; alt?: string }[] = [];
+      const matches = text.matchAll(/!\[(.*?)\]\((.*?)\)/g);
+      for (const match of matches) {
+        const alt = match[1];
+        const url = match[2];
+        const isVideo = url.toLowerCase().match(/\.(mp4|webm|ogg|mov)(\?.*)?$/i) || url.includes('/videos/') || url.includes('video');
+        items.push({ url, type: isVideo ? 'video' : 'image', alt });
+      }
+      return items;
+    }, [text]);
+
+    const handleMediaClick = (url: string) => {
+      const index = mediaItems.findIndex(item => item.url === url);
+      if (index !== -1) {
+        setAllMedia(mediaItems);
+        setCurrentMediaIndex(index);
+        setPreviewMedia(mediaItems[index]);
+      }
+    };
+
     return (
       <>
-        {text.split(/(!\[.*?\]\(.*?\)|\[.*?\]\(.*?\))/g).map((part, index) => {
+        {text.split(/(!\[.*?\]\(.*?\)|\[.*?\]\(.*?\)|\[PROPERTY_DETAILS\][\s\S]*?\[\/PROPERTY_DETAILS\])/g).map((part, index) => {
+          if (!part) return null;
+
+          // Handle Property Details Form
+          if (part.startsWith('[PROPERTY_DETAILS]')) {
+            const content = part.replace('[PROPERTY_DETAILS]', '').replace('[/PROPERTY_DETAILS]', '').trim();
+            const lines = content.split('\n');
+            const data: Record<string, string> = {};
+            lines.forEach(line => {
+              const [key, ...val] = line.split(':');
+              if (key && val.length) {
+                data[key.trim()] = val.join(':').trim();
+              }
+            });
+
+            return (
+              <div key={index} className="my-3 bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm text-slate-800">
+                <div className="bg-slate-50 px-3 py-2 border-b border-slate-200 flex items-center gap-2">
+                  <ClipboardList size={14} className="text-purple-600" />
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-600">Property Submission Details</span>
+                </div>
+                <div className="p-3 space-y-2.5">
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-0.5">
+                      <div className="flex items-center gap-1 text-[9px] font-medium text-slate-400 uppercase">
+                        <Info size={10} /> Mode
+                      </div>
+                      <div className="text-xs font-semibold text-slate-700">{data.Mode}</div>
+                    </div>
+                    <div className="space-y-0.5">
+                      <div className="flex items-center gap-1 text-[9px] font-medium text-slate-400 uppercase">
+                        <Building2 size={10} /> Type
+                      </div>
+                      <div className="text-xs font-semibold text-slate-700">{data.Type}</div>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-0.5">
+                    <div className="flex items-center gap-1 text-[9px] font-medium text-slate-400 uppercase">
+                      <MapPin size={10} /> Location
+                    </div>
+                    <div className="text-xs font-semibold text-slate-700">{data.Location}</div>
+                  </div>
+
+                  <div className="space-y-0.5">
+                    <div className="flex items-center gap-1 text-[9px] font-medium text-slate-400 uppercase">
+                      <DollarSign size={10} /> {data.Mode === 'Rent' ? 'Monthly Rent' : 'Selling Price'}
+                    </div>
+                    <div className="text-xs font-bold text-purple-600">
+                      {isNaN(Number(data.Price)) ? data.Price : `₱${Number(data.Price).toLocaleString('en-PH')}`}
+                    </div>
+                  </div>
+
+                  {data.Amenities && (
+                    <div className="space-y-0.5">
+                      <div className="flex items-center gap-1 text-[9px] font-medium text-slate-400 uppercase">
+                        <Sparkles size={10} /> Amenities
+                      </div>
+                      <div className="text-xs text-slate-600 leading-relaxed">{data.Amenities}</div>
+                    </div>
+                  )}
+
+                  {data.Notes && (
+                    <div className="space-y-0.5 pt-1 border-t border-slate-100">
+                      <div className="text-[9px] font-medium text-slate-400 uppercase">Additional Notes</div>
+                      <div className="text-[11px] text-slate-500 italic leading-relaxed">{data.Notes}</div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          }
+
           // Handle Images and Videos using ![alt](url)
-          const imageMatch = part.match(/!\[(.*?)\]\((.*?)\)/);
+          const imageMatch = part.match(/^!\[(.*?)\]\((.*?)\)$/);
           if (imageMatch) {
             const alt = imageMatch[1];
             const url = imageMatch[2];
-            const isVideo = url.toLowerCase().match(/\.(mp4|webm|ogg)(\?.*)?$/i) || url.includes('/videos/');
+            const isVideo = url.toLowerCase().match(/\.(mp4|webm|ogg|mov)(\?.*)?$/i) || url.includes('/videos/') || url.includes('video');
             
             return (
-              <div key={index} className="my-2 rounded-lg overflow-hidden border border-slate-100 shadow-sm bg-black/5">
+              <div 
+                key={index} 
+                className="my-2 rounded-lg overflow-hidden border border-slate-100 shadow-sm bg-black/5 cursor-pointer hover:ring-2 hover:ring-purple-400 transition-all"
+                onClick={() => handleMediaClick(url)}
+              >
                 {isVideo ? (
-                  <video src={url} controls preload="metadata" className="w-full h-auto max-h-64" />
+                  <div className="relative group">
+                    <video src={url} preload="metadata" muted playsInline className="w-full h-auto max-h-80 pointer-events-none" />
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/40 transition-colors">
+                      <div className="w-12 h-12 rounded-full bg-white/90 flex items-center justify-center shadow-lg transform group-hover:scale-110 transition-transform">
+                        <div className="w-0 h-0 border-t-[8px] border-t-transparent border-l-[12px] border-l-purple-600 border-b-[8px] border-b-transparent ml-1" />
+                      </div>
+                    </div>
+                  </div>
                 ) : (
-                  <Image 
-                    src={url} 
-                    alt={alt} 
-                    width={400}
-                    height={300}
-                    unoptimized
-                    className="w-full h-auto object-cover max-h-64"
-                    onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                  />
+                  <div className="relative group">
+                    <Image 
+                      src={url} 
+                      alt={alt} 
+                      width={400}
+                      height={300}
+                      unoptimized
+                      className="w-full h-auto object-cover max-h-80 group-hover:opacity-95 transition-opacity"
+                      onError={(e) => { 
+                        console.error("Image load failed:", url);
+                        (e.target as HTMLImageElement).style.display = 'none'; 
+                      }}
+                    />
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/10 transition-colors">
+                      <div className="opacity-0 group-hover:opacity-100 bg-white/90 p-2 rounded-full shadow-lg transform translate-y-2 group-hover:translate-y-0 transition-all">
+                        <Maximize2 size={18} className="text-purple-600" />
+                      </div>
+                    </div>
+                  </div>
                 )}
-                {alt && <div className="p-2 text-[10px] text-slate-500 bg-white/80 border-t border-slate-100">{alt}</div>}
+                {alt && <div className="p-2 text-[10px] text-slate-500 bg-white/80 border-t border-slate-100 font-medium">{alt}</div>}
               </div>
             );
           }
 
           // Handle Links [text](url)
-          const linkMatch = part.match(/\[(.*?)\]\((.*?)\)/);
-          if (linkMatch && !part.startsWith('!')) {
+          const linkMatch = part.match(/^\[(.*?)\]\((.*?)\)$/);
+          if (linkMatch) {
             const linkText = linkMatch[1];
             const linkUrl = linkMatch[2];
-            const isVideo = linkUrl.toLowerCase().match(/\.(mp4|webm|ogg)(\?.*)?$/i) || linkUrl.includes('/videos/');
+            const isVideo = linkUrl.toLowerCase().match(/\.(mp4|webm|ogg|mov)(\?.*)?$/i) || linkUrl.includes('/videos/') || linkUrl.includes('video');
 
             if (isVideo) {
               return (
                 <div key={index} className="my-2 rounded-lg overflow-hidden border border-slate-100 shadow-sm bg-black/5">
-                  <video src={linkUrl} controls preload="metadata" className="w-full h-auto max-h-64" />
-                  {linkText && <div className="p-2 text-[10px] text-slate-500 bg-white/80 border-t border-slate-100">{linkText} (Video)</div>}
+                  <video src={linkUrl} controls playsInline preload="auto" className="w-full h-auto max-h-80" />
+                  {linkText && <div className="p-2 text-[10px] text-slate-500 bg-white/80 border-t border-slate-100 font-medium">{linkText} (Video)</div>}
                 </div>
               );
             }
@@ -624,7 +792,7 @@ export default function AIAgent() {
                 key={index}
                 href={linkUrl}
                 target={linkUrl.startsWith('http') ? "_blank" : "_self"}
-                className="text-purple-600 font-bold underline hover:text-purple-800 transition-colors"
+                className="text-purple-600 font-bold underline hover:text-purple-800 transition-colors inline-flex items-center gap-1"
               >
                 {linkText}
               </Link>
@@ -848,8 +1016,16 @@ export default function AIAgent() {
           return;
         }
         const makeLoc = (l: any) => [l.address, l.city, l.state, l.country].filter(Boolean).join(", ");
+        const getCurrency = (l: any) => {
+          const country = String(l.country || "").toLowerCase();
+          if (country.includes("usa") || country.includes("united states")) return "$";
+          if (country.includes("dubai") || country.includes("uae") || country.includes("emirates")) return "AED ";
+          if (country.includes("singapore")) return "S$";
+          return "₱";
+        };
         const build = samples.map((l: any, idx: number) => {
-          const price = `₱${Number(l.price).toLocaleString("en-PH", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+          const currency = getCurrency(l);
+          const price = `${currency}${Number(l.price).toLocaleString("en-PH", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
           const loc = makeLoc(l);
           const beds = Number(l.bedrooms) > 0 ? `${l.bedrooms} BR` : "";
           const baths = Number(l.bathrooms) > 0 ? `${l.bathrooms} BA` : "";
@@ -924,8 +1100,16 @@ export default function AIAgent() {
         const listings = Array.isArray(data?.listings) ? data.listings : [];
         const samples = listings.slice(0, Math.max(1, Math.min(3, listings.length)));
         const makeLoc = (l: any) => [l.address, l.city, l.state, l.country].filter(Boolean).join(", ");
+        const getCurrency = (l: any) => {
+          const country = String(l.country || "").toLowerCase();
+          if (country.includes("usa") || country.includes("united states")) return "$";
+          if (country.includes("dubai") || country.includes("uae") || country.includes("emirates")) return "AED ";
+          if (country.includes("singapore")) return "S$";
+          return "₱";
+        };
         const build = samples.map((l: any, idx: number) => {
-          const price = `₱${Number(l.price).toLocaleString("en-PH", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+          const currency = getCurrency(l);
+          const price = `${currency}${Number(l.price).toLocaleString("en-PH", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
           const loc = makeLoc(l);
           const beds = Number(l.bedrooms) > 0 ? `${l.bedrooms} BR` : "";
           const baths = Number(l.bathrooms) > 0 ? `${l.bathrooms} BA` : "";
@@ -1166,12 +1350,14 @@ export default function AIAgent() {
       return;
     }
 
-    const summary = `🏠 **Property for ${propertyFormMode === 'rent' ? 'Rent' : 'Sale'} Details:**\n\n` +
-      `📍 **Location:** ${location}\n` +
-      `🏢 **Type:** ${type}\n` +
-      `💰 **${propertyFormMode === 'rent' ? 'Desired Monthly Rent' : 'Desired Selling Price'}:** ${price}\n` +
-      (amenities ? `✨ **Amenities:** ${amenities}\n` : "") +
-      (notes ? `📝 **Notes:** ${notes}` : "");
+    const summary = `[PROPERTY_DETAILS]\n` +
+      `Mode: ${propertyFormMode === 'rent' ? 'Rent' : 'Sale'}\n` +
+      `Location: ${location}\n` +
+      `Type: ${type}\n` +
+      `Price: ${price}\n` +
+      (amenities ? `Amenities: ${amenities}\n` : "") +
+      (notes ? `Notes: ${notes}\n` : "") +
+      `[/PROPERTY_DETAILS]`;
     
     console.log("DEBUG: Property form submit - checking sendMessage:", typeof chatInstance.sendMessage);
     chatInstance.sendMessage({
@@ -1440,19 +1626,20 @@ export default function AIAgent() {
 
       console.log("Using sendMessage", { sessionId: currentSessionId || currentInquiryId || "default_session" });
       const wantsCtx = /\b(website|this page|this site|your site)\b/i.test(textOnly);
-      const ctx = wantsCtx ? await extractWebsiteContext() : "";
-      const payload = ctx ? `${finalContent}\n\n${ctx}` : (finalContent || "Attached a photo for verification.");
       
-      console.log("Appending to chat:", { payload, sessionId: currentSessionId || currentInquiryId || "default_session" });
+      // Separate visual message from hidden context
+      const visualMessage = finalContent || (imageFile ? "Attached a photo for verification." : "");
+      let hiddenContext = "";
+      
+      if (wantsCtx) {
+        hiddenContext = await extractWebsiteContext();
+      } else if (/\b(property|house|lot|listing|condo|apartment|rent|sale|buy|available|looking for|inventory)\b/i.test(textOnly)) {
+        hiddenContext = await extractWebsiteContext();
+      }
+
+      console.log("Sending message with context:", { visualMessage, hasContext: !!hiddenContext });
       
       try {
-        console.log("DEBUG: chatInstance check before sendMessage:", {
-          type: typeof chatInstance,
-          hasSendMessage: typeof chatInstance.sendMessage === 'function',
-          keys: Object.keys(chatInstance),
-          status: (chatInstance as any).status
-        });
-
         if (typeof chatInstance.sendMessage !== 'function') {
           console.error("CRITICAL: chatInstance.sendMessage is not a function!", chatInstance);
           throw new Error(`Chat system error: sendMessage method is missing. Type: ${typeof chatInstance.sendMessage}`);
@@ -1460,10 +1647,11 @@ export default function AIAgent() {
         
         console.log("Calling chatInstance.sendMessage...");
         await chatInstance.sendMessage({ 
-          text: payload
+          text: visualMessage
         }, {
           body: { 
-            sessionId: currentSessionId || currentInquiryId || "default_session" 
+            sessionId: currentSessionId || currentInquiryId || "default_session",
+            additionalContext: hiddenContext
           }
         });
         console.log("sendMessage call finished");
@@ -1499,6 +1687,27 @@ export default function AIAgent() {
       console.log("handleChatSubmit finished");
     }
   };
+
+  useEffect(() => {
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setPreviewMedia(null);
+    };
+    window.addEventListener('keydown', handleEsc);
+    return () => window.removeEventListener('keydown', handleEsc);
+  }, []);
+
+  // Force video play when previewMedia changes
+  useEffect(() => {
+    if (previewMedia?.type === 'video' && videoRef.current) {
+      videoRef.current.load();
+      const playPromise = videoRef.current.play();
+      if (playPromise !== undefined) {
+        playPromise.catch(error => {
+          console.error("Video play failed:", error);
+        });
+      }
+    }
+  }, [previewMedia]);
 
   // Scroll to bottom when messages change
   useEffect(() => {
@@ -1704,14 +1913,8 @@ export default function AIAgent() {
                 )}
                 <Image src="/girl.png" alt="PhDreamHome AI Assistant" width={32} height={32} className="rounded-full" />
                 <div className="flex flex-col">
-                  <span className="font-semibold text-sm">PhDreamHome AI Assistant</span>
+                  <span className="font-semibold text-sm">Kyuubi AI</span>
                   <span className="text-[10px] opacity-90 leading-tight">Hi there! I am Kyuubi, your PhDreamHome AI Assistant.</span>
-                  {providerInfo && (
-                    <span className="mt-0.5 inline-flex items-center gap-1 text-[10px] bg-purple-100 text-purple-700 px-2 py-0.5 rounded">
-                      <span>Provider:</span>
-                      <span className="font-semibold capitalize">{providerInfo.provider}</span>
-                    </span>
-                  )}
                 </div>
               </div>
               <div className="flex items-center gap-2">
@@ -1748,7 +1951,10 @@ export default function AIAgent() {
                   <div className="flex-1 flex flex-col items-center justify-center p-3 bg-white">
                     <div className="w-full max-w-[220px] space-y-3">
                       <h3 className="text-sm font-bold text-center text-gray-900 leading-tight">
-                        Please fill in the form below before starting the chat.
+                        {isReturningVisitor 
+                          ? "Welcome back! Please verify your details to continue." 
+                          : "Please fill in the form below before starting the chat."
+                        }
                       </h3>
                       
                       <form onSubmit={handleFormSubmit} className="space-y-2.5">
@@ -1770,31 +1976,54 @@ export default function AIAgent() {
                           value={formData.email}
                           onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                         />
-                        <div className="space-y-1">
-                          <input
-                             type="tel"
-                             placeholder="Phone number *"
-                             title="Please enter your 11-digit contact number"
-                             required
-                             maxLength={11}
-                             pattern="\d{11}"
-                             className="w-full px-3 py-2 rounded-lg border border-gray-200 bg-gray-100 focus:outline-none focus:ring-2 focus:ring-purple-600 transition-all text-sm text-gray-700 placeholder:text-gray-400"
-                             value={formData.phone}
-                             onChange={(e) => {
-                               const value = e.target.value.replace(/\D/g, "");
-                               if (value.length <= 11) {
-                                 setFormData({ ...formData, phone: value });
-                               }
-                             }}
-                           />
-                          <p className="text-[10px] text-gray-400 ml-1 italic">Format: 09XX XXX XXXX</p>
-                        </div>
+                        {!isReturningVisitor && (
+                          <div className="space-y-1">
+                            <input
+                               type="tel"
+                               placeholder="Phone number *"
+                               title="Please enter your 11-digit contact number"
+                               required
+                               maxLength={11}
+                               pattern="\d{11}"
+                               className="w-full px-3 py-2 rounded-lg border border-gray-200 bg-gray-100 focus:outline-none focus:ring-2 focus:ring-purple-600 transition-all text-sm text-gray-700 placeholder:text-gray-400"
+                               value={formData.phone}
+                               onChange={(e) => {
+                                 const value = e.target.value.replace(/\D/g, "");
+                                 if (value.length <= 11) {
+                                   setFormData({ ...formData, phone: value });
+                                 }
+                               }}
+                             />
+                            <p className="text-[10px] text-gray-400 ml-1 italic">Format: 09XX XXX XXXX</p>
+                          </div>
+                        )}
+                        
+                        {verificationError && (
+                          <p className="text-[10px] text-red-500 text-center font-medium bg-red-50 p-2 rounded border border-red-100 animate-pulse">
+                            {verificationError}
+                          </p>
+                        )}
+
                         <button
                           type="submit"
                           className="w-full bg-blue-600 text-white font-bold py-2.5 rounded-lg hover:bg-blue-700 transition-colors shadow-lg active:scale-[0.98] text-sm"
                         >
-                          Send
+                          {isReturningVisitor ? "Verify & Continue" : "Send"}
                         </button>
+                        
+                        {isReturningVisitor && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setIsReturningVisitor(false);
+                              setFormData({ name: "", email: "", phone: "" });
+                              setVerificationError(null);
+                            }}
+                            className="w-full text-[10px] text-gray-500 hover:text-purple-600 transition-colors text-center mt-1"
+                          >
+                            Not you? Click here to start fresh.
+                          </button>
+                        )}
                       </form>
                     </div>
                   </div>
@@ -1818,7 +2047,7 @@ export default function AIAgent() {
                           >
                             <div className="flex items-center gap-2">
                               <Image src="/girl.png" alt="PhDreamHome AI Assistant" width={24} height={24} className="rounded-full" />
-                              <div className="text-xs font-semibold text-slate-800">Chat {chatSessions.length - idx}</div>
+                              <div className="text-xs font-semibold text-slate-800">Kyuubi AI</div>
                             </div>
                             <div className="text-[10px] text-slate-500">
                               {formatDate(new Date(session.startedAt))} · {formatTime(new Date(session.startedAt))}
@@ -2056,10 +2285,10 @@ export default function AIAgent() {
                                             : "bg-white text-slate-800 border border-slate-100 rounded-tl-none"
                                         }`}
                                       >
-                                        <div className="flex items-center gap-1 mb-1 opacity-70">
-                                          {m.role === "user" ? <User size={12} /> : <Image src="/girl.png" alt="AI" width={16} height={16} className="rounded-full" />}
-                                          <span className="font-bold uppercase tracking-wider text-[8px]">
-                                            {m.role === "user" ? "You" : "PhDreamHome AI Assistant"}
+                                        <div className="flex items-center gap-1.5 mb-1 opacity-70">
+                                          {m.role === "user" ? <User size={14} /> : <Image src="/girl.png" alt="AI" width={20} height={20} className="rounded-full" />}
+                                          <span className="font-bold uppercase tracking-wider text-[10px]">
+                                            {m.role === "user" ? "You" : "Kyuubi AI"}
                                           </span>
                                         </div>
                                         {
@@ -2257,6 +2486,129 @@ export default function AIAgent() {
                 )}
               </>
             )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {previewMedia && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[1000] flex flex-col items-center justify-center bg-black/95 backdrop-blur-sm p-4 md:p-8"
+          >
+            {/* Close button */}
+            <button
+              onClick={() => setPreviewMedia(null)}
+              className="absolute top-4 right-4 z-50 p-2 rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors flex items-center gap-2 group"
+            >
+              <span className="text-xs font-medium opacity-0 group-hover:opacity-100 transition-opacity">Back to Chat</span>
+              <X size={24} />
+            </button>
+
+            {/* Main Content Area */}
+            <div className="relative w-full h-full max-w-5xl flex items-center justify-center">
+              {/* Navigation - Left */}
+              {allMedia.length > 1 && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const newIndex = (currentMediaIndex - 1 + allMedia.length) % allMedia.length;
+                    setCurrentMediaIndex(newIndex);
+                    setPreviewMedia(allMedia[newIndex]);
+                  }}
+                  className="absolute left-0 z-50 p-3 rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors -translate-x-1/2 md:-translate-x-full"
+                >
+                  <ChevronLeft size={32} />
+                </button>
+              )}
+
+              {/* Media Display */}
+              <div className="relative w-full h-full flex items-center justify-center">
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={previewMedia.url}
+                    initial={{ scale: 0.9, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    exit={{ scale: 0.9, opacity: 0 }}
+                    transition={{ type: "spring", damping: 25, stiffness: 200 }}
+                    className="relative w-full h-full flex items-center justify-center"
+                  >
+                    {previewMedia.type === 'video' ? (
+                      <video
+                        ref={videoRef}
+                        src={previewMedia.url}
+                        controls
+                        autoPlay
+                        muted
+                        playsInline
+                        preload="auto"
+                        className="max-w-full max-h-full rounded-lg shadow-2xl"
+                      >
+                        Your browser does not support the video tag.
+                      </video>
+                    ) : (
+                      <div className="relative w-full h-full">
+                        <Image
+                          src={previewMedia.url}
+                          alt={previewMedia.alt || "Preview"}
+                          fill
+                          className="object-contain"
+                          unoptimized
+                        />
+                      </div>
+                    )}
+                  </motion.div>
+                </AnimatePresence>
+              </div>
+
+              {/* Navigation - Right */}
+              {allMedia.length > 1 && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const newIndex = (currentMediaIndex + 1) % allMedia.length;
+                    setCurrentMediaIndex(newIndex);
+                    setPreviewMedia(allMedia[newIndex]);
+                  }}
+                  className="absolute right-0 z-50 p-3 rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors translate-x-1/2 md:translate-x-full"
+                >
+                  <ChevronRight size={32} />
+                </button>
+              )}
+            </div>
+
+            {/* Bottom Info & Counter */}
+            <div className="mt-6 text-center">
+              {previewMedia.alt && (
+                <p className="text-white text-sm md:text-base font-medium mb-2">
+                  {previewMedia.alt}
+                </p>
+              )}
+              {allMedia.length > 1 && (
+                <div className="inline-flex items-center gap-4 bg-white/10 px-4 py-2 rounded-full border border-white/10">
+                  <div className="flex gap-1">
+                    {allMedia.map((_, idx) => (
+                      <div
+                        key={idx}
+                        className={`h-1.5 rounded-full transition-all ${
+                          idx === currentMediaIndex ? 'w-4 bg-purple-500' : 'w-1.5 bg-white/20'
+                        }`}
+                      />
+                    ))}
+                  </div>
+                  <span className="text-white/60 text-xs font-mono">
+                    {currentMediaIndex + 1} / {allMedia.length}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* Close hint for desktop */}
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-white/30 text-[10px] uppercase tracking-widest hidden md:block">
+              Click anywhere outside to close • Press ESC to exit
+            </div>
           </motion.div>
         )}
       </AnimatePresence>

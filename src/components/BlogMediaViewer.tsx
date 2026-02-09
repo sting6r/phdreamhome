@@ -30,6 +30,7 @@ export default function BlogMediaViewer({ media, title }: { media: Item[]; title
             src={items[index]!.url as string}
             className="absolute inset-0 w-full h-full object-cover"
             controls
+            preload="auto"
             controlsList="nodownload"
           />
         ) : (
@@ -53,6 +54,7 @@ export default function BlogMediaViewer({ media, title }: { media: Item[]; title
                   className="absolute inset-0 w-full h-full object-cover"
                   muted
                   playsInline
+                  preload="metadata"
                   controlsList="nodownload"
                 />
               ) : (

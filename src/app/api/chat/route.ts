@@ -4,27 +4,51 @@ import { createUIMessageStreamResponse } from 'ai';
 export const runtime = 'nodejs';
 export const maxDuration = 30;
 
-async function getGroqFallbackResponse(message: string, history: any[] = []) {
+async function getGroqFallbackResponse(message: string, history: any[] = [], userData?: { name?: string; email?: string; phone?: string }, additionalContext?: string) {
   try {
     const groqKey = process.env.GROQ_API_KEY;
     if (!groqKey) {
       throw new Error("GROQ_API_KEY is not set");
     }
 
+    const userInfo = userData ? `
+User Information (Already captured):
+- Name: ${userData.name || 'Not provided'}
+- Email: ${userData.email || 'Not provided'}
+- Phone: ${userData.phone || 'Not provided'}
+DO NOT ask the user for their name, email, or phone number again as they have already provided this in the initial form.
+` : "";
+
+    const contextInfo = additionalContext ? `
+Additional Context from the website:
+${additionalContext}
+` : "";
+
     const systemPrompt = `
 You are Kyuubi, a professional PhDreamHome AI Assistant.
+${userInfo}
+${contextInfo}
 Your goals:
 1. Answer questions about property listings with enthusiasm.
-2. If a user asks about a specific price or location, provide helpful general ranges if data isn't provided.
-3. IMPORTANT: Always try to capture the user's name or contact info to "schedule a viewing."
-4. MEDIA HANDLING: You can provide images and videos in your responses using Markdown:
+2. STRICT INVENTORY POLICY: Only offer properties that are explicitly provided in the chat context or listing data. 
+   - DO NOT invent, hallucinate, or assume any property details.
+   - DO NOT provide links to external websites or example.com.
+   - If a user asks for a property that you don't see in the provided context, politely inform them that you couldn't find it in our current inventory and offer to help them find something else from our available listings.
+3. CURRENCY & LOCATION: Use the appropriate currency based on the property's location:
+   - For Philippines: Use Philippine Peso (₱ or PHP).
+   - For USA: Use US Dollars ($ or USD).
+   - For UAE/Dubai: Use UAE Dirham (AED).
+   - For Singapore: Use Singapore Dollars (S$ or SGD).
+   Always format prices clearly (e.g., ₱15,000,000 or $500,000).
+4. If a user asks about a specific price or location, provide helpful general ranges if data isn't provided, but prioritize showing real listings from the context if available.
+5. MEDIA HANDLING: You must provide images and videos in your responses using Markdown to support the client's needs:
    - For images: ![Title](image_url)
-   - For videos: ![Title](video_url) (The system will automatically detect video formats)
-   - If you see a video link in the context, always try to show it to the user.
-5. AUTONOMY: You are a standalone assistant. You can handle the entire conversation flow yourself. 
-6. PERSUASION: Be proactive. If a user seems interested, suggest a tour or ask for their preferred contact method.
-7. Keep responses concise (under 3 sentences) to suit a chat bubble.
-Use the chat history to provide personalized help.
+   - For videos: ![Title](video_url)
+   - Always include at least one relevant image for each property you recommend.
+6. AUTONOMY: You are a standalone assistant. You can handle the entire conversation flow yourself. 
+7. PERSUASION: Be proactive. If a user seems interested, suggest a tour or provide a link to view the full listing.
+8. Keep responses concise (under 3 sentences) to suit a chat bubble.
+Use the chat history and the provided listing context to provide personalized help.
 `;
 
     // Filter history to exclude the current message and limit to last 5 for context
@@ -71,7 +95,7 @@ Use the chat history to provide personalized help.
   }
 }
 
-async function getPythonAIResponse(message: string, sessionId: string = "default_session", history: any[] = []) {
+async function getPythonAIResponse(message: string, sessionId: string = "default_session", history: any[] = [], userData?: any, additionalContext?: string) {
   try {
     let baseUrl = (process.env.PYTHON_API_URL || "http://localhost:8000").trim();
     
@@ -93,7 +117,12 @@ async function getPythonAIResponse(message: string, sessionId: string = "default
     }
 
     const apiUrl = `${baseUrl}/chat`;
-    console.log(`[Chat API] Connecting to: ${apiUrl} (ENV: ${process.env.NODE_ENV})`);
+    console.log(`[Chat API] Connecting to Python Agent at: ${apiUrl}`);
+
+    // If there's additional context, append it to the message for the Python agent
+    // but the Python agent usually handles its own context. However, to ensure
+    // it sees the website data, we can inject it here as a system message or append to current message.
+    const enrichedMessage = additionalContext ? `${message}\n\n[Website Context]:\n${additionalContext}` : message;
 
     const response = await fetch(apiUrl, {
       method: "POST",
@@ -101,11 +130,15 @@ async function getPythonAIResponse(message: string, sessionId: string = "default
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        message,
-        session_id: sessionId
+        message: enrichedMessage,
+        session_id: sessionId,
+        user_data: userData,
+        history: history.slice(-5).map(m => ({
+          role: m.role,
+          content: m.content || (Array.isArray(m.parts) ? m.parts.filter((p: any) => p.type === 'text').map((p: any) => p.text).join('\n') : "")
+        }))
       }),
-      // Add a timeout to avoid hanging requests
-      signal: AbortSignal.timeout(5000) // Shorter timeout for primary check
+      signal: AbortSignal.timeout(15000)
     });
 
     if (!response.ok) {
@@ -125,7 +158,7 @@ async function getPythonAIResponse(message: string, sessionId: string = "default
 
     if (isConnectionError) {
       console.warn("[Chat API] Python Agent unreachable or timeout, falling back to direct Groq call...");
-      return await getGroqFallbackResponse(message, history);
+      return await getGroqFallbackResponse(message, history, userData, additionalContext);
     }
 
     console.error("[Chat API] Connection Error:", {
@@ -158,8 +191,8 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
-    const { messages, sessionId } = await req.json();
-    console.log("Chat API received messages:", messages?.length, "Session:", sessionId);
+    const { messages, sessionId, userData, additionalContext } = await req.json();
+    console.log("Chat API received messages:", messages?.length, "Session:", sessionId, "User:", userData?.name);
 
     const lastMessage = messages[messages.length - 1];
     let userMessage = lastMessage.content;
@@ -176,8 +209,8 @@ export async function POST(req: Request) {
       throw new Error("No message content found");
     }
     
-    // Call the FastAPI server with history
-    const reply = await getPythonAIResponse(userMessage, sessionId || "default_session", messages);
+    // Call the FastAPI server with history, user data and additional context
+    const reply = await getPythonAIResponse(userMessage, sessionId || "default_session", messages, userData, additionalContext);
 
     const messageId = `assistant-${Date.now()}`;
     const stream = new ReadableStream({

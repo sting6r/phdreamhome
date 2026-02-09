@@ -113,31 +113,34 @@ export async function PUT(req: Request) {
 export async function GET() {
   try {
     const supabase = await createServerSideClient();
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    const { data: { user: authUser }, error: userError } = await supabase.auth.getUser();
 
     if (userError) {
       console.error("Profile API GET: Supabase auth error:", userError);
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-    const userId = user?.id;
+    const userId = authUser?.id;
     if (!userId) {
       console.warn("Profile API GET: No userId found in token");
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
     console.log("Profile API GET: Found userId:", userId);
     
-    let user, totalListings;
+    let dbUser, totalListings;
     try {
       const timeout = (ms: number) => new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), ms));
       const userTask = withRetry(() => prisma.user.findUnique({ where: { id: userId } }));
       const countTask = withRetry(() => prisma.listing.count({ where: { userId } }));
-      [user, totalListings] = await Promise.race([
+      const [resUser, resCount] = await Promise.race([
         Promise.all([userTask, countTask]),
         timeout(10000)
       ]) as [any, number];
       
+      dbUser = resUser;
+      totalListings = resCount;
+
       // If Prisma returns null (e.g. not found or sync issue), force fallback to Supabase
-      if (!user) {
+      if (!dbUser) {
         throw new Error("User not found in Prisma, forcing fallback");
       }
     } catch (dbError) {
@@ -157,39 +160,39 @@ export async function GET() {
       if (userRes.error) console.error("Supabase fallback user fetch error:", userRes.error);
       if (countRes.error) console.error("Supabase fallback count fetch error:", countRes.error);
 
-      user = userRes.data || null;
+      dbUser = userRes.data || null;
       totalListings = countRes.count || 0;
     }
     
-    const signedTask = user?.image ? createSignedUrl(user.image) : Promise.resolve(null);
+    const signedTask = dbUser?.image ? createSignedUrl(dbUser.image) : Promise.resolve(null);
     const signed = await signedTask;
 
     // Construct proxy URL if user has an image path, otherwise use signed URL
-    let imageUrl = user?.image 
-      ? `/api/image/proxy?path=${encodeURIComponent(user.image)}` 
+    let imageUrl = dbUser?.image 
+      ? `/api/image/proxy?path=${encodeURIComponent(dbUser.image)}` 
       : signed;
     
     return NextResponse.json({
-      id: user?.id ?? null,
-      name: user?.name ?? "",
-      username: user?.username ?? "",
-      email: user?.email ?? (user?.email ?? ""),
-      address: user?.address ?? "",
-      phone: user?.phone ?? "",
-      image: user?.image ?? "",
+      id: dbUser?.id ?? null,
+      name: dbUser?.name ?? "",
+      username: dbUser?.username ?? "",
+      email: dbUser?.email ?? (dbUser?.email ?? ""),
+      address: dbUser?.address ?? "",
+      phone: dbUser?.phone ?? "",
+      image: dbUser?.image ?? "",
       imageUrl: imageUrl ?? null,
-      verified: Boolean(user?.emailVerified ?? null),
+      verified: Boolean(dbUser?.emailVerified ?? null),
       totalListings,
-      role: user?.role ?? "",
-      licenseNo: user?.licenseNo ?? "",
-      dhsudAccredNo: user?.dhsudAccredNo ?? "",
-      facebook: user?.facebook ?? "",
-      whatsapp: user?.whatsapp ?? "",
-      viber: user?.viber ?? "",
-      instagram: user?.instagram ?? "",
-      telegram: user?.telegram ?? "",
-      youtube: user?.youtube ?? "",
-      twitter: user?.twitter ?? ""
+      role: dbUser?.role ?? "",
+      licenseNo: dbUser?.licenseNo ?? "",
+      dhsudAccredNo: dbUser?.dhsudAccredNo ?? "",
+      facebook: dbUser?.facebook ?? "",
+      whatsapp: dbUser?.whatsapp ?? "",
+      viber: dbUser?.viber ?? "",
+      instagram: dbUser?.instagram ?? "",
+      telegram: dbUser?.telegram ?? "",
+      youtube: dbUser?.youtube ?? "",
+      twitter: dbUser?.twitter ?? ""
     });
   } catch (error: any) {
     console.error("Error in profile GET API:", error);

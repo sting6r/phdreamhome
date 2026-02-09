@@ -13,24 +13,34 @@ export async function GET() {
       const timeout = (ms: number) => new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), ms));
       
       // Simpler Prisma query: just get the first user with an image if possible, or any user
-      user = await Promise.race([
-        (async () => {
-          return await withRetry(() => prisma.user.findFirst({ 
-            select: {
-              id: true, name: true, username: true, email: true, address: true, 
-              phone: true, image: true, emailVerified: true, role: true, 
-              licenseNo: true, dhsudAccredNo: true, youtube: true
-            }
-          }), 1, 0);
-        })(),
-        timeout(8000)
-      ]) as any;
+      try {
+        user = await Promise.race([
+          (async () => {
+            return await withRetry(() => prisma.user.findFirst({ 
+              select: {
+                id: true, name: true, username: true, email: true, address: true, 
+                phone: true, image: true, emailVerified: true, role: true, 
+                licenseNo: true, dhsudAccredNo: true, youtube: true
+              }
+            }), 1, 0);
+          })(),
+          timeout(8000)
+        ]) as any;
 
-      if (user) {
-        totalListings = await Promise.race([
-          withRetry(() => prisma.listing.count({ where: { userId: user.id } }), 1, 0),
-          timeout(5000)
-        ]) as number;
+        if (user) {
+          try {
+            totalListings = await Promise.race([
+              withRetry(() => prisma.listing.count({ where: { userId: user.id } }), 1, 0),
+              timeout(5000)
+            ]) as number;
+          } catch (countErr) {
+            console.warn("Prisma count failed in public-profile:", countErr);
+            // Non-critical, just keep totalListings as 0 or try Supabase for count only
+          }
+        }
+      } catch (userErr) {
+        console.warn("Prisma user fetch failed in public-profile:", userErr);
+        throw userErr; // Trigger Supabase fallback
       }
     } catch (dbError) {
       console.error("Prisma failed in public-profile, attempting Supabase fallback:", dbError);
@@ -82,7 +92,11 @@ export async function GET() {
       youtube: user.youtube ?? ""
     });
   } catch (error: any) {
-    console.error("Error in public-profile API:", error);
-    return NextResponse.json({ error: "Failed to fetch profile" }, { status: 500 });
+    console.error("CRITICAL Error in public-profile API:", {
+      message: error.message,
+      stack: error.stack,
+      cause: error.cause
+    });
+    return NextResponse.json({ error: `Failed to fetch profile: ${error.message}` }, { status: 500 });
   }
 }

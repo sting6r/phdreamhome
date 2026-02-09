@@ -3223,6 +3223,7 @@ export default function NewBlogPage() {
                                 src={upload.url || `/api/image/proxy?path=${encodeURIComponent(upload.path)}`}
                                 className="absolute inset-0 w-full h-full object-cover"
                                 controls
+                                preload="auto"
                                 controlsList="nodownload"
                               />
                             );
@@ -3415,6 +3416,7 @@ export default function NewBlogPage() {
                                     src={upload.url || `/api/image/proxy?path=${encodeURIComponent(upload.path)}`}
                                     className="absolute inset-0 w-full h-full object-contain"
                                     controls
+                                    preload="auto"
                                     controlsList="nodownload"
                                   />
                                 );
@@ -3474,6 +3476,7 @@ export default function NewBlogPage() {
                                     src={upload.url || `/api/image/proxy?path=${encodeURIComponent(upload.path)}`}
                                     className="absolute inset-0 w-full h-full object-contain"
                                     controls
+                                    preload="auto"
                                     controlsList="nodownload"
                                   />
                                 );

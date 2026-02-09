@@ -21,13 +21,14 @@ export async function POST(req: Request) {
       );
     }
 
-    // Check if a lead with this email already exists
+    // Check if a lead with this name and email already exists
     let existingInquiry: any = null;
     try {
       existingInquiry = await Promise.race([
         withRetry(() => prisma.inquiry.findFirst({
           where: {
             email: { equals: email, mode: 'insensitive' },
+            name: { equals: name, mode: 'insensitive' },
             type: "AI Lead"
           },
           orderBy: {
@@ -42,6 +43,7 @@ export async function POST(req: Request) {
         .from('Inquiry')
         .select('*')
         .ilike('email', email)
+        .ilike('name', name)
         .eq('type', 'AI Lead')
         .order('createdAt', { ascending: false })
         .limit(1)

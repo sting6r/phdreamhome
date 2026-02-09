@@ -205,6 +205,7 @@ export default async function BlogDetailPage({ params }: { params: Promise<{ id:
                     src={`/api/image/proxy?path=${encodeURIComponent(mediaItem.path)}`}
                     className="absolute inset-0 w-full h-full object-cover"
                     controls
+                    preload="auto"
                     controlsList="nodownload"
                   />
                 </div>

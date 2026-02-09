@@ -38,7 +38,7 @@ export async function GET(req: Request) {
           include: { images: { orderBy: { sortOrder: "asc" } } },
           orderBy: { createdAt: "desc" }
         }), 1, 0),
-        timeout(3000)
+        timeout(8000)
       ]);
     } catch (dbError) {
       console.error("Prisma failed in public-listings, attempting Supabase fallback:", dbError);
@@ -117,7 +117,11 @@ export async function GET(req: Request) {
     headers.set("Cache-Control", "public, max-age=60");
     return new NextResponse(JSON.stringify({ listings: listings || [] }), { headers });
   } catch (error: any) {
-    console.error("Error in public-listings API:", error);
-    return NextResponse.json({ listings: [], error: "Failed to fetch listings" }, { status: 500 });
+    console.error("CRITICAL Error in public-listings API:", {
+      message: error.message,
+      stack: error.stack,
+      cause: error.cause
+    });
+    return NextResponse.json({ listings: [], error: `Failed to fetch listings: ${error.message}` }, { status: 500 });
   }
 }
