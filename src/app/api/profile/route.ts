@@ -2,24 +2,19 @@ import { NextResponse } from "next/server";
 import { prisma, withRetry } from "@lib/prisma";
 import { cookies } from "next/headers";
 import { supabaseAdmin, createSignedUrl } from "@lib/supabase";
+import { createServerSideClient } from "@lib/supabase-server";
 export const runtime = "nodejs";
 
 export async function PUT(req: Request) {
   try {
-    const cookieStore = await cookies();
-    const token = cookieStore.get("sb-access-token")?.value;
-    console.log("Profile API: Fetching for token present:", !!token);
-    if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    const { data, error: userError } = await supabaseAdmin.auth.getUser(token);
-    if (userError) {
-      console.error("Profile API: Supabase auth error:", userError);
+    const supabase = await createServerSideClient();
+    const { data: { user: authUser }, error: userError } = await supabase.auth.getUser();
+    
+    if (userError || !authUser) {
+      console.error("Profile API PUT: Auth error:", userError);
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-    const userId = data.user?.id;
-    if (!userId) {
-      console.warn("Profile API: No userId found in token");
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const userId = authUser.id;
     console.log("Profile API: Found userId:", userId);
     const body = await req.json();
     if (body.email) body.email = body.email.trim();
@@ -30,30 +25,30 @@ export async function PUT(req: Request) {
       let exists;
       try {
         exists = await Promise.race([
-          withRetry(() => prisma.user.findFirst({
-            where: { username: body.username, NOT: { id: userId } }
-          })),
-          timeout(5000)
-        ]);
-      } catch (e) {
-        console.warn("Prisma username check failed/timed out, falling back to Supabase", e);
+        withRetry(() => prisma.user.findFirst({
+          where: { username: body.username, NOT: { id: userId } }
+        })),
+        timeout(8000)
+      ]);
+    } catch (e) {
+      console.warn("Prisma username check failed/timed out (8s), falling back to Supabase", e);
         const { data: u } = await supabaseAdmin.from('User').select('id').eq('username', body.username).neq('id', userId).maybeSingle();
         exists = !!u;
       }
       if (exists) return NextResponse.json({ error: "Username taken" }, { status: 409 });
     }
 
-    if (body.email && body.email !== data.user?.email) {
+    if (body.email && body.email !== authUser.email) {
       let emailExists;
       try {
         emailExists = await Promise.race([
-          withRetry(() => prisma.user.findFirst({
-            where: { email: body.email, NOT: { id: userId } }
-          })),
-          timeout(5000)
-        ]);
-      } catch (e) {
-        console.warn("Prisma email check failed/timed out, falling back to Supabase", e);
+        withRetry(() => prisma.user.findFirst({
+          where: { email: body.email, NOT: { id: userId } }
+        })),
+        timeout(8000)
+      ]);
+    } catch (e) {
+      console.warn("Prisma email check failed/timed out (8s), falling back to Supabase", e);
         const { data: u } = await supabaseAdmin.from('User').select('id').eq('email', body.email).neq('id', userId).maybeSingle();
         emailExists = !!u;
       }
@@ -96,10 +91,10 @@ export async function PUT(req: Request) {
           where: { id: userId },
           data: updateData
         })),
-        timeout(5000)
+        timeout(10000)
       ]);
     } catch (e) {
-      console.warn("Prisma update failed/timed out, falling back to Supabase", e);
+      console.warn("Prisma update failed/timed out (10s), falling back to Supabase", e);
       const { error: upError } = await supabaseAdmin.from('User').update({
         ...updateData,
         updatedAt: new Date().toISOString()
@@ -117,16 +112,14 @@ export async function PUT(req: Request) {
 
 export async function GET() {
   try {
-    const cookieStore = await cookies();
-    const token = cookieStore.get("sb-access-token")?.value;
-    console.log("Profile API GET: Fetching for token present:", !!token);
-    if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    const { data, error: userError } = await supabaseAdmin.auth.getUser(token);
+    const supabase = await createServerSideClient();
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+
     if (userError) {
       console.error("Profile API GET: Supabase auth error:", userError);
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-    const userId = data.user?.id;
+    const userId = user?.id;
     if (!userId) {
       console.warn("Profile API GET: No userId found in token");
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -180,7 +173,7 @@ export async function GET() {
       id: user?.id ?? null,
       name: user?.name ?? "",
       username: user?.username ?? "",
-      email: user?.email ?? (data.user?.email ?? ""),
+      email: user?.email ?? (user?.email ?? ""),
       address: user?.address ?? "",
       phone: user?.phone ?? "",
       image: user?.image ?? "",

@@ -124,12 +124,13 @@ async function getPythonAIResponse(message: string, sessionId: string = "default
       error.name === 'TimeoutError';
 
     if (isConnectionError) {
-      console.warn("[Chat API] Python Agent unreachable, falling back to direct Groq call...");
+      console.warn("[Chat API] Python Agent unreachable or timeout, falling back to direct Groq call...");
       return await getGroqFallbackResponse(message, history);
     }
 
     console.error("[Chat API] Connection Error:", {
       message: error.message,
+      name: error.name,
       stack: error.stack,
       cause: error.cause
     });

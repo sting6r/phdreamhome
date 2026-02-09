@@ -121,7 +121,12 @@ export default async function ListingPage({ params, searchParams }: { params: Pr
         listing.images.sort((a: any, b: any) => (a.sortOrder || 0) - (b.sortOrder || 0));
       }
       // User might be array or object depending on relation type, usually object for many-to-one
-      if (Array.isArray(listing.user)) listing.user = listing.user[0];
+      if (typeof listing.user === 'string') {
+        console.error("Invalid user type (string) received for listing:", listing.id);
+        listing.user = null;
+      } else if (Array.isArray(listing.user)) {
+        listing.user = listing.user[0];
+      }
     }
   }
 
@@ -130,8 +135,10 @@ export default async function ListingPage({ params, searchParams }: { params: Pr
     .filter((u): u is string => !!u)
     .map(u => ({ url: u }));
   
-  const agentImageUrl = listing.user?.image ? (await createSignedUrl(listing.user.image)) : null;
-  const agent = { ...listing.user, imageUrl: agentImageUrl };
+  // Ensure listing.user is an object before spreading or accessing properties
+  const userData = (listing.user && typeof listing.user === 'object') ? listing.user : {};
+  const agentImageUrl = userData.image ? (await createSignedUrl(userData.image)) : null;
+  const agent = { ...userData, imageUrl: agentImageUrl };
 
   const typeText = (() => { const sub = listing.type === "Industrial Properties" ? (listing.industrySubtype || "") : listing.type === "Commercial Space" ? (listing.commercialSubtype || "") : ""; return sub ? `${listing.type} — ${sub}` : listing.type; })();
   const indoor = Array.isArray(listing.indoorFeatures) ? listing.indoorFeatures.filter(Boolean) : [];

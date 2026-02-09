@@ -43,13 +43,13 @@ export async function GET(req: Request) {
           return new Response(buffer, {
             headers: {
               'Content-Type': contentType,
-              'Cache-Control': 'public, max-age=604800, stale-while-revalidate=86400',
+              'Cache-Control': 'public, max-age=31536000, stale-while-revalidate=86400',
               'Access-Control-Allow-Origin': '*'
             }
           });
         } else {
           console.warn(`External image fetch failed with status ${response.status}: ${path}`);
-          // Redirect to the original URL as a fallback if proxy fails
+          // For auth errors or common failures, redirect to origin
           return NextResponse.redirect(path);
         }
       } catch (e) {
