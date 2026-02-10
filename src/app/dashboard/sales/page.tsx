@@ -9,12 +9,17 @@ const fetcher = async (u: string) => {
   const token = data.session?.access_token;
   const headers: Record<string, string> = {};
   if (token) headers["Authorization"] = `Bearer ${token}`;
-  const r = await fetch(u, { headers });
-  if (!r.ok) {
-    if (r.status === 401) return null;
-    throw new Error("Failed to fetch");
+  
+  try {
+    const r = await fetch(u, { headers });
+    if (!r.ok) {
+      throw new Error(`Error ${r.status}: ${r.statusText}`);
+    }
+    return r.json();
+  } catch (err) {
+    console.error("Fetcher error:", err);
+    throw err;
   }
-  return r.json();
 };
 
 const STATUS_CATEGORIES = ["In Progress", "Closed", "Cancelled"];
@@ -38,8 +43,10 @@ const Icons = {
 };
 
 export default function SalesPage() {
-  const { data: sales, mutate: mutateSales } = useSWR("/api/sales", fetcher);
-  const { data: listingsData } = useSWR("/api/listings", fetcher);
+  const { data: salesData, error: salesError, mutate: mutateSales } = useSWR("/api/sales", fetcher);
+  const { data: listingsData, error: listingsError } = useSWR("/api/listings", fetcher);
+  
+  const sales = Array.isArray(salesData) ? salesData : null;
   const listings = listingsData?.listings ?? [];
 
   const [mounted, setMounted] = useState(false);
@@ -133,7 +140,7 @@ export default function SalesPage() {
       clientEmail: sale.clientEmail || "",
       clientMessenger: sale.clientMessenger || "",
       clientPhone: sale.clientPhone || "",
-      amount: sale.amount.toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+      amount: (sale.amount || 0).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
       salesCategory: sale.salesCategory || "Sale",
       saleDate: sale.saleDate ? new Date(sale.saleDate).toISOString().split("T")[0] : new Date().toISOString().split("T")[0],
       rentalStartDate: sale.rentalStartDate ? new Date(sale.rentalStartDate).toISOString().split("T")[0] : "",
@@ -247,6 +254,12 @@ export default function SalesPage() {
         </button>
       </div>
 
+      {(salesError || listingsError) && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+          Failed to load data. Please try refreshing the page.
+        </div>
+      )}
+
       {isFormOpen && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in duration-200">
@@ -318,12 +331,10 @@ export default function SalesPage() {
 
                   <div className="space-y-1">
                     <label className="text-xs font-medium text-slate-700">Amount (PHP)</label>
-                    <input
-                      type="text"
+                    <CurrencyInput
                       required
                       value={formData.amount}
-                      onChange={(e) => setFormData({ ...formData, amount: formatAmount(e.target.value) })}
-                      onBlur={handleAmountBlur}
+                      onChange={(val) => setFormData({ ...formData, amount: val })}
                       className="w-full rounded-md border border-slate-300 bg-slate-100 p-2 text-xs text-black focus:ring-2 focus:ring-blue-500 outline-none"
                       placeholder="0.00"
                     />
@@ -498,7 +509,7 @@ export default function SalesPage() {
                       )}
                     </td>
                     <td className="px-6 py-4 font-semibold text-slate-900">
-                      {mounted ? `₱${sale.amount.toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ""}
+                      {mounted ? `₱${(sale.amount || 0).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ""}
                     </td>
                     <td className="px-6 py-4">
                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${
@@ -506,7 +517,7 @@ export default function SalesPage() {
                         sale.status === "Cancelled" ? "bg-red-100 text-red-700" :
                         "bg-blue-100 text-blue-700"
                       }`}>
-                        {sale.status}
+                        {sale.status || "Unknown"}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-right relative">
@@ -538,8 +549,9 @@ export default function SalesPage() {
                 ))
               ) : (
                 <tr>
-                  <td colSpan={6} className="px-6 py-10 text-center text-slate-500 italic">
-                    {sales ? "No sales records found." : "Loading sales records..."}
+                  <td colSpan={7} className="px-6 py-10 text-center text-slate-500 italic">
+                    {salesError ? "Error loading sales records." : 
+                     (sales ? "No sales records found." : "Loading sales records...")}
                   </td>
                 </tr>
               )}

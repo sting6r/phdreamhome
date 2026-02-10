@@ -90,7 +90,14 @@ function LoginPageContent() {
       console.error("Failed to sync user on login:", syncError);
     }
 
-    await fetch("/api/auth/session", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ access_token: data.session.access_token }) });
+    await fetch("/api/auth/session", { 
+      method: "POST", 
+      headers: { "Content-Type": "application/json" }, 
+      body: JSON.stringify({ 
+        access_token: data.session.access_token,
+        refresh_token: data.session.refresh_token
+      }) 
+    });
     router.replace(callbackUrl);
   }
   return (

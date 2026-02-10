@@ -68,9 +68,25 @@ export async function GET(req: Request) {
 
   const res = NextResponse.redirect(redirectTo);
   
-  // Note: createServerSideClient already handles setting cookies on the cookie store.
-  // We don't need to manually set sb-access-token and sb-refresh-token here
-  // as they are not the standard Supabase SSR cookies anyway.
+  // Set the custom cookies used by the rest of the application
+  const isProd = process.env.NODE_ENV === "production";
+  res.cookies.set("sb-access-token", data.session.access_token, {
+    path: "/",
+    httpOnly: true,
+    sameSite: "lax",
+    maxAge: 604800,
+    secure: isProd
+  });
+  
+  if (data.session.refresh_token) {
+    res.cookies.set("sb-refresh-token", data.session.refresh_token, {
+      path: "/",
+      httpOnly: true,
+      sameSite: "lax",
+      maxAge: 604800,
+      secure: isProd
+    });
+  }
   
   return res;
 }

@@ -160,8 +160,9 @@ export default function Navbar() {
       setLoggedIn(!!session);
       if (session) {
         const token = session.access_token;
+        const refresh = session.refresh_token;
         if (token) {
-          safePost("/api/auth/session", { access_token: token });
+          safePost("/api/auth/session", { access_token: token, refresh_token: refresh });
         }
         const u = session.user as any;
         if (u) {

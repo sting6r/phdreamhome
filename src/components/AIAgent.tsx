@@ -1832,7 +1832,7 @@ export default function AIAgent() {
   const constraintsRef = useRef(null);
   const isDraggingRef = useRef(false);
 
-  if (!mounted) return null;
+  if (!mounted || pathname?.startsWith('/dashboard')) return null;
 
   return (
     <div ref={constraintsRef} className="fixed inset-0 pointer-events-none z-[9999]">
