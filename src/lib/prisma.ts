@@ -25,17 +25,17 @@ export const prisma =
                 
                 // Set reasonable connection pool limits and timeouts
                 if (!url.searchParams.has("connection_limit")) {
-                  url.searchParams.set("connection_limit", "10");
+                  url.searchParams.set("connection_limit", "15");
                 } else if (url.searchParams.get("connection_limit") === "1") {
-                  url.searchParams.set("connection_limit", "2");
+                  url.searchParams.set("connection_limit", "5");
                 }
                 
                 if (!url.searchParams.has("pool_timeout")) {
-                  url.searchParams.set("pool_timeout", "15");
+                  url.searchParams.set("pool_timeout", "30");
                 }
 
                 if (!url.searchParams.has("connect_timeout")) {
-                  url.searchParams.set("connect_timeout", "15");
+                  url.searchParams.set("connect_timeout", "30");
                 }
                 
                 return url.toString();

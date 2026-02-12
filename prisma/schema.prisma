@@ -35,9 +35,9 @@ model User {
   accounts      Account[]
   blogs         BlogPost[]
   listings      Listing[]
-  sessions      Session[]
-  sales         Sale[]
   notes         Note[]
+  sales         Sale[]
+  sessions      Session[]
 }
 
 model Account {
@@ -116,9 +116,9 @@ model Listing {
   seoDescription     String?
   seoKeywords        String[]       @default([])
   seoTitle           String?
+  inquiries          Inquiry[]
   user               User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   images             ListingImage[]
-  inquiries          Inquiry[]
   sales              Sale[]
 }
 
@@ -161,47 +161,44 @@ model BlogMedia {
 }
 
 model Inquiry {
-  id        String   @id @default(cuid())
-  listingId String?
-  name      String
-  email     String
-  phone     String?
-  message   String
-  status    String?  @default("Pending")
-  subject   String?
+  id             String   @id @default(cuid())
+  listingId      String?
+  name           String
+  email          String
+  phone          String?
+  message        String
+  status         String?  @default("Pending")
+  subject        String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
   recipientEmail String?
-  type      String?  @default("Inquiry") // Inquiry, Tour
-  tourDate  String?
-  tourTime  String?
-  transcript Json?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  listing   Listing? @relation(fields: [listingId], references: [id], onDelete: SetNull)
-
-  @@index([type])
-  @@index([createdAt(sort: Desc)])
+  tourDate       String?
+  tourTime       String?
+  type           String?  @default("Inquiry")
+  transcript     Json?
+  listing        Listing? @relation(fields: [listingId], references: [id])
 }
 
 model Sale {
-  id            String   @id @default(cuid())
-  userId        String
-  listingId     String?
+  id              String    @id @default(cuid())
+  listingId       String?
   clientName      String
-  clientAddress   String?
   clientEmail     String?
-  clientMessenger String?
   clientPhone     String?
   amount          Float
-  status          String    @default("In Progress") // In Progress, Closed, Cancelled
-  salesCategory   String?   @default("Sale") // Rental, Sale
-  saleDate        DateTime  @default(now())
-  rentalStartDate DateTime?
-  rentalDueDate   DateTime?
+  status          String    @default("In Progress")
   notes           String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  listing       Listing? @relation(fields: [listingId], references: [id], onDelete: SetNull)
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  userId          String
+  salesCategory   String?   @default("Sale")
+  rentalDueDate   DateTime?
+  rentalStartDate DateTime?
+  saleDate        DateTime  @default(now())
+  clientAddress   String?
+  clientMessenger String?
+  listing         Listing?  @relation(fields: [listingId], references: [id])
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Note {
@@ -220,5 +217,6 @@ model ChatHistory {
   message   Json
   createdAt DateTime @default(now()) @map("created_at")
 
+  @@index([sessionId], map: "idx_chat_history_session_id")
   @@map("chat_history")
 }

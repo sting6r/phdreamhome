@@ -48,7 +48,31 @@ Your goals:
 6. AUTONOMY: You are a standalone assistant. You can handle the entire conversation flow yourself. 
 7. PERSUASION: Be proactive. If a user seems interested, suggest a tour or provide a link to view the full listing.
 8. Keep responses concise (under 3 sentences) to suit a chat bubble.
-9. ONLY REAL DATA: Every property you mention MUST have a link and an image from the provided context. If it doesn't have a link, it's not in our database—DO NOT MENTION IT. If you are unsure if a property is in the context, assume it is NOT.
+9. INTERACTIVE CHOICES: If you provide options, choices, or suggestions to the user, format them using [CHOICES] Option 1 | Option 2 [/CHOICES] at the end of your message. This will render as clickable buttons for the user.
+   - Use "Send Message", "Call Agent", or "Email Agent" when the user wants to contact someone.
+   - Use "View Listings" when the user wants to see more properties.
+   - Example: "Would you like to speak with an agent? [CHOICES] Send Message | Call Agent | Email Agent [/CHOICES]"
+10. AGENT CONTACT CARD: If the user wants to contact an agent, see agent details, or speak with someone, you can display an interactive agent card using [AGENT_CARD] block.
+    - Format: 
+      [AGENT_CARD]
+      Name: Del Adones Adlawan
+      Role: REAL ESTATE AGENT
+      PRC: 13123123
+      DHSUD: HS-1231
+      Phone: 09772838819
+      Email: deladonesadlawan@gmail.com
+       Listings: 5
+              [/AGENT_CARD]
+    - Use [PHONE_DISPLAY]09772838819[/PHONE_DISPLAY] if the user ONLY wants the contact number.
+    - Use [EMAIL_DISPLAY]deladonesadlawan@gmail.com[/EMAIL_DISPLAY] if the user ONLY wants the email address.
+    - Always offer this when user asks for "Call Agent", "Email Agent", or "Contact Us".
+11. TOUR SCHEDULE FORM: If the user wants to "Schedule a Tour", "Book a Visit", or "See the property in person", you can display an interactive tour form using [TOUR_FORM] block.
+    - Format:
+      [TOUR_FORM]
+      Property: [Property Name]
+      [/TOUR_FORM]
+    - Always offer this when user asks for a visit or tour.
+12. ONLY REAL DATA: Every property you mention MUST have a link and an image from the provided context. If it doesn't have a link, it's not in our database—DO NOT MENTION IT. If you are unsure if a property is in the context, assume it is NOT.
 Use the chat history and the provided listing context to provide personalized help.
 `;
 
@@ -228,13 +252,36 @@ export async function POST(req: Request) {
     }
     
     // Call the FastAPI server with history, user data and additional context
-    const reply = await getPythonAIResponse(
+    let reply = await getPythonAIResponse(
       typeof finalMessageForPython === 'string' ? finalMessageForPython : JSON.stringify(finalMessageForPython), 
       sessionId || "default_session", 
       messages, 
       userData, 
       additionalContext
     );
+
+    // If the reply contains raw Supabase paths (images: or videos:), sign them before sending to UI
+    if (reply && (reply.includes("images:") || reply.includes("videos:"))) {
+      try {
+        const { createSignedUrl } = await import("@lib/supabase");
+        // Regex to find patterns like ![Title](images:path) or just images:path in text
+        const pathRegex = /(?:images|videos):[a-zA-Z0-9._\-/]+/g;
+        const paths = reply.match(pathRegex);
+        
+        if (paths) {
+          console.log(`[Chat API] Signing ${paths.length} media paths found in AI response`);
+          for (const path of paths) {
+            const signedUrl = await createSignedUrl(path);
+            if (signedUrl) {
+              // Replace all occurrences of this path with the signed URL
+              reply = reply.split(path).join(signedUrl);
+            }
+          }
+        }
+      } catch (signErr) {
+        console.error("[Chat API] Error signing media paths in reply:", signErr);
+      }
+    }
 
     const messageId = `assistant-${Date.now()}`;
     const stream = new ReadableStream({

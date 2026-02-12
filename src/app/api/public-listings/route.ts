@@ -13,7 +13,7 @@ export async function GET(req: Request) {
     const maxPriceParam = url.searchParams.get("maxPrice");
     const bedroomsParam = url.searchParams.get("bedrooms");
     const featuredParam = url.searchParams.get("featured");
-    const searchStatus = statusParam === "RFO" ? "Ready for Occupancy" : statusParam || undefined;
+    const searchStatus = statusParam === "RFO" ? "Ready for Occupancy" : (statusParam === "all" ? undefined : (statusParam || undefined));
     const minPrice = minPriceParam ? Number(minPriceParam) : undefined;
     const maxPrice = maxPriceParam ? Number(maxPriceParam) : undefined;
     const bedrooms = bedroomsParam ? Number(bedroomsParam) : undefined;

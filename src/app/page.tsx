@@ -16,16 +16,16 @@ const fetcher = async (u: string, signal?: AbortSignal) => {
     });
     if (!r.ok) {
       if (r.status === 404) return null;
+      // Only log errors if not aborted
+      if (signal?.aborted) return null;
       const text = await r.text();
       console.error(`Home fetcher error [${r.status}]:`, u, text.slice(0, 100));
       return null;
     }
     return await r.json();
   } catch (e: any) {
-    if (e?.name === "AbortError") return null;
-    // Don't log TypeError: Failed to fetch as an error if it's likely a dev-mode abort
-    if (e instanceof TypeError && e.message === "Failed to fetch") {
-      // In development, this often happens during HMR or StrictMode double-mount
+    if (e?.name === "AbortError" || signal?.aborted) return null;
+    if (e instanceof TypeError && (e.message === "Failed to fetch" || e.message.includes("aborted"))) {
       return null;
     }
     console.error("Home fetcher error:", u, e);

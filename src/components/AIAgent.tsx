@@ -3,17 +3,19 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { useChat, type UIMessage as Message } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import Script from "next/script";
-import { X, Send, User, Minimize2, Maximize2, Loader2, ExternalLink, Image as ImageIcon, ChevronLeft, Undo2, GripHorizontal, Building2, MapPin, DollarSign, Info, Sparkles, ClipboardList, ChevronRight, Share2, Copy, Facebook, Twitter, Check } from "lucide-react";
+import { X, Send, User, Minimize2, Maximize2, Loader2, ExternalLink, Image as ImageIcon, ChevronLeft, Undo2, GripHorizontal, Building2, MapPin, DollarSign, Info, Sparkles, ClipboardList, ChevronRight, Share2, Copy, Facebook, Twitter, Check, Mic, MicOff, Phone, Mail, Link as LinkIcon, Calendar, Clock
+} from "lucide-react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 
 export default function AIAgent() {
   const pathname = usePathname();
+  const router = useRouter();
   const [mounted, setMounted] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   
@@ -34,6 +36,7 @@ export default function AIAgent() {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
   const [showPropertyForm, setShowPropertyForm] = useState(false);
   const [showChatHistory, setShowChatHistory] = useState(false);
   const [propertyFormMode, setPropertyFormMode] = useState<'rent' | 'sell'>('rent');
@@ -49,6 +52,25 @@ export default function AIAgent() {
   const [providerInfo, setProviderInfo] = useState<{ provider: string; model: string } | null>(null);
   const [showShareMenu, setShowShareMenu] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
+  const [agentProfileImage, setAgentProfileImage] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function fetchAgentProfile() {
+      try {
+        const res = await fetch('/api/profile');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.imageUrl) {
+            setAgentProfileImage(data.imageUrl);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching agent profile:', error);
+      }
+    }
+    fetchAgentProfile();
+  }, []);
+
   const handleShare = (platform: 'facebook' | 'twitter' | 'copy') => {
     const url = typeof window !== 'undefined' ? window.location.href : '';
     const text = "Check out PhDreamHome AI Assistant for the best property listings!";
@@ -77,13 +99,20 @@ export default function AIAgent() {
   const [allMedia, setAllMedia] = useState<{ url: string; type: 'image' | 'video'; alt?: string }[]>([]);
   const [currentMediaIndex, setCurrentMediaIndex] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const chatInputRef = useRef<HTMLInputElement>(null);
+  const chatInputRef = useRef<HTMLTextAreaElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const messagesRef = useRef<Message[]>([]);
   const inquiryIdRef = useRef<string | null>(null);
   const hasFetchedProfile = useRef(false);
   const propertyFormJustSubmittedRef = useRef<boolean>(false);
   const syncAbortControllerRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    if (chatInputRef.current) {
+      chatInputRef.current.style.height = 'auto';
+      chatInputRef.current.style.height = `${Math.min(chatInputRef.current.scrollHeight, 120)}px`;
+    }
+  }, [chatInput]);
 
   // Define utility functions before they are used in hooks
   const safeJson = async (res: Response) => {
@@ -137,6 +166,7 @@ export default function AIAgent() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ transcript: cleaned }),
         signal,
+        cache: 'no-store', // Avoid caching for PATCH requests
       });
       if (!res.ok) {
         const errData = await safeJson(res);
@@ -703,8 +733,359 @@ export default function AIAgent() {
 
     return (
       <>
-        {text.split(/(!\[.*?\]\(.*?\)|\[.*?\]\(.*?\)|\[PROPERTY_DETAILS\][\s\S]*?\[\/PROPERTY_DETAILS\])/g).map((part, index) => {
+        {text.split(/(!\[.*?\]\(.*?\)|\[.*?\]\(.*?\)|\[PROPERTY_DETAILS\][\s\S]*?\[\/PROPERTY_DETAILS\]|\[CHOICES\][\s\S]*?\[\/CHOICES\])/g).map((part, index) => {
           if (!part) return null;
+
+          // Handle Choices/Buttons
+          if (part.startsWith('[CHOICES]')) {
+            const content = part.replace('[CHOICES]', '').replace('[/CHOICES]', '').trim();
+            const options = content.split('|').map(opt => opt.trim()).filter(Boolean);
+            
+            return (
+              <div key={index} className="flex flex-wrap gap-2 my-3">
+                {options.map((option, optIdx) => (
+                  <button
+                    key={optIdx}
+                    disabled={isLoading}
+                    onClick={() => {
+                      if (!isLoading) {
+                        console.log(`[AIAgent] Button clicked: "${option}"`);
+                        
+                        // Handle special routing buttons
+                         const lowerOpt = option.toLowerCase();
+                         if (lowerOpt === 'send message' || lowerOpt === 'inquire' || lowerOpt === 'contact us') {
+                           // Display a polite message first
+                           const politeMsg = {
+                             id: Date.now().toString(),
+                             role: 'assistant' as const,
+                             content: `Please check our contact page on our website to send a message.`,
+                             parts: [{ 
+                               type: 'text' as const, 
+                               text: `Please check our contact page on our website to send a message.` 
+                             }]
+                           };
+                           chatInstance.setMessages([...chatInstance.messages, politeMsg]);
+                           
+                           // Delay the routing slightly so the user can see the message
+                           setTimeout(() => {
+                             router.push('/contact');
+                           }, 2000);
+                           return;
+                         }
+                         if (lowerOpt === 'call agent' || lowerOpt === 'call us' || lowerOpt === 'contact agent') {
+                           // Display only the contact number in a styled div
+                           const phoneMsg = {
+                             id: Date.now().toString(),
+                             role: 'assistant' as const,
+                             content: `[PHONE_DISPLAY]09772838819[/PHONE_DISPLAY]`,
+                             parts: [{ 
+                               type: 'text' as const, 
+                               text: `[PHONE_DISPLAY]09772838819[/PHONE_DISPLAY]` 
+                             }]
+                           };
+                           chatInstance.setMessages([...chatInstance.messages, phoneMsg]);
+                           return;
+                         }
+                         if (lowerOpt === 'view listings' || lowerOpt === 'see properties') {
+                          router.push('/properties');
+                          return;
+                        }
+                        if (lowerOpt === 'email agent' || lowerOpt === 'email us') {
+                          // Display only the email address in a styled div
+                          const emailMsg = {
+                            id: Date.now().toString(),
+                            role: 'assistant' as const,
+                            content: `[EMAIL_DISPLAY]deladonesadlawan@gmail.com[/EMAIL_DISPLAY]`,
+                            parts: [{ 
+                              type: 'text' as const, 
+                              text: `[EMAIL_DISPLAY]deladonesadlawan@gmail.com[/EMAIL_DISPLAY]` 
+                            }]
+                          };
+                          chatInstance.setMessages([...chatInstance.messages, emailMsg]);
+                          return;
+                        }
+                        if (lowerOpt === 'schedule a tour' || lowerOpt === 'book a tour' || lowerOpt === 'visit property') {
+                          // Insert a system message into the chat that will render the form
+                          const tourFormMsg = {
+                            id: Date.now().toString(),
+                            role: 'assistant' as const,
+                            content: `[TOUR_FORM]\nProperty: ${chatInput || 'Selected Property'}\n[/TOUR_FORM]`,
+                            parts: [{ 
+                              type: 'text' as const, 
+                              text: `[TOUR_FORM]\nProperty: ${chatInput || 'Selected Property'}\n[/TOUR_FORM]` 
+                            }]
+                          };
+                          chatInstance.setMessages([...chatInstance.messages, tourFormMsg]);
+                          return;
+                        }
+
+                        setChatInput(option);
+                        // Use append if available, otherwise fallback to form submission
+                        const chat = chatInstance as any;
+                        if (typeof chat.append === 'function') {
+                          chat.append({ role: 'user', content: option });
+                        } else {
+                          setChatInput(option);
+                          setTimeout(() => {
+                            handleChatSubmit(new Event('submit') as any);
+                          }, 10);
+                        }
+                      }
+                    }}
+                    className="bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 px-3 py-1.5 rounded-full text-xs font-semibold transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+                  >
+                    {option}
+                  </button>
+                ))}
+              </div>
+            );
+          }
+
+          // Handle Phone Display
+          if (part.startsWith('[PHONE_DISPLAY]')) {
+            const phoneNumber = part.replace('[PHONE_DISPLAY]', '').replace('[/PHONE_DISPLAY]', '').trim();
+            return (
+              <div key={index} className="my-2 flex items-center gap-2 text-sm text-slate-800 bg-slate-50 p-2.5 rounded-lg border border-slate-100 w-fit">
+                <Phone size={16} className="text-green-600" />
+                <a href={`tel:${phoneNumber.replace(/\s/g, '')}`} className="font-semibold hover:text-green-600 transition-colors">
+                  {phoneNumber}
+                </a>
+              </div>
+            );
+          }
+
+          // Handle Email Display
+          if (part.startsWith('[EMAIL_DISPLAY]')) {
+            const email = part.replace('[EMAIL_DISPLAY]', '').replace('[/EMAIL_DISPLAY]', '').trim();
+            return (
+              <div key={index} className="my-2 flex items-center gap-2 text-sm text-slate-800 bg-slate-50 p-2.5 rounded-lg border border-slate-100 w-fit">
+                <Mail size={16} className="text-blue-500" />
+                <a href={`mailto:${email}`} className="font-semibold hover:text-blue-500 transition-colors">
+                  {email}
+                </a>
+              </div>
+            );
+          }
+
+          // Handle Agent Card
+          if (part.startsWith('[AGENT_CARD]')) {
+            const content = part.replace('[AGENT_CARD]', '').replace('[/AGENT_CARD]', '').trim();
+            const lines = content.split('\n');
+            const data: Record<string, string> = {};
+            lines.forEach(line => {
+              const [key, ...val] = line.split(':');
+              if (key && val.length) {
+                data[key.trim()] = val.join(':').trim();
+              }
+            });
+
+            // Dynamic image for agent card, fallback to agentProfileImage or null
+            const agentImage = data.Image || agentProfileImage;
+
+            return (
+              <div key={index} className="my-3 bg-[#FDFCFE] border border-slate-100 rounded-2xl overflow-hidden shadow-sm text-slate-800 max-w-sm mx-auto sm:max-w-none">
+                <div className="p-5 sm:p-6 flex flex-row items-center gap-6">
+                  {/* Agent Image - Left side circular */}
+                  <div className="relative w-24 h-24 sm:w-32 sm:h-32 rounded-full overflow-hidden border-4 border-white flex-shrink-0 bg-slate-50 shadow-sm">
+                    {agentImage ? (
+                      <Image 
+                        src={agentImage} 
+                        alt={data.Name || "Agent"} 
+                        fill 
+                        className="object-cover"
+                        unoptimized
+                        onError={(e) => {
+                          const target = e.target as any;
+                          target.style.display = 'none';
+                          target.parentElement.classList.add('flex', 'items-center', 'justify-center', 'bg-slate-100');
+                        }}
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-slate-300 bg-slate-50">
+                        <User size={48} />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Agent Info - Right side */}
+                  <div className="flex-1 space-y-1 min-w-0">
+                    <h3 className="text-xl sm:text-2xl font-bold text-slate-900 leading-tight truncate">
+                      {data.Name || "Del Adones Adlawan"}
+                    </h3>
+                    <p className="text-[10px] sm:text-xs font-medium text-slate-400 uppercase tracking-wider">
+                      {data.Role || "REAL ESTATE AGENT"}
+                    </p>
+                    
+                    <div className="space-y-0.5 pt-1">
+                      {data.PRC && (
+                        <p className="text-xs sm:text-sm text-slate-700">
+                          <span className="font-bold">PRC Accred. No:</span> {data.PRC}
+                        </p>
+                      )}
+                      {data.DHSUD && (
+                        <p className="text-xs sm:text-sm text-slate-700">
+                          <span className="font-bold">DHSUD Accred. No:</span> {data.DHSUD}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="flex flex-col gap-1.5 pt-1">
+                      {data.Phone && (
+                        <a href={`tel:${data.Phone.replace(/\s/g, '')}`} className="flex items-center gap-2 text-xs sm:text-sm text-green-600 font-medium hover:underline">
+                          <Phone size={14} />
+                          <span>{data.Phone}</span>
+                        </a>
+                      )}
+                      {data.Email && (
+                        <a href={`mailto:${data.Email}`} className="flex items-center gap-2 text-xs sm:text-sm text-blue-500 font-medium hover:underline truncate">
+                          <Mail size={14} />
+                          <span className="truncate">{data.Email}</span>
+                        </a>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-2 pt-1 text-xs sm:text-sm font-bold text-green-600">
+                      <span className="text-lg">{data.Listings || "5"}</span>
+                      <span>Total Listings</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Actions - Bottom buttons matching the image */}
+                <div className="px-5 pb-5 sm:px-6 sm:pb-6 flex items-center gap-3">
+                  <button 
+                    onClick={() => router.push('/contact')}
+                    className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-[#10A34E] text-white px-4 py-3 text-sm font-bold hover:bg-[#0E8F44] shadow-sm transition-all active:scale-95 group"
+                  >
+                    <Send size={18} className="transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+                    <span>Send Inquiry</span>
+                  </button>
+                  
+                  <button 
+                    onClick={() => {
+                      try {
+                        navigator.clipboard.writeText(window.location.origin);
+                        alert("Link copied to clipboard!");
+                      } catch {}
+                    }}
+                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#F0F4F8] text-[#475467] px-4 py-3 text-sm font-bold hover:bg-[#E2E8F0] border border-slate-100 transition-all active:scale-95"
+                  >
+                    <Copy size={18} />
+                    <span>Copy Link</span>
+                  </button>
+                </div>
+              </div>
+            );
+          }
+
+          // Handle Tour Schedule Form
+          if (part.startsWith('[TOUR_FORM]')) {
+            const content = part.replace('[TOUR_FORM]', '').replace('[/TOUR_FORM]', '').trim();
+            const lines = content.split('\n');
+            const data: Record<string, string> = {};
+            lines.forEach(line => {
+              const [key, ...val] = line.split(':');
+              if (key && val.length) {
+                data[key.trim()] = val.join(':').trim();
+              }
+            });
+
+            return (
+              <div key={index} className="my-3 bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm text-slate-800">
+                <div className="bg-purple-600 px-3 py-2 flex items-center gap-2 text-white">
+                  <Calendar size={14} />
+                  <span className="text-[10px] font-bold uppercase tracking-wider">Schedule a Property Tour</span>
+                </div>
+                <div className="p-4 space-y-4">
+                  <div className="space-y-1">
+                    <div className="text-[10px] font-medium text-slate-400 uppercase">Property</div>
+                    <div className="text-sm font-semibold text-slate-700">{data.Property || "Selected Property"}</div>
+                  </div>
+
+                  <form className="space-y-3" onSubmit={(e) => {
+                    e.preventDefault();
+                    const form = e.currentTarget;
+                    const date = (form.elements.namedItem('tour-date') as HTMLInputElement).value;
+                    const time = (form.elements.namedItem('tour-time') as HTMLInputElement).value;
+                    const type = (form.elements.namedItem('tour-type') as HTMLSelectElement).value;
+
+                    if (!date || !time) {
+                      alert("Please select both a date and time for your tour.");
+                      return;
+                    }
+
+                    const confirmationText = `I've scheduled a ${type} for ${data.Property} on ${date} at ${time}.`;
+                    
+                    // Add user confirmation and then assistant confirmation
+                    const userMsg = {
+                      id: Date.now().toString(),
+                      role: 'user' as const,
+                      content: `I'd like to schedule a ${type} for ${date} at ${time}.`,
+                      parts: [{ type: 'text' as const, text: `I'd like to schedule a ${type} for ${date} at ${time}.` }]
+                    };
+                    
+                    const assistantMsg = {
+                      id: (Date.now() + 1).toString(),
+                      role: 'assistant' as const,
+                      content: `Perfect! 🗓️ Your ${type} has been requested for **${date}** at **${time}**. One of our agents will contact you shortly to confirm the appointment.`,
+                      parts: [{ type: 'text' as const, text: `Perfect! 🗓️ Your ${type} has been requested for **${date}** at **${time}**. One of our agents will contact you shortly to confirm the appointment.` }]
+                    };
+
+                    const newMsgs = [...chatInstance.messages, userMsg, assistantMsg];
+                    chatInstance.setMessages(newMsgs);
+                    if (currentInquiryId) {
+                      syncTranscriptToDb(newMsgs, currentInquiryId);
+                    }
+                  }}>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-medium text-slate-400 uppercase flex items-center gap-1">
+                          <Calendar size={10} /> Preferred Date
+                        </label>
+                        <input 
+                          type="date" 
+                          name="tour-date" 
+                          required
+                          min={new Date().toISOString().split('T')[0]}
+                          className="w-full bg-slate-50 border border-slate-200 rounded-lg px-2 py-1.5 text-xs focus:ring-1 focus:ring-purple-500 outline-none"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-medium text-slate-400 uppercase flex items-center gap-1">
+                          <Clock size={10} /> Preferred Time
+                        </label>
+                        <input 
+                          type="time" 
+                          name="tour-time" 
+                          required
+                          className="w-full bg-slate-50 border border-slate-200 rounded-lg px-2 py-1.5 text-xs focus:ring-1 focus:ring-purple-500 outline-none"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-medium text-slate-400 uppercase">Tour Type</label>
+                      <select 
+                        name="tour-type"
+                        className="w-full bg-slate-50 border border-slate-200 rounded-lg px-2 py-1.5 text-xs focus:ring-1 focus:ring-purple-500 outline-none appearance-none cursor-pointer"
+                      >
+                        <option value="Physical Tour">In-Person (Physical) Tour</option>
+                        <option value="Virtual Tour">Virtual (Video Call) Tour</option>
+                      </select>
+                    </div>
+
+                    <button 
+                      type="submit"
+                      className="w-full bg-purple-600 text-white py-2 rounded-lg text-sm font-bold hover:bg-purple-700 transition-all active:scale-95 shadow-md mt-2 flex items-center justify-center gap-2"
+                    >
+                      <Check size={16} />
+                      Confirm Schedule
+                    </button>
+                  </form>
+                </div>
+              </div>
+            );
+          }
 
           // Handle Property Details Form
           if (part.startsWith('[PROPERTY_DETAILS]')) {
@@ -832,6 +1213,7 @@ export default function AIAgent() {
                   {listingUrl && (
                     <Link 
                       href={listingUrl}
+                      prefetch={false}
                       onClick={(e) => e.stopPropagation()}
                       className="inline-flex items-center justify-center gap-1 bg-purple-600 text-white px-2 py-1 rounded text-[10px] font-semibold hover:bg-purple-700 transition-colors shadow-sm w-fit"
                     >
@@ -863,6 +1245,7 @@ export default function AIAgent() {
               <Link 
                 key={index}
                 href={linkUrl}
+                prefetch={false}
                 target={linkUrl.startsWith('http') ? "_blank" : "_self"}
                 className="text-purple-600 font-bold underline hover:text-purple-800 transition-colors inline-flex items-center gap-1"
               >
@@ -893,6 +1276,7 @@ export default function AIAgent() {
                 {part.split('/contact')[0]}
                 <Link 
                   href="/contact" 
+                  prefetch={false}
                   className="inline-flex items-center gap-1 text-purple-600 font-bold underline hover:text-purple-800 transition-colors bg-purple-50 px-2 py-1 rounded"
                 >
                   {linkLabel}
@@ -989,6 +1373,34 @@ export default function AIAgent() {
       console.log("Quick action blocked: isLoading is true");
       return;
     }
+
+    // Handle special routing buttons
+    const lowerText = text.toLowerCase();
+    if (lowerText === 'send message' || lowerText === 'inquire' || lowerText === 'contact us') {
+      router.push('/contact');
+      return;
+    }
+    if (lowerText === 'call agent' || lowerText === 'call us' || lowerText === 'contact agent') {
+      window.location.href = 'tel:09171234567';
+      return;
+    }
+    if (lowerText === 'view listings' || lowerText === 'see properties') {
+        router.push('/properties');
+        return;
+      }
+      if (lowerText === 'schedule a tour' || lowerText === 'book a tour' || lowerText === 'visit property') {
+        const tourFormMsg = {
+          id: Date.now().toString(),
+          role: 'assistant' as const,
+          content: `[TOUR_FORM]\nProperty: ${text}\n[/TOUR_FORM]`,
+          parts: [{ 
+            type: 'text' as const, 
+            text: `[TOUR_FORM]\nProperty: ${text}\n[/TOUR_FORM]` 
+          }]
+        };
+        chatInstance.setMessages([...chatInstance.messages, tourFormMsg]);
+        return;
+      }
 
     if (text === "Property Visit" || text === "Visit a Property Today") {
       if (!isFormSubmitted) {
@@ -1819,15 +2231,20 @@ export default function AIAgent() {
   // Sync transcript to database if we have an active inquiry
   useEffect(() => {
     if (currentInquiryId && chatInstance.messages.length > 0) {
+      const lastMsg = chatInstance.messages[chatInstance.messages.length - 1];
+      const isAssistantStreaming = lastMsg?.role === 'assistant' && chatInstance.status === 'streaming';
+      
+      // Don't sync while assistant is streaming to avoid rapid aborted requests
+      if (isAssistantStreaming) return;
+
       const timeoutId = setTimeout(() => syncTranscriptToDb(chatInstance.messages), 2000); // Debounce 2s
       return () => {
         clearTimeout(timeoutId);
-        if (syncAbortControllerRef.current) {
-          syncAbortControllerRef.current.abort();
-        }
+        // We don't necessarily want to abort here if the component is just re-rendering,
+        // but the syncTranscriptToDb function already handles aborting the previous one.
       };
     }
-  }, [chatInstance.messages, currentInquiryId, syncTranscriptToDb]);
+  }, [chatInstance.messages, currentInquiryId, chatInstance.status, syncTranscriptToDb]);
 
   const constraintsRef = useRef(null);
   const isDraggingRef = useRef(false);
@@ -2622,19 +3039,44 @@ export default function AIAgent() {
                           >
                             <ImageIcon size={16} />
                           </button>
-                          <div className="relative flex-1">
-                            <input
+                          <button
+                            type="button"
+                            className={`flex h-7 w-7 items-center justify-center rounded-full transition-all shrink-0 ${
+                              isRecording 
+                                ? 'bg-red-100 text-red-600 animate-pulse ring-2 ring-red-400' 
+                                : 'text-slate-400 hover:bg-slate-100 hover:text-purple-600'
+                            }`}
+                            title={isRecording ? "Stop recording" : "Voice input"}
+                            onClick={() => {
+                              setIsRecording(!isRecording);
+                              console.log(`[AIAgent] Voice recording: ${!isRecording ? 'ON' : 'OFF'}`);
+                            }}
+                          >
+                            <Mic size={14} />
+                          </button>
+                          <div className="relative flex-1 flex items-end">
+                            <textarea
                               value={chatInput}
-                              onChange={handleChatInputChange}
+                              onChange={(e) => {
+                                handleChatInputChange(e as any);
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter' && !e.shiftKey) {
+                                  e.preventDefault();
+                                  const form = e.currentTarget.closest('form');
+                                  if (form) form.requestSubmit();
+                                }
+                              }}
                               placeholder={imageFile ? "Add a caption..." : "Type your message..."}
-                              className="w-full rounded-full border border-slate-200 bg-gray-100 py-2 pl-4 pr-10 text-xs text-black focus:border-purple-500 focus:outline-none transition-all"
+                              className="w-full rounded-2xl border border-slate-200 bg-gray-100 py-2 pl-4 pr-10 text-xs text-black focus:border-purple-500 focus:outline-none transition-all resize-none min-h-[36px] max-h-[120px] overflow-y-auto block leading-normal"
+                              rows={1}
                               disabled={isUploading}
                               ref={chatInputRef}
                             />
                             <button
                               type="submit"
                               disabled={isLoading || isUploading || (!chatInput?.trim() && !imageFile)}
-                              className="absolute right-1 top-1/2 -translate-y-1/2 flex h-7 w-7 items-center justify-center rounded-full bg-purple-600 text-white disabled:bg-slate-300 transition-colors hover:drop-shadow-[0_6px_10px_rgba(126,43,245,0.25)]"
+                              className="absolute right-1 bottom-1 flex h-7 w-7 items-center justify-center rounded-full bg-purple-600 text-white disabled:bg-slate-300 transition-colors hover:drop-shadow-[0_6px_10px_rgba(126,43,245,0.25)]"
                             >
                               {isUploading ? <Loader2 className="animate-spin" size={12} /> : <Send size={12} />}
                             </button>
