@@ -237,8 +237,12 @@ export default function Navbar() {
         <div className="flex items-center gap-2 sm:gap-5 h-full">
           <nav className="hidden sm:flex items-center gap-2 sm:gap-5 self-end mb-1 overflow-x-auto whitespace-nowrap pr-2 no-scrollbar">
             <Link href="/contact" prefetch={false} className="inline-flex items-center gap-1 sm:gap-2 btn-blue btn-glow-soft px-2 py-1 sm:px-4 sm:py-2 text-xs sm:text-sm">
-              <span className="underline-run hidden xs:inline">Sell your Property Today?</span>
-              <span className="underline-run xs:hidden">Sell Property</span>
+              <span className="underline-run hidden xs:inline">
+                <span className="text-[#00008B]">Sell</span> / <span className="text-[#00008B]">Rent</span> your Property Today?
+              </span>
+              <span className="underline-run xs:hidden">
+                 <span className="text-[#00008B]">Sell</span> / <span className="text-[#00008B]">Rent</span> your Property?
+               </span>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3 h-3 sm:w-4 sm:h-4"><path d="M21 15a2 2 0 0 1-2 2h-3l-4 4v-4H7a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v9z"/></svg>
             </Link>
           </nav>

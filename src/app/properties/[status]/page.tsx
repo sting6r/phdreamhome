@@ -1,5 +1,5 @@
 "use client";
-import React, { Suspense, use } from "react";
+import React, { useState, useMemo, useEffect, Suspense, use } from "react";
 import MainFooterCards from "../../../components/MainFooterCards";
 import Link from "next/link";
 import Image from "next/image";
@@ -70,6 +70,16 @@ function PropertiesByStatusPageContent({ params }: { params: Promise<{ status: s
   const [inqPhone, setInqPhone] = React.useState("");
   const [inqSubject, setInqSubject] = React.useState("");
   const [inqMessage, setInqMessage] = React.useState("");
+
+  React.useEffect(() => {
+    const adjustHeight = (el: HTMLTextAreaElement) => {
+      el.style.height = "auto";
+      el.style.height = `${el.scrollHeight}px`;
+    };
+    const textareas = document.querySelectorAll("textarea");
+    textareas.forEach(el => adjustHeight(el as HTMLTextAreaElement));
+  }, [inqMessage]);
+
   const [inqSent, setInqSent] = React.useState<string | null>(null);
   const [inqError, setInqError] = React.useState<string | null>(null);
   const [inqLoading, setInqLoading] = React.useState(false);
@@ -511,7 +521,7 @@ function PropertiesByStatusPageContent({ params }: { params: Promise<{ status: s
               const emphasizeStatus = statusText === "Sold" || statusText === "Occupied";
               return (
                 <Link prefetch={false} key={l.id} href={`/listing/${l.slug || l.id}`} className="card group transition-all duration-300 hover:shadow-[0_10px_30px_rgba(0,0,0,0.15)] hover:scale-[0.98] hover:ring-1 hover:ring-black/10">
-                  <div className="relative w-full h-40 sm:h-48 mb-3 rounded overflow-hidden">
+                  <div className="relative w-full h-40 sm:h-48 mb-3 rounded overflow-hidden shadow-md">
                     {imgUrl ? (
                       <Image src={imgUrl} alt={l.title} fill className="object-cover transition-transform duration-300 group-hover:scale-105" />
                     ) : (
@@ -703,7 +713,7 @@ function PropertiesByStatusPageContent({ params }: { params: Promise<{ status: s
                 </select>
               </div>
               <textarea
-                className="input h-24"
+                className="input resize-none overflow-hidden"
                 placeholder="Tell us about your rental needs, timeline, budget, or any specific questions you have..."
                 value={inqMessage}
                 onChange={e=>{

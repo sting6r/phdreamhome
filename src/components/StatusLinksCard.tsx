@@ -199,7 +199,9 @@ export default function StatusLinksCard() {
         </button>
 
         <Link href="/contact" prefetch={false} className="inline-flex items-center gap-1.5 btn-blue btn-glow-soft px-3 py-1.5 text-xs">
-          <span className="underline-run">Sell Property</span>
+          <span className="underline-run">
+            <span className="text-[#00008B]">Sell</span> / <span className="text-[#00008B]">Rent</span> your Property?
+          </span>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3.5 h-3.5"><path d="M21 15a2 2 0 0 1-2 2h-3l-4 4v-4H7a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v9z"/></svg>
         </Link>
       </div>

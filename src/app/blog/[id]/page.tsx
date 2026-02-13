@@ -275,7 +275,7 @@ export default async function BlogDetailPage({ params }: { params: Promise<{ id:
             <div className="flex justify-end">
               <ShareButtons title={post.title} />
             </div>
-            <div className="relative w-full h-80 sm:h-[450px] rounded overflow-hidden bg-slate-200">
+            <div className="relative w-full h-80 sm:h-[450px] rounded overflow-hidden bg-slate-200 shadow-md">
               {post.coverPath ? (
                 <Image src={`/api/image/proxy?path=${encodeURIComponent(post.coverPath)}`} alt={post.title} fill sizes="(max-width: 640px) 100vw, 60vw" className="object-cover" unoptimized />
               ) : (

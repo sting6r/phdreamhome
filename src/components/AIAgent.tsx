@@ -107,12 +107,15 @@ export default function AIAgent() {
   const propertyFormJustSubmittedRef = useRef<boolean>(false);
   const syncAbortControllerRef = useRef<AbortController | null>(null);
 
+  // Auto-resize textarea logic
   useEffect(() => {
-    if (chatInputRef.current) {
-      chatInputRef.current.style.height = 'auto';
-      chatInputRef.current.style.height = `${Math.min(chatInputRef.current.scrollHeight, 120)}px`;
-    }
-  }, [chatInput]);
+    const adjustHeight = (el: HTMLTextAreaElement) => {
+      el.style.height = "auto";
+      el.style.height = `${el.scrollHeight}px`;
+    };
+    const textareas = document.querySelectorAll("textarea");
+    textareas.forEach(el => adjustHeight(el as HTMLTextAreaElement));
+  }, [chatInput, propertyFormData.notes, isOpen, showPropertyForm]);
 
   // Define utility functions before they are used in hooks
   const safeJson = async (res: Response) => {
@@ -2783,7 +2786,7 @@ export default function AIAgent() {
                               <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Notes</label>
                               <textarea 
                                 placeholder={propertyFormMode === 'rent' ? 'Add rental terms, duration, deposit, rules...' : 'Add selling highlights, upgrades, timeline, negotiable...'}
-                                className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:border-purple-500 h-16 resize-none bg-gray-100"
+                                className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:border-purple-500 resize-none overflow-hidden bg-gray-100"
                                 value={propertyFormData.notes}
                                 onChange={e => setPropertyFormData({...propertyFormData, notes: e.target.value})}
                               />
@@ -3070,7 +3073,7 @@ export default function AIAgent() {
                                 }
                               }}
                               placeholder={imageFile ? "Add a caption..." : "Type your message..."}
-                              className="w-full rounded-2xl border border-slate-200 bg-gray-100 py-2 pl-4 pr-10 text-xs text-black focus:border-purple-500 focus:outline-none transition-all resize-none min-h-[36px] max-h-[120px] overflow-y-auto block leading-normal"
+                              className="w-full rounded-2xl border border-slate-200 bg-gray-100 py-2 pl-4 pr-10 text-xs text-black focus:border-purple-500 focus:outline-none transition-all resize-none overflow-hidden min-h-[36px] max-h-[120px] block leading-normal"
                               rows={1}
                               disabled={isUploading}
                               ref={chatInputRef}

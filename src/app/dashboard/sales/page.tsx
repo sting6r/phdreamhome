@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import useSWR from "swr";
 import { supabase } from "@lib/supabase";
 import CurrencyInput from "@components/CurrencyInput";
@@ -85,6 +85,56 @@ export default function SalesPage() {
 
   const [emailSuggestion, setEmailSuggestion] = useState<string | null>(null);
 
+  // Auto-resize textarea logic
+  useEffect(() => {
+    const adjustHeight = (el: HTMLTextAreaElement) => {
+      el.style.height = "auto";
+      el.style.height = `${el.scrollHeight}px`;
+    };
+    const textareas = document.querySelectorAll("textarea");
+    textareas.forEach(el => adjustHeight(el as HTMLTextAreaElement));
+  }, [isFormOpen, formData.notes]);
+
+  // Draggable Modal Logic
+  const [modalPos, setModalPos] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    // Only allow dragging from the header, not its children buttons
+    if ((e.target as HTMLElement).closest('button')) return;
+    
+    setIsDragging(true);
+    setDragStart({
+      x: e.clientX - modalPos.x,
+      y: e.clientY - modalPos.y
+    });
+  };
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isDragging) return;
+      setModalPos({
+        x: e.clientX - dragStart.x,
+        y: e.clientY - dragStart.y
+      });
+    };
+
+    const handleMouseUp = () => {
+      setIsDragging(false);
+    };
+
+    if (isDragging) {
+      window.addEventListener("mousemove", handleMouseMove);
+      window.addEventListener("mouseup", handleMouseUp);
+    }
+
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, [isDragging, dragStart]);
+
   const getEmailSuggestion = (email: string) => {
     const commonDomains: Record<string, string> = {
       "gmial.com": "gmail.com",
@@ -132,6 +182,7 @@ export default function SalesPage() {
     setEditingId(null);
     setIsFormOpen(false);
     setEmailSuggestion(null);
+    setModalPos({ x: 0, y: 0 }); // Reset position when closing
   };
 
   const handleEdit = (sale: any) => {
@@ -264,14 +315,23 @@ export default function SalesPage() {
 
       {isFormOpen && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-1">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-lg overflow-hidden border border-slate-200">
-            <div className="px-3 py-1.5 border-b flex justify-between items-center bg-slate-50">
-              <h2 className="text-sm font-bold text-slate-800">
+          <div 
+            style={{ 
+              transform: `translate(${modalPos.x}px, ${modalPos.y}px)`,
+              transition: isDragging ? 'none' : 'transform 0.2s ease-out'
+            }}
+            className="bg-white rounded-lg shadow-xl w-full max-w-lg overflow-hidden border border-slate-200 relative"
+          >
+            <div 
+              onMouseDown={handleMouseDown}
+              className="px-3 py-1.5 border-b flex justify-between items-center bg-slate-50 cursor-move select-none"
+            >
+              <h2 className="text-sm font-bold text-slate-800 pointer-events-none">
                 {editingId ? "Edit Sales Record" : "Add New Sale"}
               </h2>
               <button 
                 onClick={resetForm}
-                className="p-1 hover:bg-slate-200 rounded-full transition-colors"
+                className="p-1 hover:bg-slate-200 rounded-full transition-colors relative z-10"
               >
                 <Icons.X />
               </button>
@@ -286,7 +346,7 @@ export default function SalesPage() {
                       key={status}
                       type="button"
                       onClick={() => setActiveTab(status)}
-                      className={`px-3 py-0 text-[8px] font-medium transition-colors border-b-2 ${
+                      className={`px-3 py-0.5 text-[9px] font-medium transition-colors border-b-2 ${
                         activeTab === status
                           ? "border-blue-600 text-blue-600"
                           : "border-transparent text-slate-500 hover:text-slate-700"
@@ -299,23 +359,23 @@ export default function SalesPage() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-3 gap-y-0 pt-0">
                   <div className="space-y-0">
-                    <label className="text-[8px] font-medium text-slate-700 leading-none">Date</label>
+                    <label className="text-[9px] font-medium text-slate-700 leading-none">Date</label>
                     <div className="date-input-container">
                       <input
                         type="date"
                         required
                         value={formData.saleDate}
                         onChange={(e) => setFormData({ ...formData, saleDate: e.target.value })}
-                        className="w-full rounded border border-slate-300 bg-slate-100 py-0 text-[9px] text-black focus:ring-1 focus:ring-purple-500 outline-none h-[14px]"
+                        className="w-full rounded border border-slate-300 bg-slate-100 py-0 text-[10px] text-black focus:ring-1 focus:ring-purple-500 outline-none h-[18px]"
                       />
                     </div>
                   </div>
                   <div className="space-y-0">
-                    <label className="text-[8px] font-medium text-slate-700 leading-none">Property / Listing</label>
+                    <label className="text-[9px] font-medium text-slate-700 leading-none">Property / Listing</label>
                     <select
                       value={formData.listingId}
                       onChange={(e) => setFormData({ ...formData, listingId: e.target.value })}
-                      className="w-full rounded border border-slate-300 bg-slate-100 px-2 py-0 text-[9px] text-black focus:ring-1 focus:ring-blue-500 outline-none h-[14px]"
+                      className="w-full rounded border border-slate-300 bg-slate-100 px-2 py-0 text-[10px] text-black focus:ring-1 focus:ring-blue-500 outline-none h-[18px]"
                     >
                       <option value="">Select a property (optional)</option>
                       {listings.map((l: any) => (
@@ -325,11 +385,11 @@ export default function SalesPage() {
                   </div>
 
                   <div className="space-y-0">
-                    <label className="text-[8px] font-medium text-slate-700 leading-none">Sales Category</label>
+                    <label className="text-[9px] font-medium text-slate-700 leading-none">Sales Category</label>
                     <select
                       value={formData.salesCategory}
                       onChange={(e) => setFormData({ ...formData, salesCategory: e.target.value })}
-                      className="w-full rounded border border-slate-300 bg-slate-100 px-2 py-0 text-[9px] text-black focus:ring-1 focus:ring-blue-500 outline-none h-[14px]"
+                      className="w-full rounded border border-slate-300 bg-slate-100 px-2 py-0 text-[10px] text-black focus:ring-1 focus:ring-blue-500 outline-none h-[18px]"
                     >
                       <option value="Sale">Sale</option>
                       <option value="Rental">Rental</option>
@@ -337,12 +397,12 @@ export default function SalesPage() {
                   </div>
 
                   <div className="space-y-0">
-                    <label className="text-[8px] font-medium text-slate-700 leading-none">Amount (PHP)</label>
+                    <label className="text-[9px] font-medium text-slate-700 leading-none">Amount (PHP)</label>
                     <CurrencyInput
                       required
                       value={formData.amount}
                       onChange={(val) => setFormData({ ...formData, amount: val })}
-                      className="w-full rounded border border-slate-300 bg-slate-100 px-2 py-0 text-[9px] text-black focus:ring-1 focus:ring-blue-500 outline-none h-[14px]"
+                      className="w-full rounded border border-slate-300 bg-slate-100 px-2 py-0 text-[10px] text-black focus:ring-1 focus:ring-blue-500 outline-none h-[18px]"
                       placeholder="0.00"
                     />
                   </div>
@@ -350,70 +410,70 @@ export default function SalesPage() {
                   {formData.salesCategory === "Rental" && (
                     <>
                       <div className="space-y-0">
-                    <label className="text-[8px] font-medium text-slate-700 leading-none">Date Started</label>
+                    <label className="text-[9px] font-medium text-slate-700 leading-none">Date Started</label>
                     <div className="date-input-container">
                       <input
                         type="date"
                         value={formData.rentalStartDate}
                         onChange={(e) => setFormData({ ...formData, rentalStartDate: e.target.value })}
-                        className="w-full rounded border border-slate-300 bg-slate-100 py-0 text-[9px] text-black focus:ring-1 focus:ring-purple-500 outline-none h-[14px]"
+                        className="w-full rounded border border-slate-300 bg-slate-100 py-0 text-[10px] text-black focus:ring-1 focus:ring-purple-500 outline-none h-[18px]"
                       />
                     </div>
                   </div>
                   <div className="space-y-0">
-                    <label className="text-[8px] font-medium text-slate-700 leading-none">Date Due</label>
+                    <label className="text-[9px] font-medium text-slate-700 leading-none">Date Due</label>
                     <div className="date-input-container">
                       <input
                         type="date"
                         value={formData.rentalDueDate}
                         onChange={(e) => setFormData({ ...formData, rentalDueDate: e.target.value })}
-                        className="w-full rounded border border-slate-300 bg-slate-100 py-0 text-[9px] text-black focus:ring-1 focus:ring-purple-500 outline-none h-[14px]"
+                        className="w-full rounded border border-slate-300 bg-slate-100 py-0 text-[10px] text-black focus:ring-1 focus:ring-purple-500 outline-none h-[18px]"
                       />
                     </div>
                   </div>
                     </>
                   )}
                   <div className="space-y-0">
-                    <label className="text-[8px] font-medium text-slate-700 leading-none">Client Name</label>
+                    <label className="text-[9px] font-medium text-slate-700 leading-none">Client Name</label>
                     <input
                       type="text"
                       required
                       value={formData.clientName}
                       onChange={(e) => setFormData({ ...formData, clientName: e.target.value })}
-                      className="w-full rounded border border-slate-300 bg-slate-100 px-2 py-0 text-[9px] text-black focus:ring-1 focus:ring-blue-500 outline-none h-[14px]"
+                      className="w-full rounded border border-slate-300 bg-slate-100 px-2 py-0 text-[10px] text-black focus:ring-1 focus:ring-blue-500 outline-none h-[18px]"
                       placeholder="Full name"
                     />
                   </div>
                   <div className="space-y-0">
-                    <label className="text-[8px] font-medium text-slate-700 leading-none">Address</label>
+                    <label className="text-[9px] font-medium text-slate-700 leading-none">Address</label>
                     <input
                       type="text"
                       value={formData.clientAddress}
                       onChange={(e) => setFormData({ ...formData, clientAddress: e.target.value })}
-                      className="w-full rounded border border-slate-300 bg-slate-100 px-2 py-0 text-[9px] text-black focus:ring-1 focus:ring-blue-500 outline-none h-[14px]"
+                      className="w-full rounded border border-slate-300 bg-slate-100 px-2 py-0 text-[10px] text-black focus:ring-1 focus:ring-blue-500 outline-none h-[18px]"
                       placeholder="Client's complete address"
                     />
                   </div>
                   <div className="space-y-0">
-                    <label className="text-[8px] font-medium text-slate-700 leading-none">Client Email</label>
+                    <label className="text-[9px] font-medium text-slate-700 leading-none">Client Email</label>
                     <div className="relative">
                       <input
                         type="email"
                         value={formData.clientEmail}
                         onChange={(e) => handleEmailChange(e.target.value)}
-                        className="w-full rounded border border-slate-300 bg-slate-100 px-2 py-0 text-[9px] text-black focus:ring-1 focus:ring-blue-500 outline-none h-[14px]"
+                        className="w-full rounded border border-slate-300 bg-slate-100 px-2 py-0 text-[10px] text-black focus:ring-1 focus:ring-blue-500 outline-none h-[18px]"
                         placeholder="email@example.com"
                       />
                       {emailSuggestion && (
                         <div className="absolute left-0 top-full z-10 w-full bg-white border border-slate-200 shadow-lg rounded mt-0.5 p-0.5">
-                          <p className="text-[7px] text-slate-500 mb-0">Did you mean?</p>
+                          <p className="text-[8px] text-slate-500 mb-0">Did you mean?</p>
                           <button
                             type="button"
                             onClick={() => {
                               setFormData({ ...formData, clientEmail: emailSuggestion });
                               setEmailSuggestion(null);
                             }}
-                            className="text-[8px] text-blue-600 hover:underline font-medium text-left w-full truncate"
+                            className="text-[9px] text-blue-600 hover:underline font-medium text-left w-full truncate"
                           >
                             {emailSuggestion}
                           </button>
@@ -422,32 +482,32 @@ export default function SalesPage() {
                     </div>
                   </div>
                   <div className="space-y-0">
-                    <label className="text-[8px] font-medium text-slate-700 leading-none">Messenger</label>
+                    <label className="text-[9px] font-medium text-slate-700 leading-none">Messenger</label>
                     <input
                       type="text"
                       value={formData.clientMessenger}
                       onChange={(e) => setFormData({ ...formData, clientMessenger: e.target.value })}
-                      className="w-full rounded border border-slate-300 bg-slate-100 px-2 py-0 text-[9px] text-black focus:ring-1 focus:ring-blue-500 outline-none h-[14px]"
+                      className="w-full rounded border border-slate-300 bg-slate-100 px-2 py-0 text-[10px] text-black focus:ring-1 focus:ring-blue-500 outline-none h-[18px]"
                       placeholder="Messenger link or username"
                     />
                   </div>
                   <div className="space-y-0">
-                    <label className="text-[8px] font-medium text-slate-700 leading-none">Client Phone</label>
+                    <label className="text-[9px] font-medium text-slate-700 leading-none">Client Phone</label>
                     <input
                       type="text"
                       value={formData.clientPhone}
                       onChange={(e) => setFormData({ ...formData, clientPhone: formatPhone(e.target.value) })}
-                      className="w-full rounded border border-slate-300 bg-slate-100 px-2 py-0 text-[9px] text-black focus:ring-1 focus:ring-blue-500 outline-none h-[14px]"
+                      className="w-full rounded border border-slate-300 bg-slate-100 px-2 py-0 text-[10px] text-black focus:ring-1 focus:ring-blue-500 outline-none h-[18px]"
                       placeholder="09123456789"
                       maxLength={11}
                     />
                   </div>
                   <div className="md:col-span-2 space-y-0">
-                    <label className="text-[8px] font-medium text-slate-700 leading-none">Notes</label>
+                    <label className="text-[9px] font-medium text-slate-700 leading-none">Notes</label>
                     <textarea
                       value={formData.notes}
                       onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                      className="w-full rounded border border-slate-300 bg-slate-100 px-2 py-0.5 text-[9px] text-black focus:ring-1 focus:ring-blue-500 outline-none h-4 resize-none"
+                      className="w-full rounded border border-slate-300 bg-slate-100 px-2 py-0.5 text-[10px] text-black focus:ring-1 focus:ring-blue-500 outline-none resize-none overflow-hidden"
                       placeholder="Additional details about the sale..."
                     />
                   </div>

@@ -1,5 +1,5 @@
 "use client";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
 import { supabase } from "@lib/supabase";
 import CurrencyInput from "@components/CurrencyInput";
@@ -12,6 +12,9 @@ export default function NewListingPage() {
   const fileRef = useRef<HTMLInputElement | null>(null);
   const videoRef = useRef<HTMLInputElement | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saveProgress, setSaveProgress] = useState(0);
+  const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [selectMode, setSelectMode] = useState(false);
   const [selected, setSelected] = useState<number[]>([]);
@@ -23,7 +26,9 @@ export default function NewListingPage() {
   ];
   const [form, setForm] = useState({
     title: "", description: "", price: 0, address: "", city: "", state: "", country: "",
-    bedrooms: 0, bathrooms: 0, floorArea: 0, lotArea: 0, parking: 0, indoorFeatures: [] as string[], outdoorFeatures: [] as string[], landmarks: [] as string[], owner: "", developer: "", status: "For Rent", type: "Condominium", published: true, industrySubtype: "", commercialSubtype: ""
+    bedrooms: 0, bathrooms: 0, floorArea: 0, lotArea: 0, parking: 0, indoorFeatures: [] as string[], outdoorFeatures: [] as string[], landmarks: [] as string[], owner: "", developer: "", status: "For Rent", type: "Condominium", published: true, industrySubtype: "", commercialSubtype: "",
+    indoorFeatureTexts: Array.from({ length: 10 }).map(() => ""),
+    outdoorFeatureTexts: Array.from({ length: 10 }).map(() => "")
   });
   const [seoTitle, setSeoTitle] = useState("");
   const [seoDescription, setSeoDescription] = useState("");
@@ -74,32 +79,58 @@ export default function NewListingPage() {
   }
   async function save(e: React.FormEvent) {
     e.preventDefault();
+    if (saving) return;
     setError(null);
-    let ordered = [...images];
-    if (featuredIndex !== null && featuredIndex >= 0 && featuredIndex < ordered.length) {
-      const [feat] = ordered.splice(featuredIndex, 1);
-      ordered = [feat, ...ordered];
-    }
-    const indoorTexts = Array.isArray((form as any).indoorFeatureTexts) ? ((form as any).indoorFeatureTexts as string[]).map(s => (s || "").trim()).filter(Boolean) : [];
-    const outdoorTexts = Array.isArray((form as any).outdoorFeatureTexts) ? ((form as any).outdoorFeatureTexts as string[]).map(s => (s || "").trim()).filter(Boolean) : [];
-    const payload = { ...form, indoorFeatures: Array.from(new Set([...(form.indoorFeatures || []), ...indoorTexts])), outdoorFeatures: Array.from(new Set([...(form.outdoorFeatures || []), ...outdoorTexts])), images: ordered };
-    (payload as any).seoTitle = seoTitle;
-    (payload as any).seoDescription = seoDescription;
-    (payload as any).seoKeyword = seoKeyword;
-    const { data } = await supabase.auth.getSession();
-    const token = data.session?.access_token;
-    const headers: Record<string,string> = { "Content-Type": "application/json" };
-    if (token) headers["Authorization"] = `Bearer ${token}`;
-    const res = await fetch("/api/listings", { method: "POST", headers, body: JSON.stringify(payload) });
-    if (res.ok) { window.location.href = "/dashboard/properties"; return; }
+    setSaveMessage(null);
+    setSaving(true);
+    setSaveProgress(10);
+    const timer = setInterval(() => setSaveProgress(p => Math.min(95, p + 5)), 200);
     try {
+      let ordered = [...images];
+      if (featuredIndex !== null && featuredIndex >= 0 && featuredIndex < ordered.length) {
+        const [feat] = ordered.splice(featuredIndex, 1);
+        ordered = [feat, ...ordered];
+      }
+      const indoorTexts = Array.isArray((form as any).indoorFeatureTexts) ? ((form as any).indoorFeatureTexts as string[]).map(s => (s || "").trim()).filter(Boolean) : [];
+      const outdoorTexts = Array.isArray((form as any).outdoorFeatureTexts) ? ((form as any).outdoorFeatureTexts as string[]).map(s => (s || "").trim()).filter(Boolean) : [];
+      const payload = { ...form, indoorFeatures: Array.from(new Set([...(form.indoorFeatures || []), ...indoorTexts])), outdoorFeatures: Array.from(new Set([...(form.outdoorFeatures || []), ...outdoorTexts])), images: ordered };
+      (payload as any).seoTitle = seoTitle;
+      (payload as any).seoDescription = seoDescription;
+      (payload as any).seoKeyword = seoKeyword;
+      const { data } = await supabase.auth.getSession();
+      const token = data.session?.access_token;
+      const headers: Record<string,string> = { "Content-Type": "application/json" };
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+      const res = await fetch("/api/listings", { method: "POST", headers, body: JSON.stringify(payload) });
+      clearInterval(timer);
+      if (res.ok) {
+        setSaveProgress(100);
+        setSaveMessage("Saved");
+        setTimeout(() => { window.location.href = "/dashboard/properties"; }, 750);
+        return;
+      }
       const j = await res.json();
+      console.error("Save failed response:", j);
       const msg = j.details || (Array.isArray(j.issues) && j.issues.length ? j.issues[0] : j.error);
       setError(msg || "Failed to save");
-    } catch {
-      setError("Failed to save");
+      setSaving(false);
+    } catch (err: any) {
+      clearInterval(timer);
+      console.error("Save error:", err);
+      setError(err.message || "Failed to save");
+      setSaving(false);
     }
   }
+
+  useEffect(() => {
+    const adjustHeight = (el: HTMLTextAreaElement) => {
+      el.style.height = "auto";
+      el.style.height = `${el.scrollHeight}px`;
+    };
+    const textareas = document.querySelectorAll("textarea");
+    textareas.forEach(el => adjustHeight(el as HTMLTextAreaElement));
+  }, [form.description, seoDescription, form.indoorFeatureTexts, form.outdoorFeatureTexts]);
+
   async function removeAt(i: number) {
     const path = images[i];
     const { data } = await supabase.auth.getSession();
@@ -179,7 +210,7 @@ export default function NewListingPage() {
             )}
           </div>
           <div><label className="label">Property Developer</label><input className="input" placeholder="e.g., Ayala Land" value={form.developer} onChange={e=>setForm({...form, developer: e.target.value})} /></div>
-          <div className="sm:col-span-2"><label className="label">Description</label><textarea className="input h-24" placeholder="e.g., Bright living room, modern kitchen, near schools and parks" value={form.description} onChange={e=>setForm({...form, description: e.target.value})} /></div>
+          <div className="sm:col-span-2"><label className="label">Description</label><textarea className="input resize-none overflow-hidden" placeholder="e.g., Bright living room, modern kitchen, near schools and parks" value={form.description} onChange={e=>setForm({...form, description: e.target.value})} /></div>
           <div className="sm:col-span-2">
             <div className="card p-3 space-y-3">
               <div className="text-sm font-semibold">SEO</div>
@@ -194,7 +225,7 @@ export default function NewListingPage() {
                 </div>
                 <div className="sm:col-span-2">
                   <label className="label">SEO Description</label>
-                  <textarea className="input h-20" placeholder="Recommended 140–160 chars" value={seoDescription} onChange={e=>setSeoDescription(e.target.value)} />
+                  <textarea className="input resize-none overflow-hidden" placeholder="Recommended 140–160 chars" value={seoDescription} onChange={e=>setSeoDescription(e.target.value)} />
                 </div>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs text-slate-700">
@@ -323,13 +354,13 @@ export default function NewListingPage() {
                   {Array.from({ length: 10 }).map((_, i) => (
                     <textarea
                       key={i}
-                      className="input h-16"
+                      className="input resize-none overflow-hidden"
                       placeholder={`Feature Paragraph ${i+1}`}
-                      value={((form as any).indoorFeatureTexts?.[i] ?? "")}
+                      value={form.indoorFeatureTexts[i] || ""}
                       onChange={(e)=>{
-                        const arr = Array.isArray((form as any).indoorFeatureTexts) ? ([...((form as any).indoorFeatureTexts as string[])]) : Array.from({ length: 10 }).map(()=>"");
+                        const arr = [...form.indoorFeatureTexts];
                         arr[i] = e.target.value;
-                        setForm({ ...(form as any), indoorFeatureTexts: arr });
+                        setForm({ ...form, indoorFeatureTexts: arr });
                       }}
                     />
                   ))}
@@ -364,15 +395,13 @@ export default function NewListingPage() {
                   {Array.from({ length: 10 }).map((_, i) => (
                     <textarea
                       key={i}
-                      className="input h-16"
+                      className="input resize-none overflow-hidden"
                       placeholder={`Feature Paragraph ${i+1}`}
-                      value={((form as any).outdoorFeatureTexts?.[i] ?? "")}
+                      value={form.outdoorFeatureTexts[i] || ""}
                       onChange={(e)=>{
-                        const arr = Array.isArray((form as any).outdoorFeatureTexts)
-                          ? ([...((form as any).outdoorFeatureTexts as string[])])
-                          : Array.from({ length: 10 }).map(()=>"");
+                        const arr = [...form.outdoorFeatureTexts];
                         arr[i] = e.target.value;
-                        setForm({ ...(form as any), outdoorFeatureTexts: arr });
+                        setForm({ ...form, outdoorFeatureTexts: arr });
                       }}
                     />
                   ))}
@@ -481,8 +510,26 @@ export default function NewListingPage() {
             <label htmlFor="published">Publish on save</label>
           </div>
         </div>
-        {error && <div className="text-red-600 text-sm">{error}</div>}
-        <button className="btn-blue w-full">Save Listing</button>
+          <div className="mb-2" aria-live="polite" aria-atomic="true">
+            {saving && (
+              <div>
+                <div className="text-sm font-medium mb-1">File Save</div>
+                <div className="h-2 bg-slate-200 rounded overflow-hidden">
+                  <div className="h-full bg-blue-500 rounded" style={{ width: `${saveProgress}%` }} />
+                </div>
+                <div className="text-xs mt-1 text-slate-600">{saveProgress}%</div>
+              </div>
+            )}
+            {saveMessage && (
+              <div className="text-sm text-green-700 mt-1">{saveMessage}</div>
+            )}
+            {error && (
+              <div className="text-sm text-red-600 mt-1">{error}</div>
+            )}
+          </div>
+          <button className="btn-blue w-full disabled:opacity-50" disabled={saving}>
+            {saving ? "Saving..." : "Save Listing"}
+          </button>
       </form>
     </div>
   );

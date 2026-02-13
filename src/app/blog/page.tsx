@@ -174,7 +174,7 @@ export default async function BlogPage({ searchParams }: { searchParams: Promise
         <>
           {featured && (
             <section className="space-y-3">
-              <div className="relative w-full h-72 sm:h-96 rounded-md overflow-hidden bg-slate-200">
+              <div className="relative w-full h-72 sm:h-96 rounded-md overflow-hidden bg-slate-200 shadow-md">
                 {(() => {
                   const src = toSrc(featured);
                   if (src) {
@@ -216,7 +216,7 @@ export default async function BlogPage({ searchParams }: { searchParams: Promise
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 {rest.map(b => (
                   <div key={b.id} className="card p-0 overflow-hidden group transition-all duration-300 hover:shadow-[0_10px_30px_rgba(0,0,0,0.15)] hover:scale-[0.98] hover:ring-1 hover:ring-black/10">
-                    <div className="relative w-full h-44 bg-slate-200">
+                    <div className="relative w-full h-44 bg-slate-200 shadow-md">
                       {(() => {
                         const src = toSrc(b);
                         if (src) {

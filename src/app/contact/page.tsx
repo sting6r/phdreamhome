@@ -1,7 +1,7 @@
 "use client";
 import MainFooterCards from "../../components/MainFooterCards";
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 export default function ContactPage() {
   const [form, setForm] = useState({ name: "", email: "", phone: "", subject: "", message: "" });
@@ -9,6 +9,15 @@ export default function ContactPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [emailSuggestion, setEmailSuggestion] = useState<string | null>(null);
+
+  useEffect(() => {
+    const adjustHeight = (el: HTMLTextAreaElement) => {
+      el.style.height = "auto";
+      el.style.height = `${el.scrollHeight}px`;
+    };
+    const textareas = document.querySelectorAll("textarea");
+    textareas.forEach(el => adjustHeight(el as HTMLTextAreaElement));
+  }, [form.message]);
 
   const getEmailSuggestion = (email: string) => {
     const commonDomains: Record<string, string> = {
@@ -166,7 +175,7 @@ export default function ContactPage() {
               <div>
                 <label className="label">Message *</label>
                 <textarea
-                  className="input h-28"
+                  className="input resize-none overflow-hidden"
                   placeholder="Tell us about your real estate needs, timeline, budget, or any specific questions you have..."
                   value={form.message}
                   onChange={e=>{

@@ -104,16 +104,16 @@ export async function POST(req: Request) {
           seoTitle: (seoTitle || undefined),
           seoDescription: (seoDescription || undefined),
           seoKeywords,
-          price: data.price,
+          price: Math.round(data.price),
           address: data.address,
           city: data.city,
           state: data.state,
           country: data.country,
-          bedrooms: data.bedrooms,
-          bathrooms: data.bathrooms,
-          floorArea: data.floorArea ?? null,
-          lotArea: data.lotArea ?? null,
-          parking: data.parking ?? 0,
+          bedrooms: Math.round(data.bedrooms),
+          bathrooms: Math.round(data.bathrooms),
+          floorArea: data.floorArea ? Math.round(data.floorArea) : null,
+          lotArea: data.lotArea ? Math.round(data.lotArea) : null,
+          parking: data.parking ? Math.round(data.parking) : 0,
           indoorFeatures: data.indoorFeatures ?? [],
           outdoorFeatures: data.outdoorFeatures ?? [],
         landmarks: data.landmarks ?? [],
@@ -129,10 +129,11 @@ export async function POST(req: Request) {
         ...(data.images.length ? { images: { create: data.images.map((url, i) => ({ url, sortOrder: i })) } } : {})
         }
       })),
-      timeout(5000)
+      timeout(15000)
     ]);
     return NextResponse.json({ listing: created });
   } catch (err: any) {
+    console.error("Listing creation error:", err);
     return NextResponse.json({ error: "Database error", details: String(err?.message ?? err) }, { status: 500 });
   }
 }

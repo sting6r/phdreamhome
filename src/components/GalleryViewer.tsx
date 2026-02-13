@@ -33,7 +33,7 @@ export default function GalleryViewer({ items, title, address, price }: { items:
   const hasSrc = !!(current && current.url);
   return (
     <div>
-      <div className="relative w-full h-72 sm:h-96 rounded-md overflow-hidden" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
+      <div className="relative w-full h-72 sm:h-96 rounded-md overflow-hidden shadow-md" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
         {hasSrc && (isVideo(current.url) ? (
           <video
               key={current.url}
@@ -122,7 +122,7 @@ export default function GalleryViewer({ items, title, address, price }: { items:
         <div className="mt-2 overflow-x-auto">
           <div className="flex gap-2">
               {items.map((it, i) => (
-                <button key={i} onClick={() => { setIndex(i); if (isVideo(it.url)) setUnmuteOnLoad(true); }} className={`relative w-24 h-16 rounded overflow-hidden border ${i === index ? "border-blue-500" : "border-gray-200"}`}>
+                <button key={i} onClick={() => { setIndex(i); if (isVideo(it.url)) setUnmuteOnLoad(true); }} className={`relative w-24 h-16 rounded overflow-hidden border shadow-sm ${i === index ? "border-blue-500" : "border-gray-200"}`}>
                 {isVideo(it.url) ? (
                   <video 
                     src={it.url} 

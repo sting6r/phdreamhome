@@ -398,7 +398,7 @@ function HomePageContent() {
   return (
     <div className="space-y-10">
       <div className="container pt-4">
-        <div className="relative h-[50vh] sm:h-[60vh] rounded-md overflow-hidden">
+        <div className="relative h-[25vh] sm:h-[60vh] rounded-md overflow-hidden">
           <div
             className="absolute inset-0 bg-center bg-no-repeat bg-contain sm:bg-cover"
             style={{ backgroundImage: baseHero ? `url(${baseHero})` : undefined }}
@@ -419,10 +419,12 @@ function HomePageContent() {
               <span className="sr-only">Open properties</span>
             </Link>
           ) : null}
-          <div className="absolute inset-0 z-10 pointer-events-none flex flex-col justify-end pb-10 sm:pb-14">
-            <div className="container text-center space-y-1">
-              <div className="text-white text-3xl sm:text-4xl font-bold">Welcome to Your Dream Home</div>
-              <div className="text-white text-sm sm:text-base">Transforming dreams into homes, one step at a time.</div>
+          <div className="absolute inset-0 z-10 pointer-events-none flex flex-col justify-center pt-8 sm:pt-0 sm:justify-end sm:pb-14">
+            <div className="container text-center space-y-0.5 sm:space-y-1">
+              <div className="text-white text-xl sm:text-4xl font-bold leading-tight drop-shadow-md sm:drop-shadow-none">
+                Welcome to Your <br className="sm:hidden" /> Dream Home
+              </div>
+              <div className="text-white text-sm sm:text-base drop-shadow-sm sm:drop-shadow-none">Transforming dreams into homes, one step at a time.</div>
             </div>
           </div>
           {countHeroes > 1 && (
@@ -637,8 +639,8 @@ function HomePageContent() {
           const emphasizeStatus = statusText === "Sold" || statusText === "Occupied";
           const propertySlug = l.slug || l.id;
           return (
-          <Link prefetch={false} key={l.id} href={`/listing/${propertySlug}`} className="card group transition-all duration-300 hover:shadow-[0_10px_30px_rgba(0,0,0,0.15)] hover:scale-[0.98] hover:ring-1 hover:ring-black/10">
-            <div className="relative w-full h-32 sm:h-48 mb-3 rounded overflow-hidden">
+          <Link prefetch={false} key={l.id} href={`/listing/${propertySlug}`} className="card group transition-all duration-300 hover:shadow-[0_15px_40px_rgba(0,0,0,0.25)] hover:scale-[0.98] hover:ring-1 hover:ring-black/10">
+            <div className="relative w-full h-32 sm:h-48 mb-3 rounded overflow-hidden shadow-[0_10px_30px_rgba(0,0,0,0.3)]">
               {imgUrl ? (
                 <Image src={imgUrl} alt={l.title} fill sizes="(max-width: 640px) 100vw, 33vw" className="object-cover transition-transform duration-500 group-hover:scale-105" unoptimized />
               ) : (

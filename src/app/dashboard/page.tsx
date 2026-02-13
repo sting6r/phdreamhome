@@ -219,7 +219,8 @@ export default function DashboardPage() {
                   axisLine={false} 
                   tickLine={false} 
                   tick={{fontSize: 12, fill: '#64748b'}}
-                  tickFormatter={(value) => `₱${value > 999999 ? (value/1000000).toFixed(1) + 'M' : (value/1000).toFixed(0) + 'k'}`}
+                  width={80}
+                  tickFormatter={(value) => `₱${value >= 1000000 ? (value/1000000).toFixed(1) + 'M' : value >= 1000 ? (value/1000).toFixed(0) + 'k' : value}`}
                 />
                 <Tooltip 
                   cursor={{fill: '#f8fafc'}}

@@ -78,6 +78,15 @@ function EditListingPageContent({ params }: { params: Promise<{ id: string }> })
       }
     })();
   }, [id]);
+
+  useEffect(() => {
+    const adjustHeight = (el: HTMLTextAreaElement) => {
+      el.style.height = "auto";
+      el.style.height = `${el.scrollHeight}px`;
+    };
+    const textareas = document.querySelectorAll("textarea");
+    textareas.forEach(el => adjustHeight(el as HTMLTextAreaElement));
+  }, [form.description, seoDescription]);
   async function upload(e: React.ChangeEvent<HTMLInputElement>) {
     const files = e.target.files;
     if (!files || !files.length) return;
@@ -218,7 +227,7 @@ function EditListingPageContent({ params }: { params: Promise<{ id: string }> })
             )}
           </div>
           <div><label className="label">Property Developer</label><input className="input" value={form.developer} onChange={e=>setForm({...form, developer: e.target.value})} /></div>
-          <div className="sm:col-span-2"><label className="label">Description</label><textarea className="input h-24" value={form.description} onChange={e=>setForm({...form, description: e.target.value})} /></div>
+          <div className="sm:col-span-2"><label className="label">Description</label><textarea className="input resize-none overflow-hidden" value={form.description} onChange={e=>setForm({...form, description: e.target.value})} /></div>
           <div className="sm:col-span-2">
             <div className="card p-3 space-y-3">
               <div className="text-sm font-semibold">SEO</div>
@@ -233,7 +242,7 @@ function EditListingPageContent({ params }: { params: Promise<{ id: string }> })
                 </div>
                 <div className="sm:col-span-2">
                   <label className="label">SEO Description</label>
-                  <textarea className="input h-20" placeholder="Recommended 140–160 chars" value={seoDescription} onChange={e=>setSeoDescription(e.target.value)} />
+                  <textarea className="input resize-none overflow-hidden" placeholder="Recommended 140–160 chars" value={seoDescription} onChange={e=>setSeoDescription(e.target.value)} />
                 </div>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs text-slate-700">

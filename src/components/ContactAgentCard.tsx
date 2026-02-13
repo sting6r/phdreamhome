@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -162,6 +162,15 @@ export default function ContactAgentCard({
     }
   };
 
+  useEffect(() => {
+    const adjustHeight = (el: HTMLTextAreaElement) => {
+      el.style.height = "auto";
+      el.style.height = `${el.scrollHeight}px`;
+    };
+    const textareas = document.querySelectorAll("textarea");
+    textareas.forEach(el => adjustHeight(el as HTMLTextAreaElement));
+  }, [form.message, tourForm.message, isOpen, isTourOpen]);
+
   return (
     <div className="card space-y-2 listing-sidebar">
       <div className="text-sm font-medium">Contact Agent</div>
@@ -292,7 +301,7 @@ export default function ContactAgentCard({
                 </select>
               </div>
               <textarea 
-                className="input text-sm h-24" 
+                className="input text-sm resize-none overflow-hidden" 
                 placeholder="Message" 
                 required
                 value={form.message}

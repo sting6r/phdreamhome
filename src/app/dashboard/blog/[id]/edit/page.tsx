@@ -204,6 +204,8 @@ export default function EditBlogPage({ params }: { params: Promise<{ id: string 
   const heroImageUploadInputRef = useRef<HTMLInputElement | null>(null);
   const toolsLockedRef = useRef(false);
 
+  const datePickerRef = useRef<HTMLInputElement | null>(null);
+
   function formatDateInput(raw: string) {
     const digits = raw.replace(/\D/g, "").slice(0, 8);
     const len = digits.length;
@@ -1003,6 +1005,16 @@ export default function EditBlogPage({ params }: { params: Promise<{ id: string 
       alive = false;
     };
   }, [id]);
+
+  useEffect(() => {
+    const adjustHeight = (el: HTMLTextAreaElement) => {
+      el.style.height = "auto";
+      el.style.height = `${el.scrollHeight}px`;
+    };
+
+    const textareas = document.querySelectorAll("textarea");
+    textareas.forEach(el => adjustHeight(el as HTMLTextAreaElement));
+  }, [description, extraBlocks, headings, subHeadings, subSubHeadings, loading]);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -1993,11 +2005,11 @@ export default function EditBlogPage({ params }: { params: Promise<{ id: string 
                 </div>
                 <div className="space-y-2">
                   <label className="block text-sm font-semibold text-slate-800">Date</label>
-                  <div className="relative">
+                  <div className="relative group">
                     <input
                       id="blog-date-input-top"
                       type="text"
-                      className={`w-full rounded-md border bg-white px-3 py-2 text-sm text-gray-900 focus:ring-2 focus:ring-slate-200 outline-none transition-all ${
+                      className={`w-full rounded-md border bg-white pl-3 pr-9 py-2 text-sm text-gray-900 focus:ring-2 focus:ring-slate-200 outline-none transition-all ${
                         dateError ? "border-red-500" : "border-gray-200"
                       }`}
                       placeholder="MM/DD/YYYY"
@@ -2014,6 +2026,47 @@ export default function EditBlogPage({ params }: { params: Promise<{ id: string 
                         }
                         if (!isValidDateText(v)) {
                           setDateError("Enter a valid date (MM/DD/YYYY)");
+                        }
+                      }}
+                    />
+                    <button
+                      type="button"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-blue-600 hover:text-blue-700 transition-colors"
+                      onClick={() => {
+                        if (datePickerRef.current) {
+                          // Set current value to picker before showing
+                          if (dateText && isValidDateText(dateText)) {
+                            const [m, d, y] = dateText.split("/");
+                            datePickerRef.current.value = `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
+                          } else {
+                            const now = new Date();
+                            const y = now.getFullYear();
+                            const m = String(now.getMonth() + 1).padStart(2, "0");
+                            const d = String(now.getDate()).padStart(2, "0");
+                            datePickerRef.current.value = `${y}-${m}-${d}`;
+                          }
+                          try {
+                            (datePickerRef.current as any).showPicker();
+                          } catch (e) {
+                            datePickerRef.current.click();
+                          }
+                        }
+                      }}
+                    >
+                      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                    </button>
+                    <input 
+                      type="date"
+                      ref={datePickerRef}
+                      className="absolute opacity-0 pointer-events-none w-0 h-0"
+                      onChange={(e) => {
+                        const date = new Date(e.target.value);
+                        if (!isNaN(date.getTime())) {
+                          const mm = String(date.getMonth() + 1).padStart(2, '0');
+                          const dd = String(date.getDate()).padStart(2, '0');
+                          const yyyy = date.getFullYear();
+                          setDateText(`${mm}/${dd}/${yyyy}`);
+                          setDateError(null);
                         }
                       }}
                     />
