@@ -245,15 +245,14 @@ export default function SalesPage() {
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <h1 className="text-2xl font-bold text-slate-800">Sales Records</h1>
+    <div className="space-y-3 p-1">
+      <div className="flex justify-between items-center mb-3">
+        <h1 className="text-lg font-bold text-slate-800">Sales Records</h1>
         <button
-          onClick={() => setIsFormOpen(true)}
-          className="w-full sm:w-auto flex items-center justify-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+          onClick={() => { resetForm(); setIsFormOpen(true); }}
+          className="px-3 py-1.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors flex items-center gap-1.5 text-xs font-medium"
         >
-          <Icons.Plus />
-          Add Sale
+          <Icons.Plus /> Add Sale
         </button>
       </div>
 
@@ -264,14 +263,17 @@ export default function SalesPage() {
       )}
 
       {isFormOpen && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-1">
-            <div className="bg-white rounded-xl shadow-xl w-full max-w-sm overflow-hidden animate-in fade-in zoom-in duration-200">
-              <div className="py-0 px-3 border-b flex justify-between items-center">
-              <h2 className="text-[10px] font-semibold text-slate-700">
-                {editingId ? "Edit Sale Record" : "Encode New Sale"}
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-1">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-lg overflow-hidden border border-slate-200">
+            <div className="px-3 py-1.5 border-b flex justify-between items-center bg-slate-50">
+              <h2 className="text-sm font-bold text-slate-800">
+                {editingId ? "Edit Sales Record" : "Add New Sale"}
               </h2>
-              <button onClick={resetForm} className="text-slate-400 hover:text-slate-600">
-                <Icons.X size={12} />
+              <button 
+                onClick={resetForm}
+                className="p-1 hover:bg-slate-200 rounded-full transition-colors"
+              >
+                <Icons.X />
               </button>
             </div>
 
@@ -472,42 +474,42 @@ export default function SalesPage() {
         </div>
       )}
 
-      <div className="card overflow-hidden">
+      <div className="card overflow-hidden p-0">
         <div className="overflow-x-auto">
-          <table className="w-full text-sm text-left min-w-[1000px]">
+          <table className="w-full text-xs text-left min-w-[1000px]">
             <thead className="bg-[#F4DDFF] border-b text-slate-700 font-semibold">
               <tr>
-                <th className="px-4 py-3">Date</th>
-                <th className="px-4 py-3">Category</th>
-                <th className="px-4 py-3">Client</th>
-                <th className="px-4 py-3">Property</th>
-                <th className="px-4 py-3">Amount</th>
-                <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3"></th>
+                <th className="px-3 py-1.5">Date</th>
+                <th className="px-3 py-1.5">Category</th>
+                <th className="px-3 py-1.5">Client</th>
+                <th className="px-3 py-1.5">Property</th>
+                <th className="px-3 py-1.5">Amount</th>
+                <th className="px-3 py-1.5">Status</th>
+                <th className="px-3 py-1.5"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200">
               {sales && sales.length > 0 ? (
                 sales.map((sale: any) => (
                   <tr key={sale.id} className="hover:bg-slate-50 transition-colors group">
-                    <td className="px-4 py-3 text-slate-500">
+                    <td className="px-3 py-1.5 text-slate-500">
                       {mounted ? new Date(sale.saleDate).toLocaleDateString("en-PH") : ""}
                     </td>
-                    <td className="px-4 py-3">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                    <td className="px-3 py-1.5">
+                      <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-medium ${
                         sale.salesCategory === "Rental" ? "bg-orange-100 text-orange-700" : "bg-purple-100 text-purple-700"
                       }`}>
                         {sale.salesCategory || "Sale"}
                       </span>
                     </td>
-                    <td className="px-4 py-3">
-                      <div className="font-medium text-slate-900">{sale.clientName}</div>
-                      <div className="text-xs text-slate-500">{sale.clientEmail || "No email"}</div>
+                    <td className="px-3 py-1.5">
+                      <div className="font-medium text-slate-900 leading-tight">{sale.clientName}</div>
+                      <div className="text-[10px] text-slate-500 leading-tight">{sale.clientEmail || "No email"}</div>
                     </td>
-                    <td className="px-4 py-3 text-slate-600">
-                      <div>{sale.listing?.title || "Direct Sale / Other"}</div>
+                    <td className="px-3 py-1.5 text-slate-600">
+                      <div className="leading-tight">{sale.listing?.title || "Direct Sale / Other"}</div>
                       {sale.salesCategory === "Rental" && sale.rentalStartDate && (
-                        <div className="text-[10px] text-slate-400 mt-1">
+                        <div className="text-[9px] text-slate-400 mt-0.5 leading-tight">
                           {mounted ? (
                             <>
                               {new Date(sale.rentalStartDate).toLocaleDateString("en-PH")} - {sale.rentalDueDate ? new Date(sale.rentalDueDate).toLocaleDateString("en-PH") : "Present"}
@@ -516,11 +518,11 @@ export default function SalesPage() {
                         </div>
                       )}
                     </td>
-                    <td className="px-4 py-3 font-semibold text-slate-900">
+                    <td className="px-3 py-1.5 font-semibold text-slate-900">
                       {mounted ? `₱${(sale.amount || 0).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ""}
                     </td>
-                    <td className="px-4 py-3">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                    <td className="px-3 py-1.5">
+                      <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-medium ${
                         sale.status === "Closed" ? "bg-green-100 text-green-700" :
                         sale.status === "Cancelled" ? "bg-red-100 text-red-700" :
                         "bg-blue-100 text-blue-700"
@@ -528,7 +530,7 @@ export default function SalesPage() {
                         {sale.status || "Unknown"}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-right relative">
+                    <td className="px-3 py-1.5 text-right relative">
                       <button 
                         onClick={() => setOpenMenuId(openMenuId === sale.id ? null : sale.id)}
                         className="p-1 hover:bg-slate-200 rounded-full transition-colors"

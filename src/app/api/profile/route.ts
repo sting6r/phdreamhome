@@ -8,9 +8,29 @@ export const runtime = "nodejs";
 export async function PUT(req: Request) {
   try {
     const supabase = await createServerSideClient();
-    const { data: { user: authUser }, error: userError } = await supabase.auth.getUser();
+    let { data: { user: authUser }, error: userError } = await supabase.auth.getUser();
     
     if (userError || !authUser) {
+      // Try fallback to manual token if createServerSideClient failed
+      const cookieStore = await cookies();
+      let token = cookieStore.get("sb-access-token")?.value;
+      if (!token) {
+        const h = req.headers.get("authorization") || "";
+        const m = h.match(/^Bearer\s+(.+)$/i);
+        token = m?.[1];
+      }
+      
+      if (token) {
+        const { data } = await supabaseAdmin.auth.getUser(token);
+        authUser = data.user;
+        if (authUser) userError = null;
+      }
+    }
+
+    if (userError || !authUser) {
+      if (userError?.name === 'AuthSessionMissingError') {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      }
       console.error("Profile API PUT: Auth error:", userError);
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -110,20 +130,36 @@ export async function PUT(req: Request) {
   }
 }
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
     const supabase = await createServerSideClient();
-    const { data: { user: authUser }, error: userError } = await supabase.auth.getUser();
+    let { data: { user: authUser }, error: userError } = await supabase.auth.getUser();
 
-    if (userError) {
+    if (userError || !authUser) {
+      // Try fallback to manual token if createServerSideClient failed
+      const cookieStore = await cookies();
+      let token = cookieStore.get("sb-access-token")?.value;
+      if (!token) {
+        const h = req.headers.get("authorization") || "";
+        const m = h.match(/^Bearer\s+(.+)$/i);
+        token = m?.[1];
+      }
+      
+      if (token) {
+        const { data } = await supabaseAdmin.auth.getUser(token);
+        authUser = data.user;
+        if (authUser) userError = null;
+      }
+    }
+
+    if (userError || !authUser) {
+      if (userError?.name === 'AuthSessionMissingError') {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      }
       console.error("Profile API GET: Supabase auth error:", userError);
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-    const userId = authUser?.id;
-    if (!userId) {
-      console.warn("Profile API GET: No userId found in token");
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const userId = authUser.id;
     console.log("Profile API GET: Found userId:", userId);
     
     let dbUser, totalListings;
