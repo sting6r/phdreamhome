@@ -39,6 +39,9 @@ const Icons = {
   ),
   X: () => (
     <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+  ),
+  Calendar: ({ className }: { className?: string }) => (
+    <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
   )
 };
 
@@ -242,7 +245,7 @@ export default function SalesPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <h1 className="text-2xl font-bold text-slate-800">Sales Records</h1>
         <button
@@ -261,19 +264,19 @@ export default function SalesPage() {
       )}
 
       {isFormOpen && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in duration-200">
-            <div className="p-4 border-b flex justify-between items-center">
-              <h2 className="text-lg font-semibold">
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-1">
+            <div className="bg-white rounded-xl shadow-xl w-full max-w-sm overflow-hidden animate-in fade-in zoom-in duration-200">
+              <div className="py-0 px-3 border-b flex justify-between items-center">
+              <h2 className="text-[10px] font-semibold text-slate-700">
                 {editingId ? "Edit Sale Record" : "Encode New Sale"}
               </h2>
               <button onClick={resetForm} className="text-slate-400 hover:text-slate-600">
-                <Icons.X />
+                <Icons.X size={12} />
               </button>
             </div>
 
             <form onSubmit={handleSubmit}>
-              <div className="p-4 space-y-3">
+              <div className="py-0 px-3 space-y-0">
                 {/* Status Tabs */}
                 <div className="flex border-b">
                   {STATUS_CATEGORIES.map((status) => (
@@ -281,7 +284,7 @@ export default function SalesPage() {
                       key={status}
                       type="button"
                       onClick={() => setActiveTab(status)}
-                      className={`px-4 py-2 text-xs font-medium transition-colors border-b-2 ${
+                      className={`px-3 py-0 text-[8px] font-medium transition-colors border-b-2 ${
                         activeTab === status
                           ? "border-blue-600 text-blue-600"
                           : "border-transparent text-slate-500 hover:text-slate-700"
@@ -292,23 +295,25 @@ export default function SalesPage() {
                   ))}
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
-                  <div className="space-y-1">
-                    <label className="text-xs font-medium text-slate-700">Date</label>
-                    <input
-                      type="date"
-                      required
-                      value={formData.saleDate}
-                      onChange={(e) => setFormData({ ...formData, saleDate: e.target.value })}
-                      className="w-full rounded-md border border-slate-300 bg-slate-100 p-2 text-xs text-black focus:ring-2 focus:ring-blue-500 outline-none"
-                    />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-3 gap-y-0 pt-0">
+                  <div className="space-y-0">
+                    <label className="text-[8px] font-medium text-slate-700 leading-none">Date</label>
+                    <div className="date-input-container">
+                      <input
+                        type="date"
+                        required
+                        value={formData.saleDate}
+                        onChange={(e) => setFormData({ ...formData, saleDate: e.target.value })}
+                        className="w-full rounded border border-slate-300 bg-slate-100 py-0 text-[9px] text-black focus:ring-1 focus:ring-purple-500 outline-none h-[14px]"
+                      />
+                    </div>
                   </div>
-                  <div className="space-y-1">
-                    <label className="text-xs font-medium text-slate-700">Property / Listing</label>
+                  <div className="space-y-0">
+                    <label className="text-[8px] font-medium text-slate-700 leading-none">Property / Listing</label>
                     <select
                       value={formData.listingId}
                       onChange={(e) => setFormData({ ...formData, listingId: e.target.value })}
-                      className="w-full rounded-md border border-slate-300 bg-slate-100 p-2 text-xs text-black focus:ring-2 focus:ring-blue-500 outline-none"
+                      className="w-full rounded border border-slate-300 bg-slate-100 px-2 py-0 text-[9px] text-black focus:ring-1 focus:ring-blue-500 outline-none h-[14px]"
                     >
                       <option value="">Select a property (optional)</option>
                       {listings.map((l: any) => (
@@ -317,92 +322,96 @@ export default function SalesPage() {
                     </select>
                   </div>
 
-                  <div className="space-y-1">
-                    <label className="text-xs font-medium text-slate-700">Sales Category</label>
+                  <div className="space-y-0">
+                    <label className="text-[8px] font-medium text-slate-700 leading-none">Sales Category</label>
                     <select
                       value={formData.salesCategory}
                       onChange={(e) => setFormData({ ...formData, salesCategory: e.target.value })}
-                      className="w-full rounded-md border border-slate-300 bg-slate-100 p-2 text-xs text-black focus:ring-2 focus:ring-blue-500 outline-none"
+                      className="w-full rounded border border-slate-300 bg-slate-100 px-2 py-0 text-[9px] text-black focus:ring-1 focus:ring-blue-500 outline-none h-[14px]"
                     >
                       <option value="Sale">Sale</option>
                       <option value="Rental">Rental</option>
                     </select>
                   </div>
 
-                  <div className="space-y-1">
-                    <label className="text-xs font-medium text-slate-700">Amount (PHP)</label>
+                  <div className="space-y-0">
+                    <label className="text-[8px] font-medium text-slate-700 leading-none">Amount (PHP)</label>
                     <CurrencyInput
                       required
                       value={formData.amount}
                       onChange={(val) => setFormData({ ...formData, amount: val })}
-                      className="w-full rounded-md border border-slate-300 bg-slate-100 p-2 text-xs text-black focus:ring-2 focus:ring-blue-500 outline-none"
+                      className="w-full rounded border border-slate-300 bg-slate-100 px-2 py-0 text-[9px] text-black focus:ring-1 focus:ring-blue-500 outline-none h-[14px]"
                       placeholder="0.00"
                     />
                   </div>
 
                   {formData.salesCategory === "Rental" && (
                     <>
-                      <div className="space-y-1">
-                        <label className="text-xs font-medium text-slate-700">Date Started</label>
-                        <input
-                          type="date"
-                          value={formData.rentalStartDate}
-                          onChange={(e) => setFormData({ ...formData, rentalStartDate: e.target.value })}
-                          className="w-full rounded-md border border-slate-300 bg-slate-100 p-2 text-xs text-black focus:ring-2 focus:ring-blue-500 outline-none"
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-xs font-medium text-slate-700">Date Due</label>
-                        <input
-                          type="date"
-                          value={formData.rentalDueDate}
-                          onChange={(e) => setFormData({ ...formData, rentalDueDate: e.target.value })}
-                          className="w-full rounded-md border border-slate-300 bg-slate-100 p-2 text-xs text-black focus:ring-2 focus:ring-blue-500 outline-none"
-                        />
-                      </div>
+                      <div className="space-y-0">
+                    <label className="text-[8px] font-medium text-slate-700 leading-none">Date Started</label>
+                    <div className="date-input-container">
+                      <input
+                        type="date"
+                        value={formData.rentalStartDate}
+                        onChange={(e) => setFormData({ ...formData, rentalStartDate: e.target.value })}
+                        className="w-full rounded border border-slate-300 bg-slate-100 py-0 text-[9px] text-black focus:ring-1 focus:ring-purple-500 outline-none h-[14px]"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-0">
+                    <label className="text-[8px] font-medium text-slate-700 leading-none">Date Due</label>
+                    <div className="date-input-container">
+                      <input
+                        type="date"
+                        value={formData.rentalDueDate}
+                        onChange={(e) => setFormData({ ...formData, rentalDueDate: e.target.value })}
+                        className="w-full rounded border border-slate-300 bg-slate-100 py-0 text-[9px] text-black focus:ring-1 focus:ring-purple-500 outline-none h-[14px]"
+                      />
+                    </div>
+                  </div>
                     </>
                   )}
-                  <div className="space-y-1">
-                    <label className="text-xs font-medium text-slate-700">Client Name</label>
+                  <div className="space-y-0">
+                    <label className="text-[8px] font-medium text-slate-700 leading-none">Client Name</label>
                     <input
                       type="text"
                       required
                       value={formData.clientName}
                       onChange={(e) => setFormData({ ...formData, clientName: e.target.value })}
-                      className="w-full rounded-md border border-slate-300 bg-slate-100 p-2 text-xs text-black focus:ring-2 focus:ring-blue-500 outline-none"
+                      className="w-full rounded border border-slate-300 bg-slate-100 px-2 py-0 text-[9px] text-black focus:ring-1 focus:ring-blue-500 outline-none h-[14px]"
                       placeholder="Full name"
                     />
                   </div>
-                  <div className="space-y-1">
-                    <label className="text-xs font-medium text-slate-700">Address</label>
+                  <div className="space-y-0">
+                    <label className="text-[8px] font-medium text-slate-700 leading-none">Address</label>
                     <input
                       type="text"
                       value={formData.clientAddress}
                       onChange={(e) => setFormData({ ...formData, clientAddress: e.target.value })}
-                      className="w-full rounded-md border border-slate-300 bg-slate-100 p-2 text-xs text-black focus:ring-2 focus:ring-blue-500 outline-none"
+                      className="w-full rounded border border-slate-300 bg-slate-100 px-2 py-0 text-[9px] text-black focus:ring-1 focus:ring-blue-500 outline-none h-[14px]"
                       placeholder="Client's complete address"
                     />
                   </div>
-                  <div className="space-y-1">
-                    <label className="text-xs font-medium text-slate-700">Client Email</label>
+                  <div className="space-y-0">
+                    <label className="text-[8px] font-medium text-slate-700 leading-none">Client Email</label>
                     <div className="relative">
                       <input
                         type="email"
                         value={formData.clientEmail}
                         onChange={(e) => handleEmailChange(e.target.value)}
-                        className="w-full rounded-md border border-slate-300 bg-slate-100 p-2 text-xs text-black focus:ring-2 focus:ring-blue-500 outline-none"
+                        className="w-full rounded border border-slate-300 bg-slate-100 px-2 py-0 text-[9px] text-black focus:ring-1 focus:ring-blue-500 outline-none h-[14px]"
                         placeholder="email@example.com"
                       />
                       {emailSuggestion && (
-                        <div className="absolute left-0 top-full z-10 w-full bg-white border border-slate-200 shadow-lg rounded-md mt-1 p-2">
-                          <p className="text-[10px] text-slate-500 mb-1">Did you mean?</p>
+                        <div className="absolute left-0 top-full z-10 w-full bg-white border border-slate-200 shadow-lg rounded mt-0.5 p-0.5">
+                          <p className="text-[7px] text-slate-500 mb-0">Did you mean?</p>
                           <button
                             type="button"
                             onClick={() => {
                               setFormData({ ...formData, clientEmail: emailSuggestion });
                               setEmailSuggestion(null);
                             }}
-                            className="text-xs text-blue-600 hover:underline font-medium text-left w-full truncate"
+                            className="text-[8px] text-blue-600 hover:underline font-medium text-left w-full truncate"
                           >
                             {emailSuggestion}
                           </button>
@@ -410,51 +419,50 @@ export default function SalesPage() {
                       )}
                     </div>
                   </div>
-                  <div className="space-y-1">
-                    <label className="text-xs font-medium text-slate-700">Messenger</label>
+                  <div className="space-y-0">
+                    <label className="text-[8px] font-medium text-slate-700 leading-none">Messenger</label>
                     <input
                       type="text"
                       value={formData.clientMessenger}
                       onChange={(e) => setFormData({ ...formData, clientMessenger: e.target.value })}
-                      className="w-full rounded-md border border-slate-300 bg-slate-100 p-2 text-xs text-black focus:ring-2 focus:ring-blue-500 outline-none"
+                      className="w-full rounded border border-slate-300 bg-slate-100 px-2 py-0 text-[9px] text-black focus:ring-1 focus:ring-blue-500 outline-none h-[14px]"
                       placeholder="Messenger link or username"
                     />
                   </div>
-                  <div className="space-y-1">
-                    <label className="text-xs font-medium text-slate-700">Client Phone</label>
+                  <div className="space-y-0">
+                    <label className="text-[8px] font-medium text-slate-700 leading-none">Client Phone</label>
                     <input
                       type="text"
                       value={formData.clientPhone}
                       onChange={(e) => setFormData({ ...formData, clientPhone: formatPhone(e.target.value) })}
-                      className="w-full rounded-md border border-slate-300 bg-slate-100 p-2 text-xs text-black focus:ring-2 focus:ring-blue-500 outline-none"
+                      className="w-full rounded border border-slate-300 bg-slate-100 px-2 py-0 text-[9px] text-black focus:ring-1 focus:ring-blue-500 outline-none h-[14px]"
                       placeholder="09123456789"
                       maxLength={11}
                     />
-                    <div className="text-[10px] text-slate-500 px-1">Format: 09XXXXXXXXX</div>
                   </div>
-                  <div className="md:col-span-2 space-y-1">
-                    <label className="text-xs font-medium text-slate-700">Notes</label>
+                  <div className="md:col-span-2 space-y-0">
+                    <label className="text-[8px] font-medium text-slate-700 leading-none">Notes</label>
                     <textarea
                       value={formData.notes}
                       onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                      className="w-full rounded-md border border-slate-300 bg-slate-100 p-2 text-xs text-black focus:ring-2 focus:ring-blue-500 outline-none h-16"
+                      className="w-full rounded border border-slate-300 bg-slate-100 px-2 py-0.5 text-[9px] text-black focus:ring-1 focus:ring-blue-500 outline-none h-4 resize-none"
                       placeholder="Additional details about the sale..."
                     />
                   </div>
                 </div>
               </div>
 
-              <div className="p-4 border-t bg-slate-50 flex justify-end gap-2">
+              <div className="py-0 px-3 border-t bg-slate-50 flex justify-end gap-2">
                 <button
                   type="button"
                   onClick={resetForm}
-                  className="px-4 py-2 text-xs font-medium text-slate-700 hover:bg-slate-200 rounded-md transition-colors"
+                  className="px-3 py-0 text-[8px] font-medium text-slate-700 hover:bg-slate-200 rounded transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md transition-colors"
+                  className="px-3 py-0 text-[8px] font-medium text-white bg-blue-600 hover:bg-blue-700 rounded transition-colors"
                 >
                   {editingId ? "Update" : "Save"}
                 </button>
@@ -469,34 +477,34 @@ export default function SalesPage() {
           <table className="w-full text-sm text-left min-w-[1000px]">
             <thead className="bg-[#F4DDFF] border-b text-slate-700 font-semibold">
               <tr>
-                <th className="px-6 py-4">Date</th>
-                <th className="px-6 py-4">Category</th>
-                <th className="px-6 py-4">Client</th>
-                <th className="px-6 py-4">Property</th>
-                <th className="px-6 py-4">Amount</th>
-                <th className="px-6 py-4">Status</th>
-                <th className="px-6 py-4"></th>
+                <th className="px-4 py-3">Date</th>
+                <th className="px-4 py-3">Category</th>
+                <th className="px-4 py-3">Client</th>
+                <th className="px-4 py-3">Property</th>
+                <th className="px-4 py-3">Amount</th>
+                <th className="px-4 py-3">Status</th>
+                <th className="px-4 py-3"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200">
               {sales && sales.length > 0 ? (
                 sales.map((sale: any) => (
                   <tr key={sale.id} className="hover:bg-slate-50 transition-colors group">
-                    <td className="px-6 py-4 text-slate-500">
+                    <td className="px-4 py-3 text-slate-500">
                       {mounted ? new Date(sale.saleDate).toLocaleDateString("en-PH") : ""}
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-4 py-3">
                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                         sale.salesCategory === "Rental" ? "bg-orange-100 text-orange-700" : "bg-purple-100 text-purple-700"
                       }`}>
                         {sale.salesCategory || "Sale"}
                       </span>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-4 py-3">
                       <div className="font-medium text-slate-900">{sale.clientName}</div>
                       <div className="text-xs text-slate-500">{sale.clientEmail || "No email"}</div>
                     </td>
-                    <td className="px-6 py-4 text-slate-600">
+                    <td className="px-4 py-3 text-slate-600">
                       <div>{sale.listing?.title || "Direct Sale / Other"}</div>
                       {sale.salesCategory === "Rental" && sale.rentalStartDate && (
                         <div className="text-[10px] text-slate-400 mt-1">
@@ -508,10 +516,10 @@ export default function SalesPage() {
                         </div>
                       )}
                     </td>
-                    <td className="px-6 py-4 font-semibold text-slate-900">
+                    <td className="px-4 py-3 font-semibold text-slate-900">
                       {mounted ? `₱${(sale.amount || 0).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ""}
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-4 py-3">
                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                         sale.status === "Closed" ? "bg-green-100 text-green-700" :
                         sale.status === "Cancelled" ? "bg-red-100 text-red-700" :
@@ -520,7 +528,7 @@ export default function SalesPage() {
                         {sale.status || "Unknown"}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-right relative">
+                    <td className="px-4 py-3 text-right relative">
                       <button 
                         onClick={() => setOpenMenuId(openMenuId === sale.id ? null : sale.id)}
                         className="p-1 hover:bg-slate-200 rounded-full transition-colors"

@@ -92,7 +92,7 @@ export function parseBucketSpec(p: string) {
   return { bucketName: bucket, objectPath: p };
 }
 
-export async function createSignedUrl(path: string, expires = Number(process.env.SUPABASE_SIGNED_URL_EXPIRES || 3600)) {
+export async function createSignedUrl(path: string, expires = Number(process.env.SUPABASE_SIGNED_URL_EXPIRES || 604800)) {
   if (!path) return null;
   if (path.startsWith("http://") || path.startsWith("https://")) return path;
   
@@ -111,7 +111,7 @@ export async function createSignedUrl(path: string, expires = Number(process.env
     return null;
   }
 }
-export async function createSignedUrls(paths: string[], expires = Number(process.env.SUPABASE_SIGNED_URL_EXPIRES || 3600)) {
+export async function createSignedUrls(paths: string[], expires = Number(process.env.SUPABASE_SIGNED_URL_EXPIRES || 604800)) {
   if (!paths.length) return [];
   
   // Group by bucket

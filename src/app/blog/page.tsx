@@ -164,7 +164,7 @@ export default async function BlogPage({ searchParams }: { searchParams: Promise
           <div className="text-sm font-medium">
             Showing results for: <span className="text-blue-600 font-bold">{q || category}</span>
           </div>
-          <Link href="/blog" className="text-xs text-red-600 hover:underline">Clear filter</Link>
+          <Link prefetch={false} href="/blog" className="text-xs text-red-600 hover:underline">Clear filter</Link>
         </div>
       )}
       {!blogs.length && (
@@ -193,7 +193,7 @@ export default async function BlogPage({ searchParams }: { searchParams: Promise
                     Posted by {featured.author || "Properties Cebu"}
                     {featured.displayDate ? ` on ${featured.displayDate}` : ""}
                   </span>
-                  <a href={`/blog/${encodeURIComponent(toSlug(featured.title))}`} className="inline-block rounded-full bg-orange-600 text-white px-3 py-1 text-xs">Read Full Post</a>
+                  <Link href={`/blog/${encodeURIComponent(toSlug(featured.title))}`} className="inline-block rounded-full bg-orange-600 text-white px-3 py-1 text-xs" prefetch={false}>Read Full Post</Link>
                 </div>
               </div>
             </section>
@@ -234,7 +234,7 @@ export default async function BlogPage({ searchParams }: { searchParams: Promise
                         {b.displayDate ? ` on ${b.displayDate}` : ""}
                       </div>
                       <div className="text-sm text-black">{excerpt(b.description)}</div>
-                      <a href={`/blog/${encodeURIComponent(toSlug(b.title))}`} className="inline-block rounded bg-orange-600 text-white px-3 py-1 text-xs">Read Full Post</a>
+                      <Link href={`/blog/${encodeURIComponent(toSlug(b.title))}`} className="inline-block rounded bg-orange-600 text-white px-3 py-1 text-xs" prefetch={false}>Read Full Post</Link>
                     </div>
                   </div>
                 ))}
@@ -266,6 +266,7 @@ export default async function BlogPage({ searchParams }: { searchParams: Promise
                                     key={midx}
                                     href={`/blog?q=${encodeURIComponent(month)} ${y}`}
                                     className="px-2 py-0.5 rounded border bg-white text-slate-800 hover:bg-slate-50 transition-colors"
+                                    prefetch={false}
                                   >
                                     {month}
                                   </Link>

@@ -291,7 +291,7 @@ export default async function BlogDetailPage({ params }: { params: Promise<{ id:
                 {renderDescription(post.description || "", post.media)}
               </div>
               <div className="mt-3">
-                <Link href="/blog" className="px-4 py-2 rounded-md border text-sm hover:bg-slate-50 transition-colors">Back to Blog</Link>
+                <Link href="/blog" className="px-4 py-2 rounded-md border text-sm hover:bg-slate-50 transition-colors" prefetch={false}>Back to Blog</Link>
               </div>
             </div>
           </div>
@@ -302,7 +302,7 @@ export default async function BlogDetailPage({ params }: { params: Promise<{ id:
                 {months.slice(0, 6).map((key) => {
                   const [y, m] = key.split("|");
                   return (
-                    <Link key={key} href={`/blog?q=${encodeURIComponent(m)} ${y}`} className="block">{m}</Link>
+                    <Link key={key} href={`/blog?q=${encodeURIComponent(m)} ${y}`} className="block" prefetch={false}>{m}</Link>
                   );
                 })}
               </div>

@@ -27,7 +27,7 @@ export async function GET(req: Request) {
     if (path.startsWith('http://') || path.startsWith('https://')) {
       try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 15000); // Increased to 15s timeout
+        const timeoutId = setTimeout(() => controller.abort(), 30000); // Increased to 30s timeout
         const response = await fetch(path, {
           signal: controller.signal,
           headers: {
@@ -103,7 +103,7 @@ export async function GET(req: Request) {
         if (base) {
           try {
             const controller = new AbortController();
-            const id = setTimeout(() => controller.abort(), 5000);
+            const id = setTimeout(() => controller.abort(), 15000);
             const r = await fetch(`${base}/storage/v1/object/authenticated/${encodeURIComponent(bucketName)}/${encodeURIComponent(objectPath)}`, { headers: { Authorization: `Bearer ${token}` }, cache: "no-store", signal: controller.signal });
             clearTimeout(id);
             if (r.ok) {
@@ -112,7 +112,7 @@ export async function GET(req: Request) {
             } else {
               // fallback to public if authenticated fails
               const controller2 = new AbortController();
-              const id2 = setTimeout(() => controller2.abort(), 5000);
+              const id2 = setTimeout(() => controller2.abort(), 15000);
               const r2 = await fetch(`${base}/storage/v1/object/public/${encodeURIComponent(bucketName)}/${encodeURIComponent(objectPath)}`, { cache: "no-store", signal: controller2.signal });
               clearTimeout(id2);
               if (r2.ok) {
@@ -135,7 +135,7 @@ export async function GET(req: Request) {
       if (!direct) direct = await createSignedUrl(path);
       if (!direct) return NextResponse.json({ error: "Not found" }, { status: 404 });
       const controller = new AbortController();
-      const id = setTimeout(() => controller.abort(), 5000);
+      const id = setTimeout(() => controller.abort(), 15000);
       try {
         const r = await fetch(direct, { cache: "no-store", signal: controller.signal });
         clearTimeout(id);
@@ -149,7 +149,7 @@ export async function GET(req: Request) {
     const type = ct || guessContentType(objectPath);
     const headers = new Headers();
     headers.set("Content-Type", type);
-    headers.set("Cache-Control", "public, max-age=60");
+    headers.set("Cache-Control", "public, max-age=86400");
     return new NextResponse(new Uint8Array(buf), { headers });
   } catch (error: any) {
     console.error("Image proxy error:", error);

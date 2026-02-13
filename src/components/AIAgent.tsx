@@ -1042,13 +1042,15 @@ export default function AIAgent() {
                         <label className="text-[10px] font-medium text-slate-400 uppercase flex items-center gap-1">
                           <Calendar size={10} /> Preferred Date
                         </label>
-                        <input 
-                          type="date" 
-                          name="tour-date" 
-                          required
-                          min={new Date().toISOString().split('T')[0]}
-                          className="w-full bg-slate-50 border border-slate-200 rounded-lg px-2 py-1.5 text-xs focus:ring-1 focus:ring-purple-500 outline-none"
-                        />
+                        <div className="date-input-container">
+                          <input 
+                            type="date" 
+                            name="tour-date" 
+                            required
+                            min={new Date().toISOString().split('T')[0]}
+                            className="w-full bg-slate-50 border border-slate-200 rounded-lg py-1.5 text-xs focus:ring-1 focus:ring-purple-500 outline-none"
+                          />
+                        </div>
                       </div>
                       <div className="space-y-1">
                         <label className="text-[10px] font-medium text-slate-400 uppercase flex items-center gap-1">

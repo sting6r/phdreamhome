@@ -149,6 +149,7 @@ export default function TourInquiryCards({ inquiries }: { inquiries: any[] }) {
                         href={`/listing/${inquiry.listing.slug}`} 
                         className="text-sm font-bold text-slate-900 hover:text-sky-600 transition-colors block"
                         target="_blank"
+                        prefetch={false}
                       >
                         {inquiry.listing.title}
                       </Link>

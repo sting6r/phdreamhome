@@ -296,7 +296,7 @@ export default async function ListingPage({ params, searchParams }: { params: Pr
           <div className="rounded-md bg-[#FAF7FD] p-3 sm:p-4 border border-slate-300 shadow-lg">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-3">
               <div className="text-lg sm:text-xl font-bold tracking-wide">OVERVIEW</div>
-              <Link href="/contact" className="inline-flex items-center rounded border border-red-500 text-red-600 px-3 py-1 text-sm w-full sm:w-auto justify-center">Do you want this Property?</Link>
+              <Link prefetch={false} href="/contact" className="inline-flex items-center rounded border border-red-500 text-red-600 px-3 py-1 text-sm w-full sm:w-auto justify-center">Do you want this Property?</Link>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {Number(listing.bathrooms) > 0 && (
@@ -399,9 +399,9 @@ export default async function ListingPage({ params, searchParams }: { params: Pr
             <div className="mt-6">
               <div className="text-sm font-bold text-[#223B55] uppercase tracking-wide mb-3">Interested on this property?</div>
               <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-                <Link href="/contact?subject=Interested" className="flex-1 sm:flex-none inline-flex items-center justify-center rounded border border-[#DE6A4A] text-[#DE6A4A] px-3 py-1 text-sm whitespace-nowrap">Interested</Link>
-                <Link href="/contact?subject=Question" className="flex-1 sm:flex-none inline-flex items-center justify-center rounded border border-[#DE6A4A] text-[#DE6A4A] px-3 py-1 text-sm whitespace-nowrap">Question</Link>
-                <Link href="/contact?subject=Visit" className="flex-1 sm:flex-none inline-flex items-center justify-center rounded border border-[#DE6A4A] text-[#DE6A4A] px-3 py-1 text-sm whitespace-nowrap">Visit</Link>
+                <Link prefetch={false} href="/contact?subject=Interested" className="flex-1 sm:flex-none inline-flex items-center justify-center rounded border border-[#DE6A4A] text-[#DE6A4A] px-3 py-1 text-sm whitespace-nowrap">Interested</Link>
+                <Link prefetch={false} href="/contact?subject=Question" className="flex-1 sm:flex-none inline-flex items-center justify-center rounded border border-[#DE6A4A] text-[#DE6A4A] px-3 py-1 text-sm whitespace-nowrap">Question</Link>
+                <Link prefetch={false} href="/contact?subject=Visit" className="flex-1 sm:flex-none inline-flex items-center justify-center rounded border border-[#DE6A4A] text-[#DE6A4A] px-3 py-1 text-sm whitespace-nowrap">Visit</Link>
               </div>
             </div>
             <div className="mt-6">
@@ -440,7 +440,7 @@ export default async function ListingPage({ params, searchParams }: { params: Pr
                 initialTerm={termYears} 
               />
             </div>
-            <div className="mt-4"><Link href="/" className="btn-outline">Back to Listings</Link></div>
+            <div className="mt-4"><Link prefetch={false} href="/" className="btn-outline">Back to Listings</Link></div>
             <div className="mt-10">
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mb-4">
                 <div className="text-xl sm:text-2xl font-semibold">Similar Properties</div>

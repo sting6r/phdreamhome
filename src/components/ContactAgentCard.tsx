@@ -325,13 +325,15 @@ export default function ContactAgentCard({
                 <div className="grid grid-cols-2 gap-2">
                   <div className="space-y-1">
                     <label className="text-[10px] font-bold text-slate-500 uppercase">Preferred Date</label>
-                    <input 
-                      type="date" 
-                      className="input text-sm" 
-                      required 
-                      value={tourForm.date}
-                      onChange={e => setTourForm({...tourForm, date: e.target.value})}
-                    />
+                    <div className="date-input-container">
+                      <input 
+                        type="date" 
+                        className="input text-sm" 
+                        required 
+                        value={tourForm.date}
+                        onChange={e => setTourForm({...tourForm, date: e.target.value})}
+                      />
+                    </div>
                   </div>
                   <div className="space-y-1">
                     <label className="text-[10px] font-bold text-slate-500 uppercase">Preferred Time</label>
