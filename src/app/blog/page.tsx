@@ -3,6 +3,7 @@ import Link from "next/link";
 import MainFooterCards from "../../components/MainFooterCards";
 import { cookies, headers } from "next/headers";
 import type { Metadata } from "next";
+import { getProxyImageUrl } from "@lib/supabase";
 
 export const dynamic = "force-dynamic";
 
@@ -31,7 +32,13 @@ async function fetchBlogsPublic(): Promise<BlogPost[]> {
     const host = h.get("host");
     const proto = h.get("x-forwarded-proto") || "http";
     if (!host) return [];
-    const r = await fetch(`${proto}://${host}/api/blog`, { cache: "no-store" });
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+    const r = await fetch(`${proto}://${host}/api/blog`, { 
+      cache: "no-store",
+      signal: controller.signal
+    });
+    clearTimeout(timeoutId);
     const text = await r.text();
     let j;
     try {
@@ -53,7 +60,14 @@ async function fetchBlogsMine(token: string): Promise<BlogPost[]> {
     const host = h.get("host");
     const proto = h.get("x-forwarded-proto") || "http";
     if (!host) return [];
-    const r = await fetch(`${proto}://${host}/api/blog?mine=1`, { cache: "no-store", headers: { Authorization: `Bearer ${token}` } });
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+    const r = await fetch(`${proto}://${host}/api/blog?mine=1`, { 
+      cache: "no-store", 
+      headers: { Authorization: `Bearer ${token}` },
+      signal: controller.signal
+    });
+    clearTimeout(timeoutId);
     const text = await r.text();
     let j;
     try {
@@ -94,8 +108,8 @@ function toSlug(s: string) {
 }
 
 function toSrc(b: BlogPost) {
-  const coverSrc = b.coverPath ? `/api/image/proxy?path=${encodeURIComponent(String(b.coverPath))}` : null;
-  const mediaSrc = !coverSrc && b.media && b.media.length && b.media[0]?.path ? `/api/image/proxy?path=${encodeURIComponent(String(b.media[0].path))}` : null;
+  const coverSrc = b.coverPath ? getProxyImageUrl(String(b.coverPath)) : null;
+  const mediaSrc = !coverSrc && b.media && b.media.length && b.media[0]?.path ? getProxyImageUrl(String(b.media[0].path)) : null;
   return coverSrc || mediaSrc;
 }
 

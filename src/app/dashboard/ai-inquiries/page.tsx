@@ -44,7 +44,7 @@ export default async function AIInquiriesPage() {
     }), 2, 500);
 
     const timeoutPromise = new Promise((_, reject) => 
-      setTimeout(() => reject(new Error("Prisma timeout")), 5000)
+      setTimeout(() => reject(new Error("Prisma timeout")), 10000)
     );
 
     inquiries = await Promise.race([prismaPromise, timeoutPromise]) as any[];

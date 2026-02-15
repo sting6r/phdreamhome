@@ -3,30 +3,45 @@ import React, { useState, useMemo, useEffect, Suspense, use } from "react";
 import MainFooterCards from "../../../components/MainFooterCards";
 import Link from "next/link";
 import Image from "next/image";
+import { getProxyImageUrl } from "../../../lib/supabase";
 import { useSearchParams, useRouter } from "next/navigation";
 import QuickLinksSelector from "../../../components/QuickLinksSelector";
 
 const fetcher = async (u: string, signal?: AbortSignal) => {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 10000);
+  const sig = signal ? (AbortSignal as any).any([signal, controller.signal]) : controller.signal;
+
   try {
     const r = await fetch(u, { 
-      signal, 
+      signal: sig, 
       cache: "no-store",
       headers: {
         'Accept': 'application/json',
       }
     });
+    
     if (!r.ok) {
       if (r.status === 404) return null;
       const text = await r.text();
       console.error(`Properties fetcher error [${r.status}]:`, u, text.slice(0, 100));
       return null;
     }
-    return await r.json();
+
+    const text = await r.text();
+    try {
+      return JSON.parse(text);
+    } catch (e) {
+      console.error("Properties fetcher parse error:", u, r.status, text.slice(0, 100));
+      return null;
+    }
   } catch (e: any) {
-    if (e?.name === "AbortError") return null;
+    if (e?.name === "AbortError" || sig.aborted) return null;
     if (e instanceof TypeError && e.message === "Failed to fetch") return null;
     console.error("Properties fetcher error:", u, e);
     return null;
+  } finally {
+    clearTimeout(timeoutId);
   }
 };
 
@@ -183,16 +198,23 @@ function PropertiesByStatusPageContent({ params }: { params: Promise<{ status: s
     const q = [l.address, l.city, l.state, l.country].filter(Boolean).join(", ");
     const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q || l.city || l.state || l.country || "Philippines")}`;
     const fallback = { lat: 12.8797, lon: 121.774 };
+    
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+    const sig = signal ? (AbortSignal as any).any([signal, controller.signal]) : controller.signal;
+    
     try {
       const r = await fetch(url, { 
         headers: { Accept: "application/json", "User-Agent": "phdreamhome/1.0" } as any,
-        signal
+        signal: sig
       });
+      clearTimeout(timeoutId);
       const d = await r.json();
       const best = Array.isArray(d) ? d[0] : null;
       if (best && best.lat && best.lon) return { lat: Number(best.lat), lon: Number(best.lon) };
     } catch (e: any) {
-      if (e.name === 'AbortError') return null;
+      clearTimeout(timeoutId);
+      if (e.name === 'AbortError' || sig.aborted) return null;
     }
     return fallback;
   }
@@ -240,6 +262,10 @@ function PropertiesByStatusPageContent({ params }: { params: Promise<{ status: s
     return arr;
   }, [filtered, sortSel]);
 
+  const pts = React.useMemo(() => {
+    return filtered.map((l: any) => ({ l, g: geocodes[String(l.id || "")] })).filter((x) => !!x.g);
+  }, [filtered, geocodes]);
+
   React.useEffect(() => {
     if (viewMode !== "map") return;
     let alive = true;
@@ -284,8 +310,6 @@ function PropertiesByStatusPageContent({ params }: { params: Promise<{ status: s
     if (!leafletReady || !mapObjRef.current || !L) return;
     try { mapObjRef.current.invalidateSize(true); } catch {}
     
-    const pts = filtered.map((l: any) => ({ l, g: geocodes[String(l.id || "")] })).filter((x) => !!x.g);
-
     // Only clear and recreate if the set of listing IDs has actually changed
     // or if we have no markers yet. This prevents popups from closing
     // during the geocoding process or minor state updates.
@@ -324,8 +348,9 @@ function PropertiesByStatusPageContent({ params }: { params: Promise<{ status: s
         : x.l.type === "Commercial Space"
           ? String((x.l as any).commercialSubtype || "")
           : "";
+      const proxiedImgUrl = getProxyImageUrl(imgUrl);
       const imageBlock = imgUrl
-        ? `<img src="${imgUrl}" alt="${titleText}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">`
+        ? `<img src="${proxiedImgUrl}" alt="${titleText}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">`
         : `<div style="position:absolute;inset:0;background:#e2e8f0"></div>`;
       const html = `
         <a href="/listing/${x.l.slug || x.l.id}" style="display:block;background:#fff;border-radius:12px;box-shadow:0 8px 18px rgba(16,24,40,0.15);width:min(360px, 80vw);overflow:hidden;text-decoration:none">
@@ -519,11 +544,12 @@ function PropertiesByStatusPageContent({ params }: { params: Promise<{ status: s
               const moreCount = expanded ? 0 : Math.max(0, landmarks.length - 3);
               const statusText = String(l.status || "");
               const emphasizeStatus = statusText === "Sold" || statusText === "Occupied";
+              const propertySlug = l.slug || l.id;
               return (
-                <Link prefetch={false} key={l.id} href={`/listing/${l.slug || l.id}`} className="card group transition-all duration-300 hover:shadow-[0_10px_30px_rgba(0,0,0,0.15)] hover:scale-[0.98] hover:ring-1 hover:ring-black/10">
+                <Link prefetch={false} key={l.id || propertySlug} href={`/listing/${propertySlug}`} className="card group transition-all duration-300 hover:shadow-[0_10px_30px_rgba(0,0,0,0.15)] hover:scale-[0.98] hover:ring-1 hover:ring-black/10">
                   <div className="relative w-full h-40 sm:h-48 mb-3 rounded overflow-hidden shadow-md">
                     {imgUrl ? (
-                      <Image src={imgUrl} alt={l.title} fill className="object-cover transition-transform duration-300 group-hover:scale-105" />
+                      <Image src={getProxyImageUrl(imgUrl)} alt={l.title} fill className="object-cover transition-transform duration-300 group-hover:scale-105" />
                     ) : (
                       <div className="absolute inset-0 bg-slate-200 flex items-center justify-center">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-10 h-10 text-gray-500"><path d="M3 9.5l9-7 9 7V20a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9.5Z"/><path d="M9 22V12h6v10"/></svg>
@@ -607,7 +633,7 @@ function PropertiesByStatusPageContent({ params }: { params: Promise<{ status: s
                   )}
                   <div className="grid grid-cols-1 gap-1 mb-2">
                     {visibleLandmarks.map((lm:string, idx:number)=> (
-                      <div key={idx} className="text-xs text-slate-700 inline-flex items-center gap-2">
+                      <div key={`${lid}-landmark-${idx}`} className="text-xs text-slate-700 inline-flex items-center gap-2">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4 text-orange-500">
                           <path d="M12 3a6 6 0 0 1 6 6c0 4.5-6 11-6 11S6 13.5 6 9a6 6 0 0 1 6-6"/>
                           <circle cx="12" cy="9" r="2"/>
@@ -651,11 +677,15 @@ function PropertiesByStatusPageContent({ params }: { params: Promise<{ status: s
                   if (!inqEmail || !inqMessage) {
                     setInqError("Please provide email and message");
                   } else {
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 10000);
                     const r = await fetch("/api/mail-inquiry", {
                       method: "POST",
                       headers: { "Content-Type": "application/json" },
+                      signal: controller.signal,
                       body: JSON.stringify({ name: inqName, email: inqEmail, phone: inqPhone, subject: inqSubject, message: inqMessage, status: statusTitle, type: statusTitle })
                     });
+                    clearTimeout(timeoutId);
                     const d = await r.json();
                     setInqDev(Boolean(d?.dev));
                     if (!r.ok || d?.error) {

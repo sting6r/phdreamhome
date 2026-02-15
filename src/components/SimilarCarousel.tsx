@@ -2,6 +2,7 @@
 import React from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { getProxyImageUrl } from "@/lib/supabase";
 
 export default function SimilarCarousel({ items }: { items: any[] }) {
   const safeItems = Array.isArray(items) ? items : [];
@@ -45,7 +46,7 @@ export default function SimilarCarousel({ items }: { items: any[] }) {
                       <div className="relative w-full h-44 rounded overflow-hidden bg-slate-200">
                         {imgUrl ? (
                           <Image 
-                            src={imgUrl} 
+                            src={getProxyImageUrl(imgUrl)} 
                             alt={l.title} 
                             fill 
                             className="object-cover" 

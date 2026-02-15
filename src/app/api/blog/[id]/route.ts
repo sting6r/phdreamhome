@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { prisma, withRetry } from "@lib/prisma";
 import type { Prisma } from "@prisma/client";
-import { supabaseAdmin, createSignedUrl, parseBucketSpec } from "@lib/supabase";
+import { supabaseAdmin, createSignedUrl, parseBucketSpec, getProxyImageUrl } from "@lib/supabase";
 
 export const runtime = "nodejs";
 
@@ -71,12 +71,12 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
 
   if (!post) return NextResponse.json({ error: "Not found" }, { status: 404 });
   if (!post.published && post.userId !== userId) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  const coverUrl = post.coverPath ? `/api/image/proxy?path=${encodeURIComponent(post.coverPath)}` : null;
+  const coverUrl = post.coverPath ? getProxyImageUrl(post.coverPath) : null;
   const base = post.userId === userId ? post.media : post.media.filter((m:any)=> m.published);
   const media: (BlogMedia & { published?: boolean })[] = base.map((m:any) => ({
     path: m.path,
     type: (m.type as any) || "image",
-    url: `/api/image/proxy?path=${encodeURIComponent(m.path)}`,
+    url: getProxyImageUrl(m.path),
     published: !!m.published,
     title: m.title ?? null,
     subtitle: m.subtitle ?? null,
@@ -160,11 +160,11 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     withRetry(() => prisma.blogPost.findUnique({ where: { id }, include: { media: { orderBy: { sortOrder: "asc" } } } })),
     timeout(5000)
   ]) as any;
-  const coverUrl = updated?.coverPath ? `/api/image/proxy?path=${encodeURIComponent(updated.coverPath)}` : null;
+  const coverUrl = updated?.coverPath ? getProxyImageUrl(updated.coverPath) : null;
   const signedMedia: (BlogMedia & { published?: boolean })[] = (updated?.media ?? []).map((m:any) => ({
     path: m.path,
     type: (m.type as any) || "image",
-    url: `/api/image/proxy?path=${encodeURIComponent(m.path)}`,
+    url: getProxyImageUrl(m.path),
     published: !!m.published,
     title: m.title ?? null,
     subtitle: m.subtitle ?? null,

@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
+import { getProxyImageUrl } from "../lib/supabase";
 
 type Item = { path: string; type: "image" | "video"; url: string | null };
 
@@ -24,10 +25,10 @@ export default function BlogMediaViewer({ media, title }: { media: Item[]; title
     <div className="grid grid-cols-1 sm:grid-cols-[1fr_200px] gap-4 items-start">
       <div ref={wrapRef} className="relative w-full h-[360px] sm:h-[420px] rounded overflow-hidden bg-slate-200">
         {items[index]?.type === "image" && items[index]?.url ? (
-          <Image src={items[index]!.url as string} alt={title} fill sizes="(max-width: 640px) 100vw, 60vw" className="object-cover" />
+          <Image src={getProxyImageUrl(items[index]!.url as string)} alt={title} fill sizes="(max-width: 640px) 100vw, 60vw" className="object-cover" />
         ) : items[index]?.type === "video" && items[index]?.url ? (
           <video
-            src={items[index]!.url as string}
+            src={getProxyImageUrl(items[index]!.url as string)}
             className="absolute inset-0 w-full h-full object-cover"
             controls
             preload="auto"
@@ -47,10 +48,10 @@ export default function BlogMediaViewer({ media, title }: { media: Item[]; title
           {items.map((m, i) => (
             <button key={i} type="button" className={`relative w-full h-20 rounded overflow-hidden border ${index===i?"border-blue-500":"border-gray-200"}`} onClick={() => setIndex(i)}>
               {m.type === "image" && m.url ? (
-                <Image src={m.url} alt={title} fill sizes="200px" className="object-cover" />
+                <Image src={getProxyImageUrl(m.url)} alt={title} fill sizes="200px" className="object-cover" />
               ) : m.type === "video" && m.url ? (
                 <video
-                  src={m.url}
+                  src={getProxyImageUrl(m.url)}
                   className="absolute inset-0 w-full h-full object-cover"
                   muted
                   playsInline

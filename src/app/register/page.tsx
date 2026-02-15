@@ -30,9 +30,20 @@ export default function RegisterPage() {
     }
     try {
       console.log("Attempting to sync user from register page.");
-      await fetch("/api/auth/sync-user", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userId: data.user.id, email: form.email }) });
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
+      try {
+        await fetch("/api/auth/sync-user", { 
+          method: "POST", 
+          headers: { "Content-Type": "application/json" }, 
+          body: JSON.stringify({ userId: data.user.id, email: form.email }),
+          signal: controller.signal
+        });
+      } finally {
+        clearTimeout(timeoutId);
+      }
       console.log("Sync user request successful from register page.");
-    } catch (syncError) {
+    } catch (syncError: any) {
       console.error("Sync user request failed from register page:", syncError);
     }
     setMsg("Check your email for verification link");

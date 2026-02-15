@@ -42,8 +42,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <aside className="col-span-12 sm:col-span-3 lg:col-span-2 bg-slate-100 shadow-sm">
           <div className="sticky" style={mounted ? { top: asideTop } : undefined}>
             <nav className="space-y-2 rounded-lg bg-slate-100 p-3">
-              {mounted && NAV_ITEMS.map((navItem) => {
-                const active = pathname === navItem.href;
+              {NAV_ITEMS.map((navItem) => {
+                const active = mounted ? pathname === navItem.href : false;
                 return (
                   <Link
                     key={navItem.href}

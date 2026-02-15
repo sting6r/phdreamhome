@@ -2,7 +2,7 @@
 import { useEffect, useState, useRef, use } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { supabase } from "@lib/supabase";
+import { supabase, getProxyImageUrl } from "@lib/supabase";
 import CurrencyInput from "@components/CurrencyInput";
 
 import { Suspense } from "react";
@@ -57,24 +57,46 @@ function EditListingPageContent({ params }: { params: Promise<{ id: string }> })
       const token = data.session?.access_token;
       const headers: Record<string,string> = {};
       if (token) headers["Authorization"] = `Bearer ${token}`;
-      const r = await fetch(`/api/listings/${id}`, { headers });
-      const d = await r.json();
-      const found = d.listing;
-      if (found) {
-        setForm({
-          title: found.title, description: found.description, price: found.price, address: found.address,
-          city: found.city, state: found.state, country: found.country, bedrooms: found.bedrooms,
-          bathrooms: found.bathrooms, floorArea: found.floorArea ?? 0, lotArea: found.lotArea ?? 0, parking: found.parking ?? 0, owner: found.owner || "", developer: found.developer || "",
-          status: found.status, type: found.type, published: found.published, industrySubtype: found.industrySubtype || "", commercialSubtype: found.commercialSubtype || "",
-          indoorFeatures: found.indoorFeatures || [], outdoorFeatures: found.outdoorFeatures || [], landmarks: found.landmarks || []
+      
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
+      try {
+        const r = await fetch(`/api/listings/${id}`, { 
+          headers,
+          signal: controller.signal 
         });
-        setSeoTitle(found.seoTitle || "");
-        setSeoDescription(found.seoDescription || "");
-        setSeoKeyword(Array.isArray(found.seoKeywords) ? found.seoKeywords.join(", ") : "");
-        setImages(found.images.map((i:any)=>i.path ?? i.url));
-        setPreviews(found.images.map((i:any)=>i.url));
-        setImageIds(found.images.map((i:any)=>i.id ?? null));
-        if ((found.images || []).length > 0) setFeaturedIndex(0);
+        
+        const text = await r.text();
+        let d;
+        try {
+          d = JSON.parse(text);
+        } catch (e) {
+          console.error("Listing fetch parse error. Status:", r.status, "Body:", text.slice(0, 200));
+          return;
+        }
+
+        const found = d.listing;
+        if (found) {
+          setForm({
+            title: found.title, description: found.description, price: found.price, address: found.address,
+            city: found.city, state: found.state, country: found.country, bedrooms: found.bedrooms,
+            bathrooms: found.bathrooms, floorArea: found.floorArea ?? 0, lotArea: found.lotArea ?? 0, parking: found.parking ?? 0, owner: found.owner || "", developer: found.developer || "",
+            status: found.status, type: found.type, published: found.published, industrySubtype: found.industrySubtype || "", commercialSubtype: found.commercialSubtype || "",
+            indoorFeatures: found.indoorFeatures || [], outdoorFeatures: found.outdoorFeatures || [], landmarks: found.landmarks || []
+          });
+          setSeoTitle(found.seoTitle || "");
+          setSeoDescription(found.seoDescription || "");
+          setSeoKeyword(Array.isArray(found.seoKeywords) ? found.seoKeywords.join(", ") : "");
+          setImages(found.images.map((i:any)=>i.path ?? i.url));
+          setPreviews(found.images.map((i:any)=>i.url));
+          setImageIds(found.images.map((i:any)=>i.id ?? null));
+          if ((found.images || []).length > 0) setFeaturedIndex(0);
+        }
+      } catch (err: any) {
+        if (err.name === 'AbortError') return;
+        console.error("Fetch listing error:", err);
+      } finally {
+        clearTimeout(timeoutId);
       }
     })();
   }, [id]);
@@ -97,12 +119,14 @@ function EditListingPageContent({ params }: { params: Promise<{ id: string }> })
     await new Promise<void>((resolve, reject) => {
       const xhr = new XMLHttpRequest();
       xhr.open("POST", "/api/upload");
+      xhr.timeout = 10000; // 10 second timeout
       xhr.upload.onprogress = (ev) => {
         if (ev.lengthComputable) {
           const pct = Math.round((ev.loaded / ev.total) * 100);
           setUploadProgress(pct);
         }
       };
+      xhr.ontimeout = () => reject(new Error("Upload timed out"));
       xhr.onreadystatechange = () => {
         if (xhr.readyState === 4) {
           try {
@@ -142,15 +166,46 @@ function EditListingPageContent({ params }: { params: Promise<{ id: string }> })
     const token = data.session?.access_token;
     const headers: Record<string,string> = { "Content-Type": "application/json" };
     if (token) headers["Authorization"] = `Bearer ${token}`;
-    const res = await fetch(`/api/listings/${id}`, { method: "PUT", headers, body: JSON.stringify(payload) }).catch(()=>null as any);
-    clearInterval(timer);
-    if (res && res.ok) {
-      setSaveProgress(100);
-      setSaveMessage("Saved");
-      setTimeout(() => { window.location.href = "/dashboard/properties"; }, 750);
-    } else {
-      setError("Failed to save changes");
+    
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+    try {
+      const res = await fetch(`/api/listings/${id}`, { 
+        method: "PUT", 
+        headers, 
+        body: JSON.stringify(payload),
+        signal: controller.signal
+      });
+      
+      clearInterval(timer);
+      const text = await res.text();
+      let errorData;
+      try {
+        errorData = JSON.parse(text);
+      } catch (e) {
+        console.error("Listing update parse error. Status:", res.status, "Body:", text.slice(0, 200));
+        errorData = { error: "Invalid server response" };
+      }
+
+      if (res && res.ok) {
+        setSaveProgress(100);
+        setSaveMessage("Saved");
+        setTimeout(() => { window.location.href = "/dashboard/properties"; }, 750);
+      } else {
+        setError(errorData.error || errorData.details || "Failed to save changes");
+        setSaving(false);
+      }
+    } catch (err: any) {
+      clearInterval(timer);
+      if (err.name === 'AbortError') {
+        setError("Save timed out. Please try again.");
+      } else {
+        console.error("Save error:", err);
+        setError("An unexpected error occurred.");
+      }
       setSaving(false);
+    } finally {
+      clearTimeout(timeoutId);
     }
   }
   async function removeAt(i: number) {
@@ -160,7 +215,22 @@ function EditListingPageContent({ params }: { params: Promise<{ id: string }> })
     const token = data.session?.access_token;
     const headers: Record<string,string> = { "Content-Type": "application/json" };
     if (token) headers["Authorization"] = `Bearer ${token}`;
-    await fetch(`/api/media/delete`, { method: "POST", headers, body: JSON.stringify({ path, imageId: imgId, listingId: id }) }).catch(()=>{});
+    
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+    try {
+      await fetch(`/api/media/delete`, { 
+        method: "POST", 
+        headers, 
+        body: JSON.stringify({ path, imageId: imgId, listingId: id }),
+        signal: controller.signal
+      });
+    } catch (err) {
+      console.error("Delete media error:", err);
+    } finally {
+      clearTimeout(timeoutId);
+    }
+    
     if (featuredIndex !== null) {
       if (i === featuredIndex) setFeaturedIndex(null);
       else if (i < featuredIndex) setFeaturedIndex(featuredIndex - 1);
@@ -427,18 +497,19 @@ function EditListingPageContent({ params }: { params: Promise<{ id: string }> })
             <button type="button" className="px-3 py-1 rounded bg-slate-200" onClick={()=>setSelected(Array.from({length: previews.length}, (_,i)=>i))}>Select All</button>
             <button type="button" className="px-3 py-1 rounded bg-slate-200" onClick={clearSelection}>Clear</button>
           </div>
-        <div className="sm:col-span-2 flex flex-wrap gap-2">
-          {previews.map((u,i)=> {
-            const path = images[i] || "";
-            const obj = path.includes(":") ? path.split(":").pop() || path : path;
-            const isVid = /\.(mp4|webm|ogg)$/i.test(obj);
-            return (
-              <div key={i} className={`relative ${selectMode ? "ring-2" : ""} ${selected.includes(i) ? "ring-blue-500" : "ring-transparent"}`}>
-                {isVid ? (
-                  <video src={u} muted autoPlay loop playsInline controlsList="nodownload" className="w-28 h-20 object-cover rounded" onClick={()=>{ if (selectMode) toggleSelected(i); }} />
-                ) : (
-                  <Image src={u} alt="preview" width={112} height={80} unoptimized className="object-cover rounded" onClick={()=>{ if (selectMode) toggleSelected(i); }} />
-                )}
+          <div className="sm:col-span-2 flex flex-wrap gap-2">
+            {previews.map((u, i) => {
+              const path = images[i] || "";
+              const obj = path.includes(":") ? path.split(":").pop() || path : path;
+              const isVid = /\.(mp4|webm|ogg)$/i.test(obj);
+              const key = imageIds[i] || `preview-${i}-${path}`;
+              return (
+                <div key={key} className={`relative ${selectMode ? "ring-2" : ""} ${selected.includes(i) ? "ring-blue-500" : "ring-transparent"}`}>
+                  {isVid ? (
+                    <video src={getProxyImageUrl(u)} muted autoPlay loop playsInline controlsList="nodownload" className="w-28 h-20 object-cover rounded" onClick={() => { if (selectMode) toggleSelected(i); }} />
+                  ) : (
+                    <Image src={getProxyImageUrl(u)} alt="preview" width={112} height={80} unoptimized className="object-cover rounded" onClick={() => { if (selectMode) toggleSelected(i); }} />
+                  )}
                 <button type="button" className={`absolute left-1 top-1 text-[10px] px-1.5 py-0.5 rounded ${featuredIndex===i?"bg-sky-500 text-white":"bg-white text-black border"}`} onClick={()=> setFeaturedIndex(i)}>{featuredIndex===i?"Feature":"Set as Feature"}</button>
                 {!selectMode && (
                   <button type="button" onClick={()=> openConfirm("Delete this media?", () => removeAt(i))} className="absolute -top-2 -right-2 rounded-full bg-red-600 text-white w-6 h-6 flex items-center justify-center shadow">×</button>

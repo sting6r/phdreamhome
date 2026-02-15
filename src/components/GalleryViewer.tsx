@@ -2,6 +2,7 @@
 import Image from "next/image";
 import { useEffect, useState, useRef } from "react";
 import ShareButtons from "./ShareButtons";
+import { getProxyImageUrl } from "@/lib/supabase";
 
   function isVideo(url: string) {
     if (!url) return false;
@@ -23,11 +24,28 @@ export default function GalleryViewer({ items, title, address, price }: { items:
   const mainVideoEl = useRef<HTMLVideoElement | null>(null);
   const [unmuteOnLoad, setUnmuteOnLoad] = useState(false);
   const touchX = useRef<number | null>(null);
+  const touchY = useRef<number | null>(null);
 
   function next() { if (items.length) setIndex(i => (i + 1) % items.length); }
   function prev() { if (items.length) setIndex(i => (i - 1 + items.length) % items.length); }
-  function onTouchStart(e: React.TouchEvent) { touchX.current = e.touches[0].clientX; }
-  function onTouchEnd(e: React.TouchEvent) { if (touchX.current !== null) { const dx = e.changedTouches[0].clientX - touchX.current; if (dx > 40) prev(); if (dx < -40) next(); touchX.current = null; } }
+  function onTouchStart(e: React.TouchEvent) { 
+    touchX.current = e.touches[0].clientX; 
+    touchY.current = e.touches[0].clientY;
+  }
+  function onTouchEnd(e: React.TouchEvent) { 
+    if (touchX.current !== null && touchY.current !== null) { 
+      const dx = e.changedTouches[0].clientX - touchX.current; 
+      const dy = e.changedTouches[0].clientY - touchY.current;
+      
+      // Ensure it's mostly a horizontal swipe
+      if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 40) {
+        if (dx > 40) prev(); 
+        if (dx < -40) next(); 
+      }
+      touchX.current = null; 
+      touchY.current = null;
+    } 
+  }
 
   const current = items[index];
   const hasSrc = !!(current && current.url);
@@ -67,7 +85,7 @@ export default function GalleryViewer({ items, title, address, price }: { items:
           />
         ) : (
           <Image 
-            src={current.url} 
+            src={getProxyImageUrl(current.url)} 
             alt="media" 
             fill 
             className="object-cover cursor-zoom-in" 
@@ -110,7 +128,15 @@ export default function GalleryViewer({ items, title, address, price }: { items:
               </div>
               {typeof price === "number" ? (
                 <div className="text-right shrink-0">
-                  <div className="text-[11px] sm:text-xs opacity-90">PHP</div>
+                  <div className="flex justify-end mb-0.5 opacity-90">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M7 6h8a3 3 0 0 1 0 6H7" />
+                      <path d="M7 12h8a3 3 0 0 1 0 6H7" />
+                      <path d="M5 9h10" />
+                      <path d="M5 15h10" />
+                      <path d="M7 6v12" />
+                    </svg>
+                  </div>
                   <div className="text-base sm:text-xl font-bold">{mounted ? Number(price).toLocaleString("en-PH", { minimumFractionDigits: 0, maximumFractionDigits: 0 }) : ""}</div>
                 </div>
               ) : null}
@@ -136,7 +162,7 @@ export default function GalleryViewer({ items, title, address, price }: { items:
                   />
                 ) : (
                   <Image 
-                    src={it.url} 
+                    src={getProxyImageUrl(it.url)} 
                     alt="thumb" 
                     fill 
                     sizes="96px" 
@@ -152,11 +178,11 @@ export default function GalleryViewer({ items, title, address, price }: { items:
         </div>
       )}
       {open && hasSrc && !isVideo(current.url) && (
-        <div className="fixed inset-0 bg-black/80 z-50">
+        <div className="fixed inset-0 bg-black/80 z-50" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
           <div className="absolute inset-0 flex items-center justify-center" onWheel={(e)=>{ const d = e.deltaY < 0 ? 0.1 : -0.1; const ns = Math.min(3, Math.max(0.5, scale + d)); setScale(ns); }}>
             <div className="relative w-[90vw] h-[90vh]" style={{ transform: `scale(${scale})` }}>
               <Image 
-                src={current.url} 
+                src={getProxyImageUrl(current.url)} 
                 alt="view" 
                 fill 
                 sizes="90vw" 
@@ -172,6 +198,16 @@ export default function GalleryViewer({ items, title, address, price }: { items:
             <button onClick={() => setScale(s => Math.max(0.5, s - 0.25))} className="rounded-md bg-white/80 px-3 py-1 text-sm">Zoom Out</button>
             <button onClick={() => setScale(s => Math.min(3, s + 0.25))} className="rounded-md bg-white/80 px-3 py-1 text-sm">Zoom In</button>
           </div>
+          {items.length > 1 && (
+            <>
+              <button aria-label="Prev" onClick={prev} className="absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-white/20 hover:bg-white/40 text-white grid place-items-center transition-colors">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-8 h-8"><path d="M15 18l-6-6 6-6"/></svg>
+              </button>
+              <button aria-label="Next" onClick={next} className="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-white/20 hover:bg-white/40 text-white grid place-items-center transition-colors">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-8 h-8"><path d="M9 6l6 6-6 6"/></svg>
+              </button>
+            </>
+          )}
           <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-3">
             <button onClick={prev} className="rounded-md bg-white/80 px-3 py-1 text-sm">Prev</button>
             <button onClick={next} className="rounded-md bg-white/80 px-3 py-1 text-sm">Next</button>
@@ -179,7 +215,7 @@ export default function GalleryViewer({ items, title, address, price }: { items:
         </div>
       )}
       {open && hasSrc && isVideo(current.url) && (
-        <div className="fixed inset-0 bg-black/80 z-50">
+        <div className="fixed inset-0 bg-black/80 z-50" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
           <div className="absolute inset-0 flex items-center justify-center" onWheel={(e)=>{ const d = e.deltaY < 0 ? 0.1 : -0.1; const ns = Math.min(3, Math.max(0.5, scale + d)); setScale(ns); }}>
             <video
               ref={videoEl}
@@ -199,6 +235,16 @@ export default function GalleryViewer({ items, title, address, price }: { items:
             <button onClick={() => setScale(s => Math.max(0.5, s - 0.25))} className="rounded-md bg-white/80 px-3 py-1 text-sm">Zoom Out</button>
             <button onClick={() => setScale(s => Math.min(3, s + 0.25))} className="rounded-md bg-white/80 px-3 py-1 text-sm">Zoom In</button>
           </div>
+          {items.length > 1 && (
+            <>
+              <button aria-label="Prev" onClick={prev} className="absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-white/20 hover:bg-white/40 text-white grid place-items-center transition-colors">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-8 h-8"><path d="M15 18l-6-6 6-6"/></svg>
+              </button>
+              <button aria-label="Next" onClick={next} className="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-white/20 hover:bg-white/40 text-white grid place-items-center transition-colors">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-8 h-8"><path d="M9 6l6 6-6 6"/></svg>
+              </button>
+            </>
+          )}
           <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-3">
             <button onClick={prev} className="rounded-md bg-white/80 px-3 py-1 text-sm">Prev</button>
             <button onClick={next} className="rounded-md bg-white/80 px-3 py-1 text-sm">Next</button>

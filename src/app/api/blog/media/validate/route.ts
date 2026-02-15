@@ -13,15 +13,29 @@ async function exists(bucketName: string, objectPath: string): Promise<boolean> 
     const { data } = supabaseAdmin.storage.from(bucketName).getPublicUrl(objectPath);
     const url = data.publicUrl || null;
     if (url) {
-      const r = await fetch(url, { method: "HEAD", cache: "no-store" });
-      if (r.ok) return true;
+      const controller = new AbortController();
+      const id = setTimeout(() => controller.abort(), 10000);
+      try {
+        const r = await fetch(url, { method: "HEAD", cache: "no-store", signal: controller.signal });
+        clearTimeout(id);
+        if (r.ok) return true;
+      } catch (e) {
+        clearTimeout(id);
+      }
     }
   } catch {}
   try {
     const url = await createSignedUrl(`${bucketName}:${objectPath}`);
     if (url) {
-      const r = await fetch(url, { method: "HEAD", cache: "no-store" });
-      if (r.ok) return true;
+      const controller = new AbortController();
+      const id = setTimeout(() => controller.abort(), 10000);
+      try {
+        const r = await fetch(url, { method: "HEAD", cache: "no-store", signal: controller.signal });
+        clearTimeout(id);
+        if (r.ok) return true;
+      } catch (e) {
+        clearTimeout(id);
+      }
     }
   } catch {}
   return false;

@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import MainFooterCards from "@components/MainFooterCards";
+import { getProxyImageUrl } from "@/lib/supabase";
 import BlogMediaViewer from "@components/BlogMediaViewer";
 import ShareButtons from "@components/ShareButtons";
 import type { Metadata } from "next";
@@ -42,33 +43,71 @@ type BlogMedia = { path: string; type: "image" | "video"; url: string | null; ti
 type BlogPost = { id: string; userId: string; title: string; description: string; author?: string | null; displayDate?: string | null; coverPath: string | null; coverUrl: string | null; media: BlogMedia[]; published: boolean; createdAt: string | number | Date };
 
 async function fetchPost(id: string): Promise<BlogPost | null> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 10000);
   try {
     const h = await headers();
     const host = h.get("host");
     const proto = h.get("x-forwarded-proto") || "http";
     if (!host) return null;
-    const r = await fetch(`${proto}://${host}/api/blog/${id}`, { cache: "no-store" });
-    const j = await r.json();
+    const r = await fetch(`${proto}://${host}/api/blog/${id}`, { 
+      cache: "no-store",
+      signal: controller.signal
+    });
+    
+    const text = await r.text();
+    let j;
+    try {
+      j = JSON.parse(text);
+    } catch (e) {
+      console.error("Blog post fetch parse error:", text.slice(0, 200));
+      return null;
+    }
+
     const p = j.post;
     if (!p) return null;
     return p as BlogPost;
-  } catch {
+  } catch (err: any) {
+    if (err.name === 'AbortError') {
+      console.warn(`Fetch post ${id} timed out`);
+    }
     return null;
+  } finally {
+    clearTimeout(timeoutId);
   }
 }
 
 async function fetchBlogs(): Promise<{ createdAt: number }[]> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 10000);
   try {
     const h = await headers();
     const host = h.get("host");
     const proto = h.get("x-forwarded-proto") || "http";
     if (!host) return [];
-    const r = await fetch(`${proto}://${host}/api/blog`, { cache: "no-store" });
-    const j = await r.json();
+    const r = await fetch(`${proto}://${host}/api/blog`, { 
+      cache: "no-store",
+      signal: controller.signal
+    });
+    
+    const text = await r.text();
+    let j;
+    try {
+      j = JSON.parse(text);
+    } catch (e) {
+      console.error("Blogs fetch parse error:", text.slice(0, 200));
+      return [];
+    }
+
     const pubs = (j.blogs || []) as Array<{ createdAt: number }>;
     return Array.isArray(pubs) ? pubs : [];
-  } catch {
+  } catch (err: any) {
+    if (err.name === 'AbortError') {
+      console.warn("Fetch blogs timed out");
+    }
     return [];
+  } finally {
+    clearTimeout(timeoutId);
   }
 }
 
@@ -195,14 +234,14 @@ export default async function BlogDetailPage({ params }: { params: Promise<{ id:
             if (mediaType === "image") {
               lineNodes.push(
                 <div key={key++} className="relative w-full h-72 sm:h-96 rounded overflow-hidden bg-slate-200 my-4">
-                  <Image src={`/api/image/proxy?path=${encodeURIComponent(mediaItem.path)}`} alt={mediaItem.title || "Blog image"} fill sizes="(max-width: 640px) 100vw, 60vw" className="object-cover" unoptimized />
+                  <Image src={getProxyImageUrl(mediaItem.path)} alt={mediaItem.title || "Blog image"} fill sizes="(max-width: 640px) 100vw, 60vw" className="object-cover" unoptimized />
                 </div>
               );
             } else if (mediaType === "video") {
               lineNodes.push(
                 <div key={key++} className="relative w-full h-72 sm:h-96 rounded overflow-hidden bg-slate-200 my-4">
                   <video
-                    src={`/api/image/proxy?path=${encodeURIComponent(mediaItem.path)}`}
+                    src={getProxyImageUrl(mediaItem.path)}
                     className="absolute inset-0 w-full h-full object-cover"
                     controls
                     preload="auto"
@@ -277,7 +316,7 @@ export default async function BlogDetailPage({ params }: { params: Promise<{ id:
             </div>
             <div className="relative w-full h-80 sm:h-[450px] rounded overflow-hidden bg-slate-200 shadow-md">
               {post.coverPath ? (
-                <Image src={`/api/image/proxy?path=${encodeURIComponent(post.coverPath)}`} alt={post.title} fill sizes="(max-width: 640px) 100vw, 60vw" className="object-cover" unoptimized />
+                <Image src={getProxyImageUrl(post.coverPath)} alt={post.title} fill sizes="(max-width: 640px) 100vw, 60vw" className="object-cover" unoptimized />
               ) : (
                 <div className="absolute inset-0 bg-slate-200" />
               )}

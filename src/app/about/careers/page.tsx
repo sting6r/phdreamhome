@@ -15,7 +15,7 @@ export default function CareersPage() {
           <Link prefetch={false} href="/contact" className="inline-flex items-center gap-2 rounded-md bg-purple-600 text-white px-4 py-2 text-sm hover:bg-purple-500 shadow-sm">
             Contact Us
           </Link>
-          <Link prefetch={false} href="/about" className="inline-flex items-center gap-2 rounded-md bg-blue-600 text-white px-4 py-2 text-sm hover:bg-blue-500 shadow-sm">
+          <Link prefetch={false} href="/about" className="inline-flex items-center gap-2 rounded-md bg-blue-600 text-white px-4 py-2 text-sm shadow-sm">
             Learn About Us
           </Link>
         </div>

@@ -16,6 +16,9 @@ export default function EmailOwnerButton({ listingId }: EmailOwnerButtonProps) {
     setMessage(null);
     setIsError(false);
 
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+
     try {
       const response = await fetch("/api/send-listing-email", {
         method: "POST",
@@ -23,7 +26,9 @@ export default function EmailOwnerButton({ listingId }: EmailOwnerButtonProps) {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ listingId }),
+        signal: controller.signal,
       });
+      clearTimeout(timeoutId);
 
       if (response.ok) {
         setMessage("Email sent successfully!");
@@ -35,8 +40,13 @@ export default function EmailOwnerButton({ listingId }: EmailOwnerButtonProps) {
         setIsError(true);
         setTimeout(() => setMessage(null), 5000);
       }
-    } catch (error) {
-      setMessage("An unexpected error occurred.");
+    } catch (error: any) {
+      clearTimeout(timeoutId);
+      if (error.name === 'AbortError') {
+        setMessage("Request timed out. Please try again.");
+      } else {
+        setMessage("An unexpected error occurred.");
+      }
       setIsError(true);
       console.error("Error sending email:", error);
     } finally {

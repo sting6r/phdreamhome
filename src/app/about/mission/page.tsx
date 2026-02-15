@@ -12,7 +12,7 @@ export default function MissionPage() {
           We combine curated listings, local expertise, and end‑to‑end support with responsive tools to help you move from search to ownership smoothly.
         </div>
         <div className="mt-2 flex items-center gap-2">
-          <Link prefetch={false} href="/about" className="inline-flex items-center gap-2 rounded-md bg-blue-600 text-white px-4 py-2 text-sm hover:bg-blue-500 shadow-sm">
+          <Link prefetch={false} href="/about" className="inline-flex items-center gap-2 rounded-md bg-blue-600 text-white px-4 py-2 text-sm shadow-sm">
             Learn More
           </Link>
           <Link prefetch={false} href="/contact" className="inline-flex items-center gap-2 rounded-md bg-purple-600 text-white px-4 py-2 text-sm hover:bg-purple-500 shadow-sm">

@@ -3,7 +3,7 @@ import { cookies } from "next/headers";
 import { prisma, withRetry } from "@lib/prisma";
 // Type safety check
 import type { Prisma } from "@prisma/client";
-import { supabaseAdmin, createSignedUrl } from "@lib/supabase";
+import { supabaseAdmin, createSignedUrl, getProxyImageUrl } from "@lib/supabase";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -73,12 +73,12 @@ export async function GET(req: Request) {
     }
   }
    const blogs: BlogPost[] = rows.map((p: any) => {
-    const coverUrl = p.coverPath ? `/api/image/proxy?path=${encodeURIComponent(p.coverPath)}` : null;
+    const coverUrl = p.coverPath ? getProxyImageUrl(p.coverPath) : null;
     const base = mine ? p.media : p.media.filter((m:any)=> m.published);
     const media: (BlogMedia & { published?: boolean })[] = base.map((m:any) => ({
       path: m.path,
       type: (m.type as "image" | "video") || "image",
-      url: `/api/image/proxy?path=${encodeURIComponent(m.path)}`,
+      url: getProxyImageUrl(m.path),
       published: !!m.published
     }));
     return {

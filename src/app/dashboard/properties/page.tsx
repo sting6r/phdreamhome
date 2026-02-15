@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState, useEffect, useRef } from "react";
 
 import { supabase } from "@lib/supabase";
-const fetcher = async (u: string) => {
+const fetcher = async (u: string, { signal }: { signal?: AbortSignal } = {}) => {
   const { data } = await supabase.auth.getSession();
   const token = data.session?.access_token;
   const headers: Record<string, string> = {};
@@ -13,25 +13,35 @@ const fetcher = async (u: string) => {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
 
+  const combinedSignal = signal 
+    ? (AbortSignal as any).any?.([signal, controller.signal]) ?? controller.signal
+    : controller.signal;
+
   try {
     const r = await fetch(u, { 
       headers,
-      signal: controller.signal
+      signal: combinedSignal
     });
-    clearTimeout(timeoutId);
     
     const text = await r.text();
+    let resData;
     try {
-      return JSON.parse(text);
-    } catch (e) {
-      console.error("Fetcher parse error:", u, r.status, text.slice(0, 200));
-      throw new Error(`Failed to parse response from ${u}`);
+      resData = JSON.parse(text);
+    } catch (e: any) {
+      if (e.name === 'AbortError' || combinedSignal.aborted) return null;
+      console.error(`Fetch parse error for ${u}. Status:`, r.status, "Body:", text.slice(0, 200));
+      resData = { error: "Invalid server response" };
     }
+
+    if (!r.ok) throw new Error(resData.error || `Fetch failed: ${r.status}`);
+    return resData;
   } catch (err: any) {
-    if (err.name === 'AbortError') {
-      console.warn(`Fetch to ${u} timed out`);
+    if (err.name === 'AbortError' || combinedSignal.aborted) {
+      return null;
     }
     throw err;
+  } finally {
+    clearTimeout(timeoutId);
   }
 };
 
@@ -48,7 +58,23 @@ export default function PropertiesPage() {
     const token = data.session?.access_token;
     const headers: Record<string,string> = { "Content-Type": "application/json" };
     if (token) headers["Authorization"] = `Bearer ${token}`;
-    await fetch(`/api/listings/${id}`, { method: "PUT", headers, body: JSON.stringify({ status }) });
+    
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+    try {
+      await fetch(`/api/listings/${id}`, { 
+        method: "PUT", 
+        headers, 
+        body: JSON.stringify({ status }),
+        signal: controller.signal
+      });
+    } catch (e: any) {
+      if (e.name === "AbortError") console.warn("setStatus timeout");
+      else console.error("setStatus error", e);
+    } finally {
+      clearTimeout(timeoutId);
+    }
     setOpenId(null);
     mutate();
   }
@@ -58,7 +84,23 @@ export default function PropertiesPage() {
     const token = data.session?.access_token;
     const headers: Record<string,string> = { "Content-Type": "application/json" };
     if (token) headers["Authorization"] = `Bearer ${token}`;
-    await fetch(`/api/listings/${id}`, { method: "PUT", headers, body: JSON.stringify({ featured }) });
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+    try {
+      await fetch(`/api/listings/${id}`, { 
+        method: "PUT", 
+        headers, 
+        body: JSON.stringify({ featured }),
+        signal: controller.signal
+      });
+    } catch (e: any) {
+      if (e.name === "AbortError") console.warn("setFeatured timeout");
+      else console.error("setFeatured error", e);
+    } finally {
+      clearTimeout(timeoutId);
+    }
     mutate();
   }
 
@@ -67,7 +109,23 @@ export default function PropertiesPage() {
     const token = data.session?.access_token;
     const headers: Record<string,string> = { "Content-Type": "application/json" };
     if (token) headers["Authorization"] = `Bearer ${token}`;
-    await fetch(`/api/listings/${id}`, { method: "PUT", headers, body: JSON.stringify({ featuredPreselling }) });
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+    try {
+      await fetch(`/api/listings/${id}`, { 
+        method: "PUT", 
+        headers, 
+        body: JSON.stringify({ featuredPreselling }),
+        signal: controller.signal
+      });
+    } catch (e: any) {
+      if (e.name === "AbortError") console.warn("setFeaturedPreselling timeout");
+      else console.error("setFeaturedPreselling error", e);
+    } finally {
+      clearTimeout(timeoutId);
+    }
     mutate();
   }
 
@@ -76,13 +134,42 @@ export default function PropertiesPage() {
     const token = data.session?.access_token;
     const headers: Record<string,string> = { "Content-Type": "application/json" };
     if (token) headers["Authorization"] = `Bearer ${token}`;
-    await fetch(`/api/listings/${id}`, { method: "PUT", headers, body: JSON.stringify({ published }) });
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+    try {
+      await fetch(`/api/listings/${id}`, { 
+        method: "PUT", 
+        headers, 
+        body: JSON.stringify({ published }),
+        signal: controller.signal
+      });
+    } catch (e: any) {
+      if (e.name === "AbortError") console.warn("setPublished timeout");
+      else console.error("setPublished error", e);
+    } finally {
+      clearTimeout(timeoutId);
+    }
     setOpenId(null);
     mutate();
   }
 
   async function remove(id: string) {
-    await fetch(`/api/listings/${id}`, { method: "DELETE" });
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+    try {
+      await fetch(`/api/listings/${id}`, { 
+        method: "DELETE",
+        signal: controller.signal
+      });
+    } catch (e: any) {
+      if (e.name === "AbortError") console.warn("remove timeout");
+      else console.error("remove error", e);
+    } finally {
+      clearTimeout(timeoutId);
+    }
     mutate();
   }
 

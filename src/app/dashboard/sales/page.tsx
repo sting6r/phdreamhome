@@ -3,22 +3,47 @@ import { useState, useEffect, useRef } from "react";
 import useSWR from "swr";
 import { supabase } from "@lib/supabase";
 import CurrencyInput from "@components/CurrencyInput";
+import SalesRentalDetailCard from "@components/SalesRentalDetailCard";
 
-const fetcher = async (u: string) => {
+const fetcher = async (u: string, { signal }: { signal?: AbortSignal } = {}) => {
   const { data } = await supabase.auth.getSession();
   const token = data.session?.access_token;
   const headers: Record<string, string> = {};
   if (token) headers["Authorization"] = `Bearer ${token}`;
   
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+  
+  // Use AbortSignal.any if available, otherwise just use our controller signal
+  // This allows SWR to abort the request when component unmounts
+  const combinedSignal = signal 
+    ? (AbortSignal as any).any?.([signal, controller.signal]) ?? controller.signal
+    : controller.signal;
+
   try {
-    const r = await fetch(u, { headers });
-    if (!r.ok) {
-      throw new Error(`Error ${r.status}: ${r.statusText}`);
+    const r = await fetch(u, { 
+      headers,
+      signal: combinedSignal
+    });
+    
+    const text = await r.text();
+    try {
+      const json = JSON.parse(text);
+      if (!r.ok) throw new Error(json.error || `Fetch failed: ${r.status}`);
+      return json;
+    } catch (e: any) {
+      if (e.name === 'AbortError' || combinedSignal.aborted) return null;
+      console.error("Sales fetcher parse error:", u, r.status, text.slice(0, 200));
+      throw new Error(`Failed to parse response from ${u}: ${e.message}`);
     }
-    return r.json();
-  } catch (err) {
+  } catch (err: any) {
+    if (err.name === 'AbortError' || combinedSignal.aborted) {
+      return null; // Return null instead of throwing for aborted requests
+    }
     console.error("Fetcher error:", err);
     throw err;
+  } finally {
+    clearTimeout(timeoutId);
   }
 };
 
@@ -59,6 +84,7 @@ export default function SalesPage() {
   const [activeTab, setActiveTab] = useState("In Progress");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [selectedSale, setSelectedSale] = useState<any>(null);
   const [formData, setFormData] = useState({
     listingId: "",
     clientName: "",
@@ -214,11 +240,26 @@ export default function SalesPage() {
       const headers: Record<string, string> = {};
       if (token) headers["Authorization"] = `Bearer ${token}`;
 
-      await fetch(`/api/sales/${id}`, { method: "DELETE", headers });
-      mutateSales();
-      setOpenMenuId(null);
-    } catch (err) {
-      console.error(err);
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
+      try {
+        await fetch(`/api/sales/${id}`, { 
+          method: "DELETE", 
+          headers,
+          signal: controller.signal
+        });
+        mutateSales();
+        setOpenMenuId(null);
+      } catch (err: any) {
+        if (err.name === 'AbortError') {
+          console.warn("Delete sale request timed out");
+        }
+        console.error(err);
+      } finally {
+        clearTimeout(timeoutId);
+      }
+    } catch (e: any) {
+      console.error("Delete outer error:", e);
     }
   };
 
@@ -280,18 +321,29 @@ export default function SalesPage() {
       const url = editingId ? `/api/sales/${editingId}` : "/api/sales";
       const method = editingId ? "PATCH" : "POST";
       
-      const res = await fetch(url, {
-        method,
-        headers,
-        body: JSON.stringify(payload),
-      });
-
-      if (res.ok) {
-        mutateSales();
-        resetForm();
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
+      try {
+        const res = await fetch(url, {
+          method,
+          headers,
+          body: JSON.stringify(payload),
+          signal: controller.signal
+        });
+        if (res.ok) {
+          mutateSales();
+          resetForm();
+        }
+      } catch (err: any) {
+        if (err.name === 'AbortError') {
+          console.warn("Submit sale request timed out");
+        }
+        console.error(err);
+      } finally {
+        clearTimeout(timeoutId);
       }
-    } catch (err) {
-      console.error(err);
+    } catch (e: any) {
+      console.error("Submit outer error:", e);
     }
   };
 
@@ -312,6 +364,30 @@ export default function SalesPage() {
           Failed to load data. Please try refreshing the page.
         </div>
       )}
+
+      {/* Tabs Navigation */}
+      <div className="flex items-center gap-1 border-b border-slate-200 bg-white px-2 pt-1 rounded-t-xl mb-3">
+        {STATUS_CATEGORIES.map((status) => {
+          const count = mounted && sales ? sales.filter((s: any) => s.status === status).length : 0;
+          const isActive = activeTab === status;
+          return (
+            <button
+              key={status}
+              onClick={() => setActiveTab(status)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-bold transition-all border-b-2 relative ${
+                isActive 
+                  ? "border-blue-600 text-blue-600" 
+                  : "border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50"
+              }`}
+            >
+              {status}
+              <span className={`px-1 rounded-md text-[9px] ${isActive ? "bg-blue-100 text-blue-600" : "bg-slate-100 text-slate-500"}`}>
+                {mounted ? count : "..."}
+              </span>
+            </button>
+          );
+        })}
+      </div>
 
       {isFormOpen && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-1">
@@ -534,100 +610,84 @@ export default function SalesPage() {
         </div>
       )}
 
-      <div className="card overflow-hidden p-0">
-        <div className="overflow-x-auto">
-          <table className="w-full text-xs text-left min-w-[1000px]">
-            <thead className="bg-[#F4DDFF] border-b text-slate-700 font-semibold">
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+        <div className="overflow-x-auto max-h-[500px]">
+          <table className="w-full text-left border-collapse">
+            <thead className="bg-slate-50 border-b border-slate-200 sticky top-0 z-10">
               <tr>
-                <th className="px-3 py-1.5">Date</th>
-                <th className="px-3 py-1.5">Category</th>
-                <th className="px-3 py-1.5">Client</th>
-                <th className="px-3 py-1.5">Property</th>
-                <th className="px-3 py-1.5">Amount</th>
-                <th className="px-3 py-1.5">Status</th>
-                <th className="px-3 py-1.5"></th>
+                <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Date</th>
+                <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Client</th>
+                <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Property</th>
+                <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-right">Amount</th>
+                <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-center">Category</th>
+                <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-center">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-200">
-              {sales && sales.length > 0 ? (
-                sales.map((sale: any) => (
-                  <tr key={sale.id} className="hover:bg-slate-50 transition-colors group">
-                    <td className="px-3 py-1.5 text-slate-500">
-                      {mounted ? new Date(sale.saleDate).toLocaleDateString("en-PH") : ""}
-                    </td>
-                    <td className="px-3 py-1.5">
-                      <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-medium ${
-                        sale.salesCategory === "Rental" ? "bg-orange-100 text-orange-700" : "bg-purple-100 text-purple-700"
-                      }`}>
-                        {sale.salesCategory || "Sale"}
-                      </span>
-                    </td>
-                    <td className="px-3 py-1.5">
-                      <div className="font-medium text-slate-900 leading-tight">{sale.clientName}</div>
-                      <div className="text-[10px] text-slate-500 leading-tight">{sale.clientEmail || "No email"}</div>
-                    </td>
-                    <td className="px-3 py-1.5 text-slate-600">
-                      <div className="leading-tight">{sale.listing?.title || "Direct Sale / Other"}</div>
-                      {sale.salesCategory === "Rental" && sale.rentalStartDate && (
-                        <div className="text-[9px] text-slate-400 mt-0.5 leading-tight">
-                          {mounted ? (
-                            <>
-                              {new Date(sale.rentalStartDate).toLocaleDateString("en-PH")} - {sale.rentalDueDate ? new Date(sale.rentalDueDate).toLocaleDateString("en-PH") : "Present"}
-                            </>
-                          ) : ""}
-                        </div>
-                      )}
-                    </td>
-                    <td className="px-3 py-1.5 font-semibold text-slate-900">
-                      {mounted ? `₱${(sale.amount || 0).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ""}
-                    </td>
-                    <td className="px-3 py-1.5">
-                      <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-medium ${
-                        sale.status === "Closed" ? "bg-green-100 text-green-700" :
-                        sale.status === "Cancelled" ? "bg-red-100 text-red-700" :
-                        "bg-blue-100 text-blue-700"
-                      }`}>
-                        {sale.status || "Unknown"}
-                      </span>
-                    </td>
-                    <td className="px-3 py-1.5 text-right relative">
-                      <button 
-                        onClick={() => setOpenMenuId(openMenuId === sale.id ? null : sale.id)}
-                        className="p-1 hover:bg-slate-200 rounded-full transition-colors"
-                      >
-                        <Icons.MoreVertical />
-                      </button>
-                      
-                      {openMenuId === sale.id && (
-                        <div className="absolute right-6 top-12 bg-white shadow-lg rounded-lg border py-1 w-32 z-10 animate-in fade-in slide-in-from-top-1 duration-200">
-                          <button 
-                            onClick={() => handleEdit(sale)}
-                            className="w-full text-left px-4 py-2 text-xs hover:bg-slate-50 flex items-center gap-2"
-                          >
-                            <Icons.Pencil /> Edit
-                          </button>
-                          <button 
-                            onClick={() => handleDelete(sale.id)}
-                            className="w-full text-left px-4 py-2 text-xs hover:bg-slate-50 text-red-600 flex items-center gap-2"
-                          >
-                            <Icons.Trash2 /> Delete
-                          </button>
-                        </div>
-                      )}
-                    </td>
-                  </tr>
-                ))
-              ) : (
+            <tbody className="divide-y divide-slate-100">
+              {!mounted || !sales ? (
                 <tr>
-                  <td colSpan={7} className="px-6 py-10 text-center text-slate-500 italic">
-                    {salesError ? "Error loading sales records." : 
-                     (sales ? "No sales records found." : "Loading sales records...")}
+                  <td colSpan={6} className="px-4 py-8 text-center text-slate-500 text-xs">
+                    {mounted ? "No sales records found." : "Loading..."}
                   </td>
                 </tr>
+              ) : (
+                sales
+                  .filter((s: any) => s.status === activeTab)
+                  .map((sale: any) => (
+                    <tr 
+                      key={sale.id} 
+                      onClick={() => setSelectedSale(sale)}
+                      className={`hover:bg-blue-50/30 transition-colors cursor-pointer group ${selectedSale?.id === sale.id ? 'bg-blue-50/50' : ''}`}
+                    >
+                      <td className="px-4 py-3 text-xs text-slate-600 whitespace-nowrap">
+                        {mounted && sale.saleDate ? new Date(sale.saleDate).toLocaleDateString("en-PH", { year: 'numeric', month: 'short', day: 'numeric' }) : (mounted ? "N/A" : "...")}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="text-xs font-bold text-slate-800">{sale.clientName}</div>
+                        <div className="text-[10px] text-slate-500">{sale.clientPhone}</div>
+                      </td>
+                      <td className="px-4 py-3 text-xs text-slate-600">
+                        {sale.listing?.title || "Custom Entry"}
+                      </td>
+                      <td className="px-4 py-3 text-xs font-bold text-slate-900 text-right">
+                        {mounted ? `₱${Number(sale.amount).toLocaleString("en-PH", { minimumFractionDigits: 2 })}` : "₱..."}
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold ${
+                          sale.salesCategory === "Rental" ? "bg-orange-100 text-orange-700" : "bg-purple-100 text-purple-700"
+                        }`}>
+                          {sale.salesCategory || "Sale"}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-center relative">
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); setOpenMenuId(openMenuId === sale.id ? null : sale.id); }}
+                          className="p-1.5 hover:bg-white rounded-full transition-colors text-slate-400 hover:text-slate-600"
+                        >
+                          <Icons.MoreVertical />
+                        </button>
+                        
+                        {openMenuId === sale.id && (
+                          <div className="absolute right-4 top-10 bg-white border border-slate-200 rounded-lg shadow-xl z-20 py-1 min-w-[120px]">
+                            <button onClick={() => handleEdit(sale)} className="w-full px-3 py-1.5 text-left text-[10px] font-medium text-slate-700 hover:bg-slate-50 flex items-center gap-2">
+                              <Icons.Pencil /> Edit
+                            </button>
+                            <button onClick={() => handleDelete(sale.id)} className="w-full px-3 py-1.5 text-left text-[10px] font-medium text-red-600 hover:bg-red-50 flex items-center gap-2">
+                              <Icons.Trash2 /> Delete
+                            </button>
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  ))
               )}
             </tbody>
           </table>
         </div>
+      </div>
+      
+      <div className="mt-6">
+        <SalesRentalDetailCard sale={selectedSale} />
       </div>
     </div>
   );

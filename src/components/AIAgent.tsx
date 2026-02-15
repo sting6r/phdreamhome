@@ -8,10 +8,30 @@ import { usePathname, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import Script from "next/script";
-import { X, Send, User, Minimize2, Maximize2, Loader2, ExternalLink, Image as ImageIcon, ChevronLeft, Undo2, GripHorizontal, Building2, MapPin, DollarSign, Info, Sparkles, ClipboardList, ChevronRight, Share2, Copy, Facebook, Twitter, Check, Mic, MicOff, Phone, Mail, Link as LinkIcon, Calendar, Clock
+import { X, Send, User, Minimize2, Maximize2, Loader2, ExternalLink, Image as ImageIcon, ChevronLeft, Undo2, GripHorizontal, Building2, MapPin, Info, Sparkles, ClipboardList, ChevronRight, Share2, Copy, Facebook, Twitter, Check, Mic, MicOff, Phone, Mail, Link as LinkIcon, Calendar, Clock
 } from "lucide-react";
 import Link from "next/link";
-import { supabase } from "@/lib/supabase";
+import { supabase, getProxyImageUrl } from "@/lib/supabase";
+
+const PesoSign = ({ size = 16, className = "" }: { size?: number; className?: string }) => (
+  <svg 
+    viewBox="0 0 24 24" 
+    width={size} 
+    height={size} 
+    fill="none" 
+    stroke="currentColor" 
+    strokeWidth="2" 
+    strokeLinecap="round" 
+    strokeLinejoin="round"
+    className={className}
+  >
+    <path d="M7 6h8a3 3 0 0 1 0 6H7" />
+    <path d="M7 12h8a3 3 0 0 1 0 6H7" />
+    <path d="M5 9h10" />
+    <path d="M5 15h10" />
+    <path d="M7 6v12" />
+  </svg>
+);
 
 export default function AIAgent() {
   const pathname = usePathname();
@@ -20,7 +40,7 @@ export default function AIAgent() {
   const [isOpen, setIsOpen] = useState(false);
   
   useEffect(() => {
-    setMounted(true);
+    // Handled in combined useEffect
   }, [pathname]);
 
   const [isMinimized, setIsMinimized] = useState(false);
@@ -55,17 +75,36 @@ export default function AIAgent() {
   const [agentProfileImage, setAgentProfileImage] = useState<string | null>(null);
 
   useEffect(() => {
+    if (typeof window === "undefined") return;
     async function fetchAgentProfile() {
+      const agentProfileController = new AbortController();
+      const agentProfileTimeoutId = setTimeout(() => agentProfileController.abort(), 10000);
       try {
-        const res = await fetch('/api/profile');
+        let res;
+        try {
+          res = await fetch('/api/public-profile', { signal: agentProfileController.signal });
+        } finally {
+          clearTimeout(agentProfileTimeoutId);
+        }
+        
         if (res.ok) {
-          const data = await res.json();
-          if (data.imageUrl) {
+          const text = await res.text();
+          let data;
+          try {
+            data = JSON.parse(text);
+          } catch (e) {
+            console.error("Agent profile parse error. Status:", res.status, "Body:", text.slice(0, 200));
+            return;
+          }
+          if (data && data.imageUrl) {
             setAgentProfileImage(data.imageUrl);
           }
         }
-      } catch (error) {
+      } catch (error: any) {
+        if (error.name === 'AbortError') return;
         console.error('Error fetching agent profile:', error);
+      } finally {
+        clearTimeout(agentProfileTimeoutId);
       }
     }
     fetchAgentProfile();
@@ -107,14 +146,16 @@ export default function AIAgent() {
   const propertyFormJustSubmittedRef = useRef<boolean>(false);
   const syncAbortControllerRef = useRef<AbortController | null>(null);
 
-  // Auto-resize textarea logic
   useEffect(() => {
-    const adjustHeight = (el: HTMLTextAreaElement) => {
-      el.style.height = "auto";
-      el.style.height = `${el.scrollHeight}px`;
-    };
-    const textareas = document.querySelectorAll("textarea");
-    textareas.forEach(el => adjustHeight(el as HTMLTextAreaElement));
+    setMounted(true);
+    if (typeof window !== "undefined") {
+      const adjustHeight = (el: HTMLTextAreaElement) => {
+        el.style.height = "auto";
+        el.style.height = `${el.scrollHeight}px`;
+      };
+      const textareas = document.querySelectorAll("textarea");
+      textareas.forEach(el => adjustHeight(el as HTMLTextAreaElement));
+    }
   }, [chatInput, propertyFormData.notes, isOpen, showPropertyForm]);
 
   // Define utility functions before they are used in hooks
@@ -159,18 +200,30 @@ export default function AIAgent() {
     }
     syncAbortControllerRef.current = new AbortController();
     const signal = syncAbortControllerRef.current.signal;
+    const timeoutId = setTimeout(() => {
+      if (syncAbortControllerRef.current?.signal === signal) {
+        syncAbortControllerRef.current.abort();
+      }
+    }, 10000);
     
     try {
       console.log(`Syncing ${msgs.length} messages to inquiry ${targetId}`);
       const origin = typeof window !== "undefined" ? window.location.origin : "";
       const cleaned = sanitizeMessages(msgs as any[]);
-      const res = await fetch(`${origin}/api/inquiries/${targetId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ transcript: cleaned }),
-        signal,
-        cache: 'no-store', // Avoid caching for PATCH requests
-      });
+      
+      let res;
+      try {
+        res = await fetch(`${origin}/api/inquiries/${targetId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ transcript: cleaned }),
+          signal,
+          cache: 'no-store', // Avoid caching for PATCH requests
+        });
+      } finally {
+        clearTimeout(timeoutId);
+      }
+      
       if (!res.ok) {
         const errData = await safeJson(res);
         console.error("Sync failed server-side:", errData);
@@ -333,12 +386,32 @@ export default function AIAgent() {
         }
 
         // Fetch more listings to give the AI better context
-        const res = await fetch(listingsUrl, { 
-          cache: 'no-store',
-          signal 
-        });
-        const data = await res.json().catch(() => ({}));
-        const listings = Array.isArray((data as any)?.listings) ? (data as any).listings : [];
+        const listingsController = new AbortController();
+        const listingsTimeoutId = setTimeout(() => listingsController.abort(), 10000);
+        
+        // Use the passed signal if available, otherwise use our local controller
+        const fetchSignal = signal ? (AbortSignal as any).any([signal, listingsController.signal]) : listingsController.signal;
+
+        let res;
+        try {
+          res = await fetch(listingsUrl, { 
+            cache: 'no-store',
+            signal: fetchSignal
+          });
+        } finally {
+          clearTimeout(listingsTimeoutId);
+        }
+        
+        const text = await res.text();
+        let data;
+        try {
+          data = JSON.parse(text);
+        } catch (e) {
+          console.error("AI Agent listings fetch parse error. Status:", res.status, "Body:", text.slice(0, 200));
+          data = { listings: [] };
+        }
+        
+        const listings = Array.isArray(data?.listings) ? data.listings : [];
         const safeListings = Array.isArray(listings) ? listings : [];
         if (safeListings.length) {
           const lines = safeListings.map((l: any, i: number) => {
@@ -376,23 +449,41 @@ export default function AIAgent() {
   };
 
   useEffect(() => {
-    const controller = new AbortController();
+    if (typeof window === "undefined") return;
+    const providerController = new AbortController();
+    const providerTimeoutId = setTimeout(() => providerController.abort(), 10000);
     (async () => {
       try {
-        const res = await fetch("/api/chat", { 
-          method: "GET", 
-          cache: "no-store",
-          signal: controller.signal 
-        });
-        const data = await res.json().catch(() => ({}));
+        let res;
+        try {
+          res = await fetch("/api/chat", { 
+            method: "GET", 
+            cache: "no-store",
+            signal: providerController.signal 
+          });
+        } finally {
+          clearTimeout(providerTimeoutId);
+        }
+        
+        const text = await res.text();
+        let data;
+        try {
+          data = JSON.parse(text);
+        } catch (e) {
+          console.error("AI Agent chat config parse error:", text.slice(0, 200));
+          return;
+        }
+
         if (data && (data.provider || data.model)) {
           setProviderInfo({ provider: String(data.provider || ""), model: String(data.model || "") });
         }
       } catch (e: any) {
         if (e.name === 'AbortError') return;
+      } finally {
+        clearTimeout(providerTimeoutId);
       }
     })();
-    return () => controller.abort();
+    return () => providerController.abort();
   }, []);
 
   useEffect(() => {
@@ -412,7 +503,7 @@ export default function AIAgent() {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!mounted || hasFetchedProfile.current) return;
+    if (!mounted || hasFetchedProfile.current || typeof window === "undefined") return;
     hasFetchedProfile.current = true;
 
     // Check localStorage for returning visitor
@@ -430,8 +521,10 @@ export default function AIAgent() {
       }
     }
 
-    const controller = new AbortController();
-    const sig = controller.signal;
+    const profileHistoryController = new AbortController();
+    const sig = profileHistoryController.signal;
+    const profileHistoryTimeoutId = setTimeout(() => profileHistoryController.abort(), 10000);
+
     const fetchProfileAndHistory = async () => {
       // 1. Try to get from sessionStorage first
       const saved = sessionStorage.getItem("ai_agent_form_submitted");
@@ -457,11 +550,20 @@ export default function AIAgent() {
 
       // 2. If not in session, try to get from profile if logged in
       try {
-        const res = await fetch("/api/profile", { 
-          signal: sig, 
-          cache: "no-store",
-          headers: { "Accept": "application/json" }
-        });
+        const profileController = new AbortController();
+        const profileTimeoutId = setTimeout(() => profileController.abort(), 10000);
+        
+        let res;
+        try {
+          res = await fetch("/api/profile", { 
+            signal: (AbortSignal as any).any([sig, profileController.signal]), 
+            cache: "no-store",
+            headers: { "Accept": "application/json" }
+          });
+        } finally {
+          clearTimeout(profileTimeoutId);
+        }
+
         if (res.ok) {
           const profile = await safeJson(res);
           if (profile && profile.name && profile.email) {
@@ -475,16 +577,24 @@ export default function AIAgent() {
             });
             
             // Auto-check for existing history for this logged-in user
-            const leadRes = await fetch("/api/leads", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              signal: sig,
-              body: JSON.stringify({ 
-                name: profile.name, 
-                email: profile.email, 
-                phone: profile.phone || "" 
-              }),
-            });
+            const leadController = new AbortController();
+            const leadTimeoutId = setTimeout(() => leadController.abort(), 10000);
+            
+            let leadRes;
+            try {
+              leadRes = await fetch("/api/leads", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                signal: (AbortSignal as any).any([sig, leadController.signal]),
+                body: JSON.stringify({ 
+                  name: profile.name, 
+                  email: profile.email, 
+                  phone: profile.phone || "" 
+                }),
+              });
+            } finally {
+              clearTimeout(leadTimeoutId);
+            }
 
             if (leadRes.ok) {
               const data = await safeJson(leadRes);
@@ -549,7 +659,7 @@ export default function AIAgent() {
 
     fetchProfileAndHistory();
     return () => {
-      try { controller.abort(); } catch {}
+      try { profileHistoryController.abort(); } catch {}
     };
   }, [mounted, syncTranscriptToDb, chatInstance, currentInquiryId]);
   
@@ -586,15 +696,23 @@ export default function AIAgent() {
     const hasPhone = !!formData.phone.trim();
 
     if (hasName && hasEmail && (!isPhoneRequired || hasPhone)) {
+      const leadsController = new AbortController();
+      const leadsTimeoutId = setTimeout(() => leadsController.abort(), 10000);
       try {
-        const response = await fetch("/api/leads", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Accept": "application/json"
-          },
-          body: JSON.stringify(formData),
-        });
+        let response;
+        try {
+          response = await fetch("/api/leads", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Accept": "application/json"
+            },
+            signal: leadsController.signal,
+            body: JSON.stringify(formData),
+          });
+        } finally {
+          clearTimeout(leadsTimeoutId);
+        }
 
         if (response.ok) {
           const data = await safeJson(response);
@@ -742,7 +860,30 @@ export default function AIAgent() {
           // Handle Choices/Buttons
           if (part.startsWith('[CHOICES]')) {
             const content = part.replace('[CHOICES]', '').replace('[/CHOICES]', '').trim();
-            const options = content.split('|').map(opt => opt.trim()).filter(Boolean);
+            const allOptions = content.split('|').map(opt => opt.trim()).filter(Boolean);
+            
+            // Filter contact-related options unless explicitly relevant or asked for by the user/AI context
+            const contactKeywords = ['send message', 'call agent', 'email agent', 'inquire', 'contact us', 'call us', 'contact agent', 'email us'];
+            const options = allOptions.filter(opt => {
+              const lower = opt.toLowerCase();
+              if (contactKeywords.includes(lower)) {
+                // Only show contact buttons if the current AI message context mentions contacting or if specifically requested
+                const textLower = text.toLowerCase();
+                const hasContactIntent = textLower.includes('contact') || 
+                                       textLower.includes('speak') || 
+                                       textLower.includes('agent') || 
+                                       textLower.includes('call') || 
+                                       textLower.includes('email') || 
+                                       textLower.includes('reach out') ||
+                                       textLower.includes('inquire') ||
+                                       textLower.includes('number') ||
+                                       textLower.includes('address');
+                return hasContactIntent;
+              }
+              return true;
+            });
+
+            if (options.length === 0) return null;
             
             return (
               <div key={index} className="flex flex-wrap gap-2 my-3">
@@ -892,7 +1033,7 @@ export default function AIAgent() {
                   <div className="relative w-24 h-24 sm:w-32 sm:h-32 rounded-full overflow-hidden border-4 border-white flex-shrink-0 bg-slate-50 shadow-sm">
                     {agentImage ? (
                       <Image 
-                        src={agentImage} 
+                        src={getProxyImageUrl(agentImage)} 
                         alt={data.Name || "Agent"} 
                         fill 
                         className="object-cover"
@@ -1050,7 +1191,7 @@ export default function AIAgent() {
                             type="date" 
                             name="tour-date" 
                             required
-                            min={new Date().toISOString().split('T')[0]}
+                            min={mounted ? new Date().toISOString().split('T')[0] : ""}
                             className="w-full bg-slate-50 border border-slate-200 rounded-lg py-1.5 text-xs focus:ring-1 focus:ring-purple-500 outline-none"
                           />
                         </div>
@@ -1135,10 +1276,10 @@ export default function AIAgent() {
 
                   <div className="space-y-0.5">
                     <div className="flex items-center gap-1 text-[9px] font-medium text-slate-400 uppercase">
-                      <DollarSign size={10} /> {data.Mode === 'Rent' ? 'Monthly Rent' : 'Selling Price'}
+                      <PesoSign size={10} /> {data.Mode === 'Rent' ? 'Monthly Rent' : 'Selling Price'}
                     </div>
                     <div className="text-xs font-bold text-purple-600">
-                      {isNaN(Number(data.Price)) ? data.Price : `₱${Number(data.Price).toLocaleString('en-PH')}`}
+                      {mounted ? (isNaN(Number(data.Price)) ? data.Price : `₱${Number(data.Price).toLocaleString('en-PH')}`) : ""}
                     </div>
                   </div>
 
@@ -1195,7 +1336,7 @@ export default function AIAgent() {
                 ) : (
                   <div className="relative group">
                     <Image 
-                      src={url} 
+                      src={getProxyImageUrl(url)} 
                       alt={alt} 
                       width={400}
                       height={300}
@@ -1476,13 +1617,25 @@ export default function AIAgent() {
         content: text,
         parts: [{ type: 'text' as const, text: text }]
       };
+      const searchController = new AbortController();
+      const searchTimeoutId = setTimeout(() => searchController.abort(), 10000);
       try {
         const qs = new URLSearchParams();
         if (selected) qs.set("status", selected);
         if (inquireSelectedCity) qs.set("city", inquireSelectedCity);
         if (inquireMaxPrice != null) qs.set("maxPrice", String(inquireMaxPrice));
         if (inquireBedrooms != null) qs.set("bedrooms", String(inquireBedrooms));
-        const res = await fetch(`/api/public-listings?${qs.toString()}`, { cache: "no-store" });
+        
+        let res;
+        try {
+          res = await fetch(`/api/public-listings?${qs.toString()}`, { 
+            cache: "no-store",
+            signal: searchController.signal
+          });
+        } finally {
+          clearTimeout(searchTimeoutId);
+        }
+        
         const data = await safeJson(res);
         const listings = Array.isArray(data?.listings) ? data.listings : [];
         const samples = listings.slice(0, Math.max(1, Math.min(3, listings.length)));
@@ -1578,13 +1731,25 @@ export default function AIAgent() {
         content: text,
         parts: [{ type: 'text' as const, text: text }]
       };
+      const budgetController = new AbortController();
+      const budgetTimeoutId = setTimeout(() => budgetController.abort(), 10000);
       try {
         const qs = new URLSearchParams();
         if (inquireFilterStatus) qs.set("status", inquireFilterStatus);
         if (inquireSelectedCity) qs.set("city", inquireSelectedCity);
         qs.set("maxPrice", String(max));
         if (inquireBedrooms != null) qs.set("bedrooms", String(inquireBedrooms));
-        const res = await fetch(`/api/public-listings?${qs.toString()}`, { cache: "no-store" });
+        
+        let res;
+        try {
+          res = await fetch(`/api/public-listings?${qs.toString()}`, { 
+            cache: "no-store",
+            signal: budgetController.signal 
+          });
+        } finally {
+          clearTimeout(budgetTimeoutId);
+        }
+        
         const data = await safeJson(res);
         const listings = Array.isArray(data?.listings) ? data.listings : [];
         const samples = listings.slice(0, Math.max(1, Math.min(3, listings.length)));
@@ -1660,13 +1825,25 @@ export default function AIAgent() {
         content: text,
         parts: [{ type: 'text' as const, text: text }]
       };
+      const bedsController = new AbortController();
+      const bedsTimeoutId = setTimeout(() => bedsController.abort(), 10000);
       try {
         const qs = new URLSearchParams();
         if (inquireFilterStatus) qs.set("status", inquireFilterStatus);
         if (inquireSelectedCity) qs.set("city", inquireSelectedCity);
         if (inquireMaxPrice != null) qs.set("maxPrice", String(inquireMaxPrice));
         qs.set("bedrooms", String(bedsMin));
-        const res = await fetch(`/api/public-listings?${qs.toString()}`, { cache: "no-store" });
+        
+        let res;
+        try {
+          res = await fetch(`/api/public-listings?${qs.toString()}`, { 
+            cache: "no-store",
+            signal: bedsController.signal
+          });
+        } finally {
+          clearTimeout(bedsTimeoutId);
+        }
+        
         const data = await safeJson(res);
         const listings = Array.isArray(data?.listings) ? data.listings : [];
         const samples = listings.slice(0, Math.max(1, Math.min(3, listings.length)));
@@ -1921,12 +2098,32 @@ export default function AIAgent() {
         content: textOnlyAll,
         parts: [{ type: 'text' as const, text: textOnlyAll }]
       };
+      const featuredController = new AbortController();
+      const featuredTimeoutId = setTimeout(() => featuredController.abort(), 10000);
       try {
         const qs = new URLSearchParams();
         qs.set("featured", "true");
         if (inquireFilterStatus) qs.set("status", inquireFilterStatus);
-        const res = await fetch(`/api/public-listings?${qs.toString()}`, { cache: "no-store" });
-        const data = await safeJson(res);
+        
+        let res;
+        try {
+          res = await fetch(`/api/public-listings?${qs.toString()}`, { 
+            cache: "no-store",
+            signal: featuredController.signal
+          });
+        } finally {
+          clearTimeout(featuredTimeoutId);
+        }
+        
+        const text = await res.text();
+        let data;
+        try {
+          data = JSON.parse(text);
+        } catch (e) {
+          console.error("AI Agent featured listings parse error:", text.slice(0, 200));
+          data = { listings: [] };
+        }
+
         const listings = Array.isArray(data?.listings) ? data.listings : [];
         const samples = listings.slice(0, Math.max(1, Math.min(3, listings.length)));
         const makeLoc = (l: any) => [l.address, l.city, l.state, l.country].filter(Boolean).join(", ");
@@ -1983,6 +2180,8 @@ export default function AIAgent() {
         }
         setChatInput("");
         return;
+      } finally {
+        clearTimeout(featuredTimeoutId);
       }
     }
       setInquireSelectedCity(typedCity);
@@ -1992,14 +2191,34 @@ export default function AIAgent() {
         content: typedCity,
         parts: [{ type: 'text' as const, text: typedCity }]
       };
+      const cityController = new AbortController();
+      const cityTimeoutId = setTimeout(() => cityController.abort(), 10000);
       try {
         const qs = new URLSearchParams();
         if (inquireFilterStatus) qs.set("status", inquireFilterStatus);
         if (typedCity) qs.set("city", typedCity);
         if (inquireMaxPrice != null) qs.set("maxPrice", String(inquireMaxPrice));
         if (inquireBedrooms != null) qs.set("bedrooms", String(inquireBedrooms));
-        const res = await fetch(`/api/public-listings?${qs.toString()}`, { cache: "no-store" });
-        const data = await safeJson(res);
+        
+        let res;
+        try {
+          res = await fetch(`/api/public-listings?${qs.toString()}`, { 
+            cache: "no-store",
+            signal: cityController.signal
+          });
+        } finally {
+          clearTimeout(cityTimeoutId);
+        }
+        
+        const text = await res.text();
+        let data;
+        try {
+          data = JSON.parse(text);
+        } catch (e) {
+          console.error("AI Agent city listings parse error:", text.slice(0, 200));
+          data = { listings: [] };
+        }
+
         const listings = Array.isArray(data?.listings) ? data.listings : [];
         const samples = listings.slice(0, Math.max(1, Math.min(3, listings.length)));
         if (samples.length === 0) {
@@ -2076,6 +2295,8 @@ export default function AIAgent() {
         setShowInChatQuickActions(true);
         setChatInput("");
         return;
+      } finally {
+        clearTimeout(cityTimeoutId);
       }
     }
 
@@ -2117,17 +2338,32 @@ export default function AIAgent() {
         const formDataUpload = new FormData();
         formDataUpload.append("files", imageFile);
         
-        const uploadRes = await fetch("/api/upload", {
-          method: "POST",
-          body: formDataUpload,
-        });
-
-        if (!uploadRes.ok) {
-          const err = await uploadRes.json();
-          throw new Error(err.error || "Failed to upload image");
+        const uploadController = new AbortController();
+        const uploadTimeoutId = setTimeout(() => uploadController.abort(), 10000);
+        let uploadRes;
+        try {
+          uploadRes = await fetch("/api/upload", {
+            method: "POST",
+            body: formDataUpload,
+            signal: uploadController.signal,
+          });
+        } finally {
+          clearTimeout(uploadTimeoutId);
         }
 
-        const uploadData = await uploadRes.json();
+        const text = await uploadRes.text();
+        let uploadData;
+        try {
+          uploadData = JSON.parse(text);
+        } catch (e) {
+          console.error("Image upload parse error. Status:", uploadRes.status, "Body:", text.slice(0, 200));
+          throw new Error("Invalid server response during upload");
+        }
+
+        if (!uploadRes.ok) {
+          throw new Error(uploadData.error || "Failed to upload image");
+        }
+
         const imageUrl = uploadData.signedUrls?.[0];
 
         if (!imageUrl) {
@@ -2382,7 +2618,7 @@ export default function AIAgent() {
             >
               <div className="absolute inset-0 bg-gradient-to-tr from-purple-600/20 to-transparent" />
               <Image 
-                src="/girl.png" 
+                src={getProxyImageUrl(agentProfileImage || "/girl.png")} 
                 alt="AI Assistant" 
                 width={56} 
                 height={56} 
@@ -2683,11 +2919,19 @@ export default function AIAgent() {
                           } else {
                             try {
                               if (formData.name && formData.email) {
-                                const response = await fetch("/api/leads", {
-                                  method: "POST",
-                                  headers: { "Content-Type": "application/json" },
-                                  body: JSON.stringify({ name: formData.name, email: formData.email, phone: formData.phone || "" })
-                                });
+                                const newChatLeadsController = new AbortController();
+                                const newChatLeadsTimeoutId = setTimeout(() => newChatLeadsController.abort(), 10000);
+                                let response;
+                                try {
+                                  response = await fetch("/api/leads", {
+                                    method: "POST",
+                                    headers: { "Content-Type": "application/json" },
+                                    signal: newChatLeadsController.signal,
+                                    body: JSON.stringify({ name: formData.name, email: formData.email, phone: formData.phone || "" })
+                                  });
+                                } finally {
+                                  clearTimeout(newChatLeadsTimeoutId);
+                                }
                                 if (response.ok) {
                                   const data = await safeJson(response);
                                   const inquiryId = data?.inquiry?.id || null;
@@ -3009,7 +3253,7 @@ export default function AIAgent() {
                         {imagePreview && (
                           <div className="relative mb-2 inline-block">
                             <Image 
-                              src={imagePreview} 
+                              src={getProxyImageUrl(imagePreview)} 
                               alt="Preview" 
                               width={80}
                               height={80}
@@ -3159,7 +3403,7 @@ export default function AIAgent() {
                     ) : (
                       <div className="relative w-full h-full">
                         <Image
-                          src={previewMedia.url}
+                          src={getProxyImageUrl(previewMedia.url)}
                           alt={previewMedia.alt || "Preview"}
                           fill
                           className="object-contain"

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma, withRetry } from "@lib/prisma";
 import { cookies } from "next/headers";
-import { supabaseAdmin, createSignedUrl } from "@lib/supabase";
+import { supabaseAdmin, createSignedUrl, getProxyImageUrl } from "@lib/supabase";
 import { createServerSideClient } from "@lib/supabase-server";
 export const runtime = "nodejs";
 
@@ -205,7 +205,7 @@ export async function GET(req: Request) {
 
     // Construct proxy URL if user has an image path, otherwise use signed URL
     let imageUrl = dbUser?.image 
-      ? `/api/image/proxy?path=${encodeURIComponent(dbUser.image)}` 
+      ? getProxyImageUrl(dbUser.image) 
       : signed;
     
     return NextResponse.json({

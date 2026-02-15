@@ -67,6 +67,8 @@ export default function ContactPage() {
     setError(null);
     setSent(null);
     setLoading(true);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
     try {
       if (!form.name || !form.email || !form.subject || !form.message) {
         setError("Please fill all required fields");
@@ -78,9 +80,17 @@ export default function ContactPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...form, type: "Contact" }),
+        signal: controller.signal,
       });
-
-      const data = await res.json();
+      
+      let data;
+      try {
+        const text = await res.text();
+        data = text ? JSON.parse(text) : {};
+      } catch (e) {
+        console.error("ContactPage: JSON parse error:", e);
+        data = { error: "Invalid server response" };
+      }
 
       if (!res.ok || data.error) {
         setError(data.error || "Failed to send message");
@@ -90,10 +100,15 @@ export default function ContactPage() {
         setForm({ name: "", email: "", phone: "", subject: "", message: "" });
         setTimeout(() => setSent(null), 5000);
       }
-    } catch (err) {
-      setError("An unexpected error occurred");
+    } catch (err: any) {
+      if (err.name === 'AbortError') {
+        setError("Request timed out. Please try again.");
+      } else {
+        setError("An unexpected error occurred");
+      }
       setTimeout(() => setError(null), 5000);
     } finally {
+      clearTimeout(timeoutId);
       setLoading(false);
     }
   }

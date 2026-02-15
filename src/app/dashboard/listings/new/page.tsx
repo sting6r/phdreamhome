@@ -1,7 +1,7 @@
 "use client";
 import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
-import { supabase } from "@lib/supabase";
+import { supabase, getProxyImageUrl } from "@lib/supabase";
 import CurrencyInput from "@components/CurrencyInput";
 
 export default function NewListingPage() {
@@ -43,12 +43,14 @@ export default function NewListingPage() {
     await new Promise<void>((resolve, reject) => {
       const xhr = new XMLHttpRequest();
       xhr.open("POST", "/api/upload");
+      xhr.timeout = 10000; // 10 second timeout
       xhr.upload.onprogress = (ev) => {
         if (ev.lengthComputable) {
           const pct = Math.round((ev.loaded / ev.total) * 100);
           setUploadProgress(pct);
         }
       };
+      xhr.ontimeout = () => reject(new Error("Upload timed out"));
       xhr.onreadystatechange = () => {
         if (xhr.readyState === 4) {
           try {
@@ -101,25 +103,50 @@ export default function NewListingPage() {
       const token = data.session?.access_token;
       const headers: Record<string,string> = { "Content-Type": "application/json" };
       if (token) headers["Authorization"] = `Bearer ${token}`;
-      const res = await fetch("/api/listings", { method: "POST", headers, body: JSON.stringify(payload) });
-      clearInterval(timer);
-      if (res.ok) {
-        setSaveProgress(100);
-        setSaveMessage("Saved");
-        setTimeout(() => { window.location.href = "/dashboard/properties"; }, 750);
-        return;
+      
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
+      try {
+        const res = await fetch("/api/listings", { 
+          method: "POST", 
+          headers, 
+          body: JSON.stringify(payload),
+          signal: controller.signal 
+        });
+
+        clearInterval(timer);
+        const text = await res.text();
+        let j;
+        try {
+          j = JSON.parse(text);
+        } catch (e) {
+          console.error("Listing save parse error. Status:", res.status, "Body:", text.slice(0, 200));
+          j = { error: "Invalid server response" };
+        }
+
+        if (res.ok) {
+          setSaveProgress(100);
+          setSaveMessage("Saved");
+          setTimeout(() => { window.location.href = "/dashboard/properties"; }, 750);
+          return;
+        }
+        
+        console.error("Save failed response:", j);
+        const msg = j.details || (Array.isArray(j.issues) && j.issues.length ? j.issues[0] : j.error);
+        setError(msg || "Failed to save");
+        setSaving(false);
+      } catch (err: any) {
+        clearInterval(timer);
+        if (err.name === 'AbortError') {
+          setError("Save timed out. Please try again.");
+        } else {
+          console.error("Save error:", err);
+          setError(err.message || "Failed to save");
+        }
+        setSaving(false);
+      } finally {
+        clearTimeout(timeoutId);
       }
-      const j = await res.json();
-      console.error("Save failed response:", j);
-      const msg = j.details || (Array.isArray(j.issues) && j.issues.length ? j.issues[0] : j.error);
-      setError(msg || "Failed to save");
-      setSaving(false);
-    } catch (err: any) {
-      clearInterval(timer);
-      console.error("Save error:", err);
-      setError(err.message || "Failed to save");
-      setSaving(false);
-    }
   }
 
   useEffect(() => {
@@ -137,7 +164,22 @@ export default function NewListingPage() {
     const token = data.session?.access_token;
     const headers: Record<string,string> = { "Content-Type": "application/json" };
     if (token) headers["Authorization"] = `Bearer ${token}`;
-    await fetch(`/api/media/delete`, { method: "POST", headers, body: JSON.stringify({ path }) }).catch(()=>{});
+    
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+    try {
+      await fetch(`/api/media/delete`, { 
+        method: "POST", 
+        headers, 
+        body: JSON.stringify({ path }),
+        signal: controller.signal
+      });
+    } catch (err) {
+      console.error("Delete media error:", err);
+    } finally {
+      clearTimeout(timeoutId);
+    }
+    
     setImages(prev => prev.filter((_, idx) => idx !== i));
     setPreviews(prev => prev.filter((_, idx) => idx !== i));
     setSelected(prev => prev.filter(idx => idx !== i).map(idx => idx > i ? idx - 1 : idx));
@@ -482,16 +524,17 @@ export default function NewListingPage() {
               </div>
             )}
             <div className="flex flex-wrap gap-2">
-              {previews.map((u,i)=> {
+              {previews.map((u, i) => {
                 const path = images[i] || "";
                 const obj = path.includes(":") ? path.split(":").pop() || path : path;
                 const isVid = /\.(mp4|webm|ogg)$/i.test(obj);
+                const key = `preview-${i}-${path}`;
                 return (
-                  <div key={i} className={`relative ${selectMode ? "ring-2" : ""} ${selected.includes(i) ? "ring-blue-500" : "ring-transparent"}`}>
+                  <div key={key} className={`relative ${selectMode ? "ring-2" : ""} ${selected.includes(i) ? "ring-blue-500" : "ring-transparent"}`}>
                     {isVid ? (
-                      <video src={u} muted autoPlay loop playsInline controlsList="nodownload" className="w-28 h-20 object-cover rounded border border-gray-200" onClick={()=>{ if (selectMode) toggleSelected(i); }} />
+                      <video src={getProxyImageUrl(u)} muted autoPlay loop playsInline controlsList="nodownload" className="w-28 h-20 object-cover rounded border border-gray-200" onClick={() => { if (selectMode) toggleSelected(i); }} />
                     ) : (
-                      <Image src={u} alt="preview" width={112} height={80} unoptimized className="object-cover rounded border border-gray-200" onClick={()=>{ if (selectMode) toggleSelected(i); }} />
+                      <Image src={getProxyImageUrl(u)} alt="preview" width={112} height={80} unoptimized className="object-cover rounded border border-gray-200" onClick={() => { if (selectMode) toggleSelected(i); }} />
                     )}
                     <button type="button" className={`absolute left-1 top-1 text-[10px] px-1.5 py-0.5 rounded ${featuredIndex===i?"bg-sky-500 text-white":"bg-white text-black border"}`} onClick={()=>setFeaturedIndex(i)}>{featuredIndex===i?"Feature":"Set as Feature"}</button>
                     {!selectMode && (

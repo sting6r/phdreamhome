@@ -41,19 +41,28 @@ export default function TranscriptModal({ isOpen, onClose, transcript, clientNam
     setLocalTranscript(updated);
     setReplyText("");
     setSaving(true);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
     try {
       const res = await fetch(`/api/inquiries/${inquiryId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ transcript: updated })
+        body: JSON.stringify({ transcript: updated }),
+        signal: controller.signal
       });
+      clearTimeout(timeoutId);
       if (!res.ok) {
         throw new Error("Failed to save manual reply");
       }
     } catch (e: any) {
+      clearTimeout(timeoutId);
       setLocalTranscript(localTranscript);
       setReplyText(trimmed);
-      alert(e?.message || "Failed to save manual reply");
+      if (e.name === 'AbortError') {
+        alert("Request timed out. Please try again.");
+      } else {
+        alert(e?.message || "Failed to save manual reply");
+      }
     } finally {
       setSaving(false);
     }

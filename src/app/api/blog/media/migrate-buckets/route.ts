@@ -70,9 +70,17 @@ export async function POST(req: Request) {
             } catch {}
           }
           if (!direct) throw new Error("download failed");
-          const r = await fetch(direct);
-          if (!r.ok) throw new Error("download failed");
-          buf = Buffer.from(await r.arrayBuffer());
+          const controller = new AbortController();
+          const id = setTimeout(() => controller.abort(), 10000);
+          try {
+            const r = await fetch(direct, { signal: controller.signal });
+            if (!r.ok) throw new Error("download failed");
+            buf = Buffer.from(await r.arrayBuffer());
+            clearTimeout(id);
+          } catch (e) {
+            clearTimeout(id);
+            throw e;
+          }
           const ext = (objectPath.split(".").pop() || "").toLowerCase();
           ct = ext === "png" ? "image/png" : ext === "jpg" || ext === "jpeg" ? "image/jpeg" : ext === "webp" ? "image/webp" : ext === "gif" ? "image/gif" : ext === "mp4" ? "video/mp4" : ext === "webm" ? "video/webm" : ext === "ogg" ? "video/ogg" : ct;
         }
@@ -125,9 +133,17 @@ export async function POST(req: Request) {
                 } catch {}
               }
               if (!direct) throw new Error("download failed");
-              const r = await fetch(direct);
-              if (!r.ok) throw new Error("download failed");
-              buf = Buffer.from(await r.arrayBuffer());
+              const controller = new AbortController();
+              const id = setTimeout(() => controller.abort(), 10000);
+              try {
+                const r = await fetch(direct, { signal: controller.signal });
+                if (!r.ok) throw new Error("download failed");
+                buf = Buffer.from(await r.arrayBuffer());
+                clearTimeout(id);
+              } catch (e) {
+                clearTimeout(id);
+                throw e;
+              }
             }
             const up = await supabaseAdmin.storage.from(bucketBlogImages).upload(objectPath, buf, { contentType: ct, upsert: true });
             if (up.error) throw new Error(up.error.message);

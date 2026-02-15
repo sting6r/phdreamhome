@@ -79,7 +79,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         </Script>
         <Navbar />
         <div id="status-links-wrapper" className="sticky top-[3.75rem] z-40 bg-white">
-          <Suspense fallback={<div className="h-10" />}>
+          <Suspense fallback={<div className="h-10 bg-white" />}>
             <StatusLinksCard />
           </Suspense>
         </div>

@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState, useCallback } from "react";
 import Image from "next/image";
-import { supabase } from "@lib/supabase";
+import { supabase, getProxyImageUrl } from "@lib/supabase";
 
 export default function ProfilePage() {
   const [form, setForm] = useState({ name: "", email: "", address: "", phone: "", image: "", role: "", licenseNo: "", dhsudAccredNo: "", facebook: "", whatsapp: "", viber: "", instagram: "", telegram: "", youtube: "", twitter: "" });
@@ -25,36 +25,43 @@ export default function ProfilePage() {
 
   useEffect(() => {
     const controller = new AbortController();
-    fetch("/api/profile", { signal: controller.signal })
-      .then(async r => {
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+    async function loadProfile() {
+      try {
+        const r = await fetch("/api/profile", { signal: controller.signal });
         const text = await r.text();
+        let j;
         try {
-          const j = JSON.parse(text);
-          if (!r.ok) {
-            throw new Error(j.error || `Failed to fetch profile (${r.status})`);
-          }
-          return j;
-        } catch (e: any) {
+          j = JSON.parse(text);
+        } catch (e) {
           console.error("Profile fetch parse error. Status:", r.status, "Body:", text.slice(0, 200));
-          throw new Error(e.message || "Invalid server response");
+          throw new Error("Invalid server response");
         }
-      })
-      .then(d => {
-        setForm({ name: d.name || "", email: d.email || "", address: d.address || "", phone: d.phone || "", image: d.image || "", role: d.role || "", licenseNo: d.licenseNo || "", dhsudAccredNo: d.dhsudAccredNo || "", facebook: d.facebook || "", whatsapp: d.whatsapp || "", viber: d.viber || "", instagram: d.instagram || "", telegram: d.telegram || "", youtube: d.youtube || "", twitter: d.twitter || "" });
+
+        if (!r.ok) {
+          throw new Error(j.error || `Failed to fetch profile (${r.status})`);
+        }
+
+        setForm({ name: j.name || "", email: j.email || "", address: j.address || "", phone: j.phone || "", image: j.image || "", role: j.role || "", licenseNo: j.licenseNo || "", dhsudAccredNo: j.dhsudAccredNo || "", facebook: j.facebook || "", whatsapp: j.whatsapp || "", viber: j.viber || "", instagram: j.instagram || "", telegram: j.telegram || "", youtube: j.youtube || "", twitter: j.twitter || "" });
         
-        // Prefer proxy URL for consistency and reliability
-        const url = d.image 
-          ? `/api/image/proxy?path=${encodeURIComponent(d.image)}` 
-          : d.imageUrl;
-          
+        // Use proxy utility for consistency and reliability
+        const url = getProxyImageUrl(j.image || j.imageUrl);
         if (url) setAvatarUrl(url);
-      })
-      .catch(err => {
+      } catch (err: any) {
         if (err.name === 'AbortError') return;
         console.error("Profile fetch error:", err);
         setErr(err.message || "Failed to load profile");
-      });
-    return () => controller.abort();
+      } finally {
+        clearTimeout(timeoutId);
+      }
+    }
+
+    loadProfile();
+    return () => {
+      controller.abort();
+      clearTimeout(timeoutId);
+    };
   }, []);
 
 
@@ -103,27 +110,74 @@ export default function ProfilePage() {
     if (!blob) return;
     const file = new File([blob], `avatar-${Date.now()}.png`, { type: "image/png" });
     const fd = new FormData(); fd.append("files", file);
-    const r = await fetch("/api/upload", { method: "POST", body: fd }); const d = await r.json();
-    const path = d.paths?.[0]; const url = d.signedUrls?.[0];
-    if (path && url) {
-      setForm(f => ({ ...f, image: path }));
-      setAvatarUrl(url);
-      setCropping(false);
-      setImageSrc(null);
-      setScale(1); setOffset({ x: 0, y: 0 });
-    } else {
-      setErr("Failed to upload avatar");
+    
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+    try {
+      const r = await fetch("/api/upload", { 
+        method: "POST", 
+        body: fd,
+        signal: controller.signal
+      }); 
+      
+      const text = await r.text();
+      let d;
+      try {
+        d = JSON.parse(text);
+      } catch (e) {
+        console.error("Upload parse error:", text.slice(0, 200));
+        d = { error: "Invalid server response" };
+      }
+
+      const path = d.paths?.[0]; const url = d.signedUrls?.[0];
+      if (path && url) {
+        setForm(f => ({ ...f, image: path }));
+        setAvatarUrl(url);
+        setCropping(false);
+        setImageSrc(null);
+        setScale(1); setOffset({ x: 0, y: 0 });
+      } else {
+        setErr("Failed to upload avatar");
+      }
+    } catch (e: any) {
+      if (e.name === 'AbortError') setErr("Upload timed out. Please try again.");
+      else setErr(e.message || "Failed to upload avatar");
+    } finally {
+      clearTimeout(timeoutId);
     }
   }
 
   async function save(e: React.FormEvent) {
     e.preventDefault(); setMsg(null); setErr(null); setSaving(true);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+
     try {
       const body = { name: form.name, email: form.email, address: form.address, phone: form.phone, image: form.image, role: form.role, licenseNo: form.licenseNo, dhsudAccredNo: form.dhsudAccredNo, facebook: form.facebook, whatsapp: form.whatsapp, viber: form.viber, instagram: form.instagram, telegram: form.telegram, youtube: form.youtube, twitter: form.twitter };
-      const res = await fetch("/api/profile", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-      if (!res.ok) { const j = await res.json().catch(()=>({})); setErr(j?.error || "Failed to save"); return; }
+      const res = await fetch("/api/profile", { 
+        method: "PUT", 
+        headers: { "Content-Type": "application/json" }, 
+        body: JSON.stringify(body),
+        signal: controller.signal
+      });
+      
+      const text = await res.text();
+      let j;
+      try {
+        j = JSON.parse(text);
+      } catch (e) {
+        console.error("Profile save parse error:", text.slice(0, 200));
+        j = { error: "Invalid server response" };
+      }
+
+      if (!res.ok) { setErr(j?.error || "Failed to save"); return; }
       setMsg("Saved");
+    } catch (e: any) {
+      if (e.name === 'AbortError') setErr("Save timed out. Please try again.");
+      else setErr(e.message || "Failed to save");
     } finally {
+      clearTimeout(timeoutId);
       setSaving(false);
     }
   }

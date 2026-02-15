@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { getProxyImageUrl } from "@/lib/supabase";
 
 interface Agent {
   name: string | null;
@@ -24,6 +25,10 @@ export default function ContactAgentCard({
   listingTitle: string;
   agent: Agent;
 }) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
   const [isOpen, setIsOpen] = useState(false);
   const [isTourOpen, setIsTourOpen] = useState(false);
   const [form, setForm] = useState({ name: "", email: "", phone: "", subject: "", message: `I am interested in ${listingTitle}` });
@@ -31,10 +36,19 @@ export default function ContactAgentCard({
     name: "", 
     email: "", 
     phone: "", 
-    date: new Date().toISOString().split('T')[0], 
+    date: "", 
     time: "09:00", 
     message: `I would like to schedule a tour for ${listingTitle}` 
   });
+
+  useEffect(() => {
+    if (mounted) {
+      setTourForm(prev => ({
+        ...prev,
+        date: new Date().toISOString().split('T')[0]
+      }));
+    }
+  }, [mounted]);
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
   const [sentMessage, setSentMessage] = useState("");
@@ -95,6 +109,8 @@ export default function ContactAgentCard({
     e.preventDefault();
     setLoading(true);
     setError(null);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
     try {
       const res = await fetch("/api/mail-inquiry", {
         method: "POST",
@@ -105,8 +121,10 @@ export default function ContactAgentCard({
           topic: form.subject || listingTitle,
           status: "Interested",
           type: "Listing"
-        })
+        }),
+        signal: controller.signal
       });
+      clearTimeout(timeoutId);
       const data = await res.json();
       if (res.ok) {
         setSent(true);
@@ -116,9 +134,14 @@ export default function ContactAgentCard({
         setError(data.error || "Failed to send inquiry. Please try again.");
       }
     } catch (err: any) {
-      console.error(err);
-      setError("A network error occurred. Please check your connection.");
+      if (err.name === 'AbortError') {
+        setError("Request timed out. Please try again.");
+      } else {
+        console.error(err);
+        setError("A network error occurred. Please check your connection.");
+      }
     } finally {
+      clearTimeout(timeoutId);
       setLoading(false);
     }
   };
@@ -127,6 +150,8 @@ export default function ContactAgentCard({
     e.preventDefault();
     setLoading(true);
     setTourError(null);
+    const tourController = new AbortController();
+    const tourTimeoutId = setTimeout(() => tourController.abort(), 10000);
     try {
       const res = await fetch("/api/mail-inquiry", {
         method: "POST",
@@ -139,8 +164,10 @@ export default function ContactAgentCard({
           tourDate: tourForm.date,
           tourTime: tourForm.time,
           status: "Interested"
-        })
+        }),
+        signal: tourController.signal
       });
+      clearTimeout(tourTimeoutId);
       const data = await res.json();
       if (res.ok) {
         setTourSent(true);
@@ -155,9 +182,14 @@ export default function ContactAgentCard({
         setTourError(data.error || "Failed to schedule tour. Please try again.");
       }
     } catch (err: any) {
-      console.error(err);
-      setTourError("A network error occurred. Please check your connection.");
+      if (err.name === 'AbortError') {
+        setTourError("Request timed out. Please try again.");
+      } else {
+        console.error(err);
+        setTourError("A network error occurred. Please check your connection.");
+      }
     } finally {
+      clearTimeout(tourTimeoutId);
       setLoading(false);
     }
   };
@@ -201,7 +233,7 @@ export default function ContactAgentCard({
             <div className="w-16 h-16 rounded-full overflow-hidden bg-slate-200 relative flex-shrink-0">
               {agent.imageUrl ? (
                 <Image 
-                  src={agent.imageUrl} 
+                  src={getProxyImageUrl(agent.imageUrl)} 
                   alt={agent.name || "Agent"} 
                   fill 
                   className="object-cover" 

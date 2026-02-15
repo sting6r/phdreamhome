@@ -60,23 +60,42 @@ export default function InquiriesTable({
   const bulkDelete = async () => {
     if (!selectedIds.length || !confirm(`Are you sure you want to delete ${selectedIds.length} inquiries?`)) return;
     setLoading(true);
+    
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+
     try {
       const res = await fetch("/api/inquiries/bulk", {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ids: selectedIds }),
+        signal: controller.signal
       });
-      const data = await res.json();
+      
+      const text = await res.text();
+      let data;
+      try {
+        data = JSON.parse(text);
+      } catch (e) {
+        console.error("Bulk delete parse error:", text.slice(0, 200));
+        data = { error: "Invalid server response" };
+      }
+
       if (res.ok && !data.error) {
         setSelectedIds([]);
         router.refresh();
       } else {
         alert(`Error: ${data.error || "Failed to delete inquiries"}`);
       }
-    } catch (err) {
-      console.error(err);
-      alert("Failed to delete inquiries. Please check your internet connection.");
+    } catch (err: any) {
+      if (err.name === 'AbortError') {
+        alert("Request timed out. Please try again.");
+      } else {
+        console.error(err);
+        alert("Failed to delete inquiries. Please check your internet connection.");
+      }
     } finally {
+      clearTimeout(timeoutId);
       setLoading(false);
     }
   };
@@ -84,23 +103,42 @@ export default function InquiriesTable({
   const bulkUpdateStatus = async (status: string) => {
     if (!selectedIds.length) return;
     setLoading(true);
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+
     try {
       const res = await fetch("/api/inquiries/bulk", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ids: selectedIds, status }),
+        signal: controller.signal
       });
-      const data = await res.json();
+      
+      const text = await res.text();
+      let data;
+      try {
+        data = JSON.parse(text);
+      } catch (e) {
+        console.error("Bulk update parse error:", text.slice(0, 200));
+        data = { error: "Invalid server response" };
+      }
+
       if (res.ok && !data.error) {
         setSelectedIds([]);
         router.refresh();
       } else {
         alert(`Error: ${data.error || "Failed to update inquiries"}`);
       }
-    } catch (err) {
-      console.error(err);
-      alert("Failed to update inquiries. Please check your internet connection.");
+    } catch (err: any) {
+      if (err.name === 'AbortError') {
+        alert("Request timed out. Please try again.");
+      } else {
+        console.error(err);
+        alert("Failed to update inquiries. Please check your internet connection.");
+      }
     } finally {
+      clearTimeout(timeoutId);
       setLoading(false);
     }
   };

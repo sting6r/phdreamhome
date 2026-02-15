@@ -3,7 +3,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useEffect, useState, useRef, useMemo } from "react";
 import { usePathname } from "next/navigation";
-import { createClientSideClient } from "@lib/supabase";
+import { createClientSideClient, getProxyImageUrl } from "@lib/supabase";
 
 export default function Navbar() {
   const [mounted, setMounted] = useState(false);
@@ -13,7 +13,6 @@ export default function Navbar() {
   const [email, setEmail] = useState<string | null>(null);
   const [avatar, setAvatar] = useState<string | null>(null);
   const [scrolled, setScrolled] = useState(false);
-  const [isClient, setIsClient] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
   const pathname = usePathname();
   const syncLockRef = useRef<string | null>(null);
@@ -21,15 +20,20 @@ export default function Navbar() {
   const supabase = useMemo(() => createClientSideClient(), []);
   
   async function safePost(url: string, body: any) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
     try {
       // Use fetch with keepalive as primary method - it handles JSON and headers better than sendBeacon
       await fetch(url, { 
         method: "POST", 
         headers: { "Content-Type": "application/json" }, 
         body: JSON.stringify(body), 
-        keepalive: true 
+        keepalive: true,
+        signal: controller.signal
       });
+      clearTimeout(timeoutId);
     } catch (e: any) {
+      clearTimeout(timeoutId);
       if (e?.name === "AbortError") return;
       if (e instanceof TypeError && e.message === "Failed to fetch") {
         // Fallback to sendBeacon only if fetch fails (e.g. browser doesn't support keepalive or during unload)
@@ -63,8 +67,15 @@ export default function Navbar() {
     }
   }
   async function loadProfileAvatar(signal?: AbortSignal) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+    const sig = signal ? (AbortSignal as any).any([signal, controller.signal]) : controller.signal;
+    
     try {
-      if (typeof document !== "undefined" && document.visibilityState !== "visible") return;
+      if (typeof document !== "undefined" && document.visibilityState !== "visible") {
+        clearTimeout(timeoutId);
+        return;
+      }
       
       const ck = "profile-image-url";
       const ek = "profile-image-url-exp";
@@ -76,14 +87,20 @@ export default function Navbar() {
         console.log("Navbar: Using cached avatar:", cached);
         avatarCacheRef.current = cached;
         setAvatar(v => v || cached);
+        clearTimeout(timeoutId);
         return;
       }
-      const r = await fetch("/api/profile", { signal });
-      if (!r.ok) {
-        console.warn(`Profile fetch failed: ${r.status}`);
+      const r = await fetch("/api/profile", { signal: sig });
+      
+      const text = await r.text();
+      let j;
+      try {
+        j = JSON.parse(text);
+      } catch (e) {
+        console.error("Navbar profile parse error:", text.slice(0, 200));
         return;
       }
-      const j = await r.json();
+
       const url = j.imageUrl as string | null;
       console.log("Navbar: /api/profile returned imageUrl:", url);
       if (url && url !== "null") {
@@ -103,110 +120,112 @@ export default function Navbar() {
         }
       }
     } catch (err: any) {
+      clearTimeout(timeoutId);
       if (err.name === 'AbortError') return;
       if (err.message === 'Failed to fetch') return; // Silently handle network aborts
       console.error("Navbar: Profile fetch error:", err);
     }
   }
   useEffect(() => {
-    setIsClient(true);
     setMounted(true);
     const controller = new AbortController();
     
-    // Use the same client for everything
-    const auth = supabase.auth;
+    // Only fetch session and profile if mounted to avoid hydration mismatch
+    if (typeof window !== "undefined") {
+      const auth = supabase.auth;
 
-    auth.getSession().then(({ data }: { data: { session: any } }) => {
-      if (controller.signal.aborted) return;
-      const session = data.session;
-      setLoggedIn(!!session);
-      if (session) {
-        const token = session.access_token;
-        const refresh = session.refresh_token;
-        if (token) {
-          safePost("/api/auth/session", { access_token: token, refresh_token: refresh });
-        }
-        const u = session.user;
-        if (u) {
-          setName((u as any)?.user_metadata?.name || null);
-          setEmail(u.email || null);
-          const mAvatar = null; // Do not use u?.user_metadata?.avatar_url or u?.user_metadata?.picture
-          console.log("Navbar: Session user avatar:", mAvatar);
-          // If we have a cached avatar from the API, prefer that over the session avatar
-          if (avatarCacheRef.current) {
-            setAvatar(avatarCacheRef.current);
-          } else {
-            setAvatar(null);
+      auth.getSession().then(({ data }: { data: { session: any } }) => {
+        if (controller.signal.aborted) return;
+        const session = data.session;
+        setLoggedIn(!!session);
+        if (session) {
+          const token = session.access_token;
+          const refresh = session.refresh_token;
+          if (token) {
+            safePost("/api/auth/session", { access_token: token, refresh_token: refresh });
           }
-          
-          if (u.id && u.email && shouldSync(u.id)) {
-            console.log("Navbar: Syncing user from session load.");
-            safePost("/api/auth/sync-user", { 
-              userId: u.id, 
-              email: u.email, 
-              name: (u as any)?.user_metadata?.name, 
-              username: (u as any)?.user_metadata?.user_name, 
-              phone: (u as any)?.phone || (u as any)?.user_metadata?.phone 
-            });
+          const u = session.user;
+          if (u) {
+            setName((u as any)?.user_metadata?.name || null);
+            setEmail(u.email || null);
+            const mAvatar = null; // Do not use u?.user_metadata?.avatar_url or u?.user_metadata?.picture
+            console.log("Navbar: Session user avatar:", mAvatar);
+            // If we have a cached avatar from the API, prefer that over the session avatar
+            if (avatarCacheRef.current) {
+              setAvatar(avatarCacheRef.current);
+            } else {
+              setAvatar(null);
+            }
+            
+            if (u.id && u.email && shouldSync(u.id)) {
+              console.log("Navbar: Syncing user from session load.");
+              safePost("/api/auth/sync-user", { 
+                userId: u.id, 
+                email: u.email, 
+                name: (u as any)?.user_metadata?.name, 
+                username: (u as any)?.user_metadata?.user_name, 
+                phone: (u as any)?.phone || (u as any)?.user_metadata?.phone 
+              });
+            }
           }
         }
-      }
-      
-      loadProfileAvatar(controller.signal);
-    });
+        
+        loadProfileAvatar(controller.signal);
+      });
 
-    const { data: sub } = auth.onAuthStateChange((_e: any, session: any) => {
-      console.log("Navbar: Auth state change:", _e);
-      setLoggedIn(!!session);
-      if (session) {
-        const token = session.access_token;
-        const refresh = session.refresh_token;
-        if (token) {
-          safePost("/api/auth/session", { access_token: token, refresh_token: refresh });
-        }
-        const u = session.user as any;
-        if (u) {
-          setName(u?.user_metadata?.name || null);
-          setEmail(u?.email || null);
-          const mAvatar = null; // Do not use u?.user_metadata?.avatar_url or u?.user_metadata?.picture
-          console.log("Navbar: Auth state change avatar:", mAvatar);
-          // If we have a cached avatar from the API, prefer that over the session avatar
-          if (avatarCacheRef.current) {
-            setAvatar(avatarCacheRef.current);
-          } else {
-            setAvatar(null);
+      const { data: sub } = auth.onAuthStateChange((_e: any, session: any) => {
+        console.log("Navbar: Auth state change:", _e);
+        setLoggedIn(!!session);
+        if (session) {
+          const token = session.access_token;
+          const refresh = session.refresh_token;
+          if (token) {
+            safePost("/api/auth/session", { access_token: token, refresh_token: refresh });
           }
-          
-          if (u.id && u.email && shouldSync(u.id)) {
-            console.log("Navbar: Syncing user from auth state change.");
-            safePost("/api/auth/sync-user", { 
-              userId: u.id, 
-              email: u.email, 
-              name: u?.user_metadata?.name, 
-              username: u?.user_metadata?.user_name, 
-              phone: u?.phone || u?.user_metadata?.phone 
-            });
+          const u = session.user as any;
+          if (u) {
+            setName(u?.user_metadata?.name || null);
+            setEmail(u?.email || null);
+            const mAvatar = null; // Do not use u?.user_metadata?.avatar_url or u?.user_metadata?.picture
+            console.log("Navbar: Auth state change avatar:", mAvatar);
+            // If we have a cached avatar from the API, prefer that over the session avatar
+            if (avatarCacheRef.current) {
+              setAvatar(avatarCacheRef.current);
+            } else {
+              setAvatar(null);
+            }
+            
+            if (u.id && u.email && shouldSync(u.id)) {
+              console.log("Navbar: Syncing user from auth state change.");
+              safePost("/api/auth/sync-user", { 
+                userId: u.id, 
+                email: u.email, 
+                name: u?.user_metadata?.name, 
+                username: u?.user_metadata?.user_name, 
+                phone: u?.phone || u?.user_metadata?.phone 
+              });
+            }
+          }
+          if (!controller.signal.aborted) {
+            loadProfileAvatar(controller.signal);
+          }
+        } else {
+          // Clear state on logout
+          setName(null);
+          setEmail(null);
+          setAvatar(null);
+          if (typeof sessionStorage !== "undefined") {
+            sessionStorage.removeItem("profile-image-url");
+            sessionStorage.removeItem("profile-image-url-exp");
           }
         }
-        if (!controller.signal.aborted) {
-          loadProfileAvatar(controller.signal);
-        }
-      } else {
-        // Clear state on logout
-        setName(null);
-        setEmail(null);
-        setAvatar(null);
-        if (typeof sessionStorage !== "undefined") {
-          sessionStorage.removeItem("profile-image-url");
-          sessionStorage.removeItem("profile-image-url-exp");
-        }
-      }
-    });
+      });
 
-    return () => { 
-      controller.abort();
-      sub.subscription.unsubscribe(); 
-    };
+      return () => { 
+        controller.abort();
+        sub.subscription.unsubscribe(); 
+      };
+    }
   }, [supabase.auth, pathname]); // Added supabase.auth and pathname to deps to satisfy ESLint and ensure correct re-runs
 
   useEffect(() => {
@@ -229,22 +248,23 @@ export default function Navbar() {
     return () => { window.removeEventListener("scroll", onScroll); };
   }, []);
   return (
-    <div className={`sticky top-0 z-50 w-full ${isClient && scrolled ? "bg-[#E5AFFF]" : "bg-[#F4DDFF]"}`}>
+    <div className={`sticky top-0 z-50 w-full ${mounted && scrolled ? "bg-[#E5AFFF]" : "bg-[#F4DDFF]"}`}>
       <div className="container flex items-center justify-between h-[3.75rem]">
         <Link href="/" prefetch={false} className="flex items-center">
           <Image src="/logo.svg" alt="PhDreamHome" width={140} height={70} className="rounded mr-3 shrink-0 mt-1 sm:mt-2 sm:w-[200px]" />
         </Link>
         <div className="flex items-center gap-2 sm:gap-5 h-full">
-          <nav className="hidden sm:flex items-center gap-2 sm:gap-5 self-end mb-1 overflow-x-auto whitespace-nowrap pr-2 no-scrollbar">
-            <Link href="/contact" prefetch={false} className="inline-flex items-center gap-1 sm:gap-2 btn-blue btn-glow-soft px-2 py-1 sm:px-4 sm:py-2 text-xs sm:text-sm">
-              <span className="underline-run hidden xs:inline">
-                <span className="text-[#00008B]">Sell</span> / <span className="text-[#00008B]">Rent</span> your Property Today?
-              </span>
-              <span className="underline-run xs:hidden">
-                 <span className="text-[#00008B]">Sell</span> / <span className="text-[#00008B]">Rent</span> your Property?
-               </span>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3 h-3 sm:w-4 sm:h-4"><path d="M21 15a2 2 0 0 1-2 2h-3l-4 4v-4H7a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v9z"/></svg>
-            </Link>
+          <nav className="hidden sm:flex flex-1 items-center justify-center gap-2 sm:gap-5 mb-1 pr-2 no-scrollbar">
+            <Link 
+                href="/contact" 
+                prefetch={false} 
+                className={`inline-flex items-center gap-2 px-4 py-2 sm:px-6 sm:py-2.5 rounded-full !bg-[#0EA5E9] !text-white hover:!bg-[#0EA5E9] transition-all shadow-md hover:shadow-lg text-xs sm:text-sm font-bold group ${!mounted ? "opacity-0 pointer-events-none" : ""}`}
+              >
+                <span className="!text-purple-900 group-hover:!text-white relative after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-full after:h-[2px] after:bg-white after:transition-transform after:duration-700 after:scale-x-0 group-hover:after:scale-x-100 drop-shadow-[2px_2px_0px_rgba(0,0,0,0.2)] transition-all">
+                  Sell / Rent your Property
+                </span>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="w-3 h-3 sm:w-4 sm:h-4 !text-purple-900 group-hover:!text-white group-hover:translate-x-1 transition-transform drop-shadow-[2px_2px_0px_rgba(0,0,0,0.2)]"><path d="M21 15a2 2 0 0 1-2 2h-3l-4 4v-4H7a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v9z"/></svg>
+              </Link>
           </nav>
           <div className="flex items-center gap-3 relative">
             {mounted && loggedIn && (
@@ -252,7 +272,7 @@ export default function Navbar() {
                 <button aria-label="User menu" className="relative w-9 h-9 rounded-full bg-gray-200 overflow-hidden flex items-center justify-center" onClick={()=>setOpen(v=>!v)}>
                   {avatar ? (
                     <Image 
-                      src={avatar} 
+                      src={getProxyImageUrl(avatar)} 
                       alt="avatar" 
                       fill 
                       sizes="36px" 
@@ -274,10 +294,10 @@ export default function Navbar() {
                       {email && <div className="text-xs text-black">{email}</div>}
                     </div>
                     <div className="border-t">
-                      <Link prefetch={false} href="/dashboard" onClick={()=>setOpen(false)} className="block mx-2 my-1 px-3 py-2 text-sm rounded-md hover:bg-teal-200 hover:text-black">Dashboard</Link>
-                      <Link prefetch={false} href="/dashboard/profile" onClick={()=>setOpen(false)} className="block mx-2 my-1 px-3 py-2 text-sm rounded-md hover:bg-teal-200 hover:text-black">Profile</Link>
-                      <Link prefetch={false} href="/dashboard/properties" onClick={()=>setOpen(false)} className="block mx-2 my-1 px-3 py-2 text-sm rounded-md hover:bg-teal-200 hover:text-black">My Properties</Link>
-                      <Link prefetch={false} href="/dashboard/listings/new" onClick={()=>setOpen(false)} className="block mx-2 my-1 px-3 py-2 text-sm rounded-md hover:bg-teal-200 hover:text-black">Add Property</Link>
+                      <Link prefetch={false} href="/dashboard" onClick={()=>setOpen(false)} className="block mx-2 my-1 px-3 py-2 text-sm rounded-md hover:!bg-teal-200 hover:!text-black">Dashboard</Link>
+                      <Link prefetch={false} href="/dashboard/profile" onClick={()=>setOpen(false)} className="block mx-2 my-1 px-3 py-2 text-sm rounded-md hover:!bg-teal-200 hover:!text-black">Profile</Link>
+                      <Link prefetch={false} href="/dashboard/properties" onClick={()=>setOpen(false)} className="block mx-2 my-1 px-3 py-2 text-sm rounded-md hover:!bg-teal-200 hover:!text-black">My Properties</Link>
+                      <Link prefetch={false} href="/dashboard/listings/new" onClick={()=>setOpen(false)} className="block mx-2 my-1 px-3 py-2 text-sm rounded-md hover:!bg-teal-200 hover:!text-black">Add Property</Link>
                       <button 
                         className="block w-[calc(100%-1rem)] mx-2 my-1 text-left px-3 py-2 text-sm rounded-md hover:bg-teal-200 hover:text-black" 
                         onClick={async () => { 

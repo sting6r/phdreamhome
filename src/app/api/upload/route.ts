@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { randomBytes } from "crypto";
-import { supabaseAdmin, bucket, bucketVideos, bucketBlogImages, bucketBlogVideos, createSignedUrl, parseBucketSpec } from "@lib/supabase";
+import { supabaseAdmin, bucket, bucketVideos, bucketBlogImages, bucketBlogVideos, createSignedUrl, parseBucketSpec, getProxyImageUrl } from "@lib/supabase";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -32,7 +32,7 @@ export async function POST(req: Request) {
     }
     const qualifiedPath = `${targetBucket}:${objectPath}`;
     paths.push(qualifiedPath);
-    let url = `/api/image/proxy?path=${encodeURIComponent(qualifiedPath)}`;
+    let url = getProxyImageUrl(qualifiedPath);
     signedUrls.push(url);
   }
   return NextResponse.json({ paths, signedUrls });

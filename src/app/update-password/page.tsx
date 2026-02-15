@@ -45,7 +45,17 @@ export default function UpdatePasswordPage() {
       if (error) throw new Error("Failed to update password");
       
       try {
-        await fetch("/api/auth/session", { method: "DELETE", keepalive: true });
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000);
+        try {
+          await fetch("/api/auth/session", { 
+            method: "DELETE", 
+            keepalive: true,
+            signal: controller.signal
+          });
+        } finally {
+          clearTimeout(timeoutId);
+        }
       } catch {}
       
       try {

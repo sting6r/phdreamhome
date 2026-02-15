@@ -4,19 +4,43 @@ import useSWR from "swr";
 import { supabase } from "@lib/supabase";
 import Link from "next/link";
 
-const fetcher = async (u: string) => {
+const fetcher = async (u: string, { signal }: { signal?: AbortSignal } = {}) => {
   const { data } = await supabase.auth.getSession();
   const token = data.session?.access_token;
   const headers: Record<string, string> = {};
   if (token) headers["Authorization"] = `Bearer ${token}`;
   
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+
+  const combinedSignal = signal 
+    ? (AbortSignal as any).any?.([signal, controller.signal]) ?? controller.signal
+    : controller.signal;
+
   try {
-    const r = await fetch(u, { headers });
-    if (!r.ok) throw new Error(`Error ${r.status}: ${r.statusText}`);
-    return r.json();
-  } catch (err) {
+    const r = await fetch(u, { 
+      headers,
+      signal: combinedSignal
+    });
+    
+    const text = await r.text();
+    try {
+      const json = JSON.parse(text);
+      if (!r.ok) throw new Error(json.error || `Fetch failed: ${r.status}`);
+      return json;
+    } catch (e: any) {
+      if (e.name === 'AbortError' || combinedSignal.aborted) return null;
+      console.error("Rentals fetcher parse error:", u, r.status, text.slice(0, 200));
+      throw new Error(`Failed to parse response from ${u}: ${e.message}`);
+    }
+  } catch (err: any) {
+    if (err.name === 'AbortError' || combinedSignal.aborted) {
+      return null;
+    }
     console.error("Fetcher error:", err);
     throw err;
+  } finally {
+    clearTimeout(timeoutId);
   }
 };
 
@@ -42,7 +66,16 @@ const Icons = {
     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
   ),
   ChevronRight: () => (
-    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+  ),
+  Peso: () => (
+    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M7 6h8a3 3 0 0 1 0 6H7" />
+      <path d="M7 12h8a3 3 0 0 1 0 6H7" />
+      <path d="M5 9h10" />
+      <path d="M5 15h10" />
+      <path d="M7 6v12" />
+    </svg>
   )
 };
 
@@ -373,7 +406,7 @@ export default function RentalsPage() {
         </div>
         <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4">
           <div className="bg-green-50 p-3 rounded-lg text-green-600">
-            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+            <Icons.Peso />
           </div>
           <div>
             <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Monthly Revenue</p>

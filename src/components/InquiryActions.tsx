@@ -25,22 +25,39 @@ export default function InquiryActions({ inquiryId, currentStatus }: { inquiryId
       return;
     }
     setLoading(true);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
     try {
       const res = await fetch(`/api/inquiries/${inquiryId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: newStatus }),
+        signal: controller.signal,
       });
-      const data = await res.json();
+      
+      const text = await res.text();
+      let data;
+      try {
+        data = JSON.parse(text);
+      } catch (e) {
+        console.error("Update status parse error:", text.slice(0, 200));
+        data = { error: "Invalid server response" };
+      }
+
       if (res.ok && !data.error) {
         router.refresh();
       } else {
         alert(`Error: ${data.error || "Failed to update status"}`);
       }
-    } catch (err) {
-      console.error(err);
-      alert("Failed to update status. Please check your internet connection.");
+    } catch (err: any) {
+      if (err.name === 'AbortError') {
+        alert("Request timed out. Please try again.");
+      } else {
+        console.error(err);
+        alert("Failed to update status. Please check your internet connection.");
+      }
     } finally {
+      clearTimeout(timeoutId);
       setLoading(false);
       setIsOpen(false);
     }
@@ -49,20 +66,37 @@ export default function InquiryActions({ inquiryId, currentStatus }: { inquiryId
   const deleteInquiry = async () => {
     if (!confirm("Are you sure you want to delete this inquiry?")) return;
     setLoading(true);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
     try {
       const res = await fetch(`/api/inquiries/${inquiryId}`, {
         method: "DELETE",
+        signal: controller.signal,
       });
-      const data = await res.json();
+      
+      const text = await res.text();
+      let data;
+      try {
+        data = JSON.parse(text);
+      } catch (e) {
+        console.error("Delete inquiry parse error:", text.slice(0, 200));
+        data = { error: "Invalid server response" };
+      }
+
       if (res.ok && !data.error) {
         router.refresh();
       } else {
         alert(`Error: ${data.error || "Failed to delete inquiry"}`);
       }
-    } catch (err) {
-      console.error(err);
-      alert("Failed to delete inquiry. Please check your internet connection.");
+    } catch (err: any) {
+      if (err.name === 'AbortError') {
+        alert("Request timed out. Please try again.");
+      } else {
+        console.error(err);
+        alert("Failed to delete inquiry. Please check your internet connection.");
+      }
     } finally {
+      clearTimeout(timeoutId);
       setLoading(false);
       setIsOpen(false);
     }

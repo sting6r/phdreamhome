@@ -77,6 +77,8 @@ function LoginPageContent() {
     }
     
     // Sync user with Railway DB
+    const syncController = new AbortController();
+    const syncTimeoutId = setTimeout(() => syncController.abort(), 10000);
     try {
       await fetch("/api/auth/sync-user", { 
         method: "POST", 
@@ -84,20 +86,32 @@ function LoginPageContent() {
         body: JSON.stringify({ 
           userId: data.session.user.id, 
           email: data.session.user.email 
-        }) 
+        }),
+        signal: syncController.signal
       });
     } catch (syncError) {
       console.error("Failed to sync user on login:", syncError);
+    } finally {
+      clearTimeout(syncTimeoutId);
     }
 
-    await fetch("/api/auth/session", { 
-      method: "POST", 
-      headers: { "Content-Type": "application/json" }, 
-      body: JSON.stringify({ 
-        access_token: data.session.access_token,
-        refresh_token: data.session.refresh_token
-      }) 
-    });
+    const sessionController = new AbortController();
+    const sessionTimeoutId = setTimeout(() => sessionController.abort(), 10000);
+    try {
+      await fetch("/api/auth/session", { 
+        method: "POST", 
+        headers: { "Content-Type": "application/json" }, 
+        body: JSON.stringify({ 
+          access_token: data.session.access_token,
+          refresh_token: data.session.refresh_token
+        }),
+        signal: sessionController.signal
+      });
+    } catch (sessionError) {
+      console.error("Failed to set session on login:", sessionError);
+    } finally {
+      clearTimeout(sessionTimeoutId);
+    }
     router.replace(callbackUrl);
   }
   return (

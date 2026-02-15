@@ -2,7 +2,7 @@
 import Image from "next/image";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { supabase } from "@lib/supabase";
+import { supabase, getProxyImageUrl } from "@lib/supabase";
 
 function renderInlineFormatting(text: string) {
   if (typeof text !== "string") return text;
@@ -226,6 +226,8 @@ export default function NewBlogPage() {
 
   useEffect(() => {
     let alive = true;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
     (async () => {
       try {
         setMyBlogsLoading(true);
@@ -234,7 +236,7 @@ export default function NewBlogPage() {
         const token = data.session?.access_token;
         const headers: Record<string, string> = {};
         if (token) headers["Authorization"] = `Bearer ${token}`;
-        const r = await fetch("/api/blog?mine=1", { headers, cache: "no-store" });
+        const r = await fetch("/api/blog?mine=1", { headers, cache: "no-store", signal: controller.signal });
         const text = await r.text();
         let j;
         try {
@@ -246,17 +248,23 @@ export default function NewBlogPage() {
         const rows = Array.isArray(j.blogs) ? j.blogs : [];
         if (alive) setMyBlogs(rows);
       } catch (e: any) {
+        if (e.name === "AbortError") return;
         if (alive) setMyBlogsErr(String(e?.message || e));
       } finally {
+        clearTimeout(timeoutId);
         if (alive) setMyBlogsLoading(false);
       }
     })();
     return () => {
       alive = false;
+      controller.abort();
+      clearTimeout(timeoutId);
     };
   }, []);
 
   async function publishExisting(id: string) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
     try {
       setActionBusyId(id);
       const { data } = await supabase.auth.getSession();
@@ -266,35 +274,59 @@ export default function NewBlogPage() {
       const r = await fetch(`/api/blog/${id}`, {
         method: "PUT",
         headers,
-        body: JSON.stringify({ published: true })
+        body: JSON.stringify({ published: true }),
+        signal: controller.signal
       });
-      const j = await r.json();
+      const text = await r.text();
+      let j;
+      try {
+        j = JSON.parse(text);
+      } catch (e) {
+        j = { error: "Invalid server response" };
+      }
       if (!r.ok || !j?.ok) throw new Error(j?.error || "Publish failed");
       setMyBlogs(prev => prev.map(b => (b.id === id ? { ...b, published: true } : b)));
     } catch (e: any) {
-      setMyBlogsErr(String(e?.message || e));
+      if (e.name === "AbortError") {
+        setMyBlogsErr("Publish timed out. Please try again.");
+      } else {
+        setMyBlogsErr(String(e?.message || e));
+      }
     } finally {
+      clearTimeout(timeoutId);
       setActionBusyId(null);
     }
   }
 
   async function deleteExisting(id: string) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
     try {
       setActionBusyId(id);
       const { data } = await supabase.auth.getSession();
       const token = data.session?.access_token;
       const headers: Record<string, string> = {};
       if (token) headers["Authorization"] = `Bearer ${token}`;
-      const r = await fetch(`/api/blog/${id}`, { method: "DELETE", headers });
-      const j = await r.json();
+      const r = await fetch(`/api/blog/${id}`, { method: "DELETE", headers, signal: controller.signal });
+      const text = await r.text();
+      let j;
+      try {
+        j = JSON.parse(text);
+      } catch (e) {
+        j = { error: "Invalid server response" };
+      }
       if (!r.ok || !j?.ok) {
-        // DELETE returns { ok: true } or error
         if (!r.ok) throw new Error(j?.error || "Delete failed");
       }
       setMyBlogs(prev => prev.filter(b => b.id !== id));
     } catch (e: any) {
-      setMyBlogsErr(String(e?.message || e));
+      if (e.name === "AbortError") {
+        setMyBlogsErr("Delete timed out. Please try again.");
+      } else {
+        setMyBlogsErr(String(e?.message || e));
+      }
     } finally {
+      clearTimeout(timeoutId);
       setActionBusyId(null);
     }
   }
@@ -860,13 +892,17 @@ export default function NewBlogPage() {
     setUploadingIndex(index);
     setUploadError(null);
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
       const form = new FormData();
       form.append("files", file);
       const res = await fetch("/api/upload?scope=blog", {
         method: "POST",
         body: form,
-        credentials: "include"
+        credentials: "include",
+        signal: controller.signal
       });
+      clearTimeout(timeoutId);
       const data = await res.json();
       if (!res.ok) {
         throw new Error(data?.error || "Upload failed");
@@ -899,13 +935,17 @@ export default function NewBlogPage() {
     setUploadingImageIndex(index);
     setUploadError(null);
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
       const form = new FormData();
       form.append("files", file);
       const res = await fetch("/api/upload?scope=blog", {
         method: "POST",
         body: form,
-        credentials: "include"
+        credentials: "include",
+        signal: controller.signal
       });
+      clearTimeout(timeoutId);
       const data = await res.json();
       if (!res.ok) {
         throw new Error(data?.error || "Upload failed");
@@ -958,13 +998,17 @@ export default function NewBlogPage() {
     setUploadingHeroImage(true);
     setUploadError(null);
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
       const form = new FormData();
       form.append("files", file);
       const res = await fetch("/api/upload?scope=blog", {
         method: "POST",
         body: form,
-        credentials: "include"
+        credentials: "include",
+        signal: controller.signal
       });
+      clearTimeout(timeoutId);
       const data = await res.json();
       if (!res.ok) {
         throw new Error(data?.error || "Upload failed");
@@ -1061,11 +1105,15 @@ export default function NewBlogPage() {
         published: publish,
         media: mediaBody
       };
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
       const r = await fetch("/api/blog", {
         method: "POST",
         headers,
-        body: JSON.stringify(body)
+        body: JSON.stringify(body),
+        signal: controller.signal
       });
+      clearTimeout(timeoutId);
       
       let j;
       const contentType = r.headers.get("content-type");
@@ -1711,10 +1759,7 @@ export default function NewBlogPage() {
               >
                 {heroImageUpload && (heroImageUpload.url || heroImageUpload.path) ? (
                   <Image
-                    src={
-                      heroImageUpload.url ||
-                      `/api/image/proxy?path=${encodeURIComponent(heroImageUpload.path)}`
-                    }
+                    src={getProxyImageUrl(heroImageUpload.url || heroImageUpload.path)}
                     alt="Blog hero image"
                     fill
                     sizes="100vw"
@@ -1890,9 +1935,7 @@ export default function NewBlogPage() {
                     {(() => {
                       const upload = getImageUpload(0, "above");
                       if (upload && (upload.url || upload.path)) {
-                        const src =
-                          upload.url ||
-                          `/api/image/proxy?path=${encodeURIComponent(upload.path)}`;
+                        const src = getProxyImageUrl(upload.url || upload.path);
                         return (
                           <div className="relative w-full h-full">
                             <Image
@@ -2024,9 +2067,7 @@ export default function NewBlogPage() {
                     {(() => {
                       const upload = getVideoUpload(0, "above");
                       if (upload && (upload.url || upload.path)) {
-                        const src =
-                          upload.url ||
-                          `/api/image/proxy?path=${encodeURIComponent(upload.path)}`;
+                        const src = getProxyImageUrl(upload.url || upload.path);
                         return (
                           <video
                             className="w-full h-full rounded-md object-cover"
@@ -2361,9 +2402,7 @@ export default function NewBlogPage() {
                     {(() => {
                       const upload = getImageUpload(0, "below");
                       if (upload && (upload.url || upload.path)) {
-                        const src =
-                          upload.url ||
-                          `/api/image/proxy?path=${encodeURIComponent(upload.path)}`;
+                        const src = getProxyImageUrl(upload.url || upload.path);
                         return (
                           <div className="relative w-full h-full">
                             <Image
@@ -2438,9 +2477,7 @@ export default function NewBlogPage() {
                     {(() => {
                       const upload = getVideoUpload(0, "below");
                       if (upload && (upload.url || upload.path)) {
-                        const src =
-                          upload.url ||
-                          `/api/image/proxy?path=${encodeURIComponent(upload.path)}`;
+                        const src = getProxyImageUrl(upload.url || upload.path);
                         return (
                           <video
                             className="w-full h-full rounded-md object-cover"
@@ -2518,9 +2555,7 @@ export default function NewBlogPage() {
                         {(() => {
                           const upload = getImageUpload(i + 1, "above");
                           if (upload && (upload.url || upload.path)) {
-                            const src =
-                              upload.url ||
-                              `/api/image/proxy?path=${encodeURIComponent(upload.path)}`;
+                            const src = getProxyImageUrl(upload.url || upload.path);
                             return (
                               <div className="relative w-full h-full">
                                 <Image
@@ -2652,9 +2687,7 @@ export default function NewBlogPage() {
                         {(() => {
                           const upload = getVideoUpload(i + 1, "above");
                           if (upload && (upload.url || upload.path)) {
-                            const src =
-                              upload.url ||
-                              `/api/image/proxy?path=${encodeURIComponent(upload.path)}`;
+                            const src = getProxyImageUrl(upload.url || upload.path);
                             return (
                               <video
                                 className="w-full h-full rounded-md object-cover"
@@ -3026,9 +3059,7 @@ export default function NewBlogPage() {
                         {(() => {
                           const upload = getImageUpload(i + 1, "below");
                           if (upload && (upload.url || upload.path)) {
-                            const src =
-                              upload.url ||
-                              `/api/image/proxy?path=${encodeURIComponent(upload.path)}`;
+                            const src = getProxyImageUrl(upload.url || upload.path);
                             return (
                               <div className="relative w-full h-full">
                                 <Image
@@ -3103,9 +3134,7 @@ export default function NewBlogPage() {
                         {(() => {
                           const upload = getVideoUpload(i + 1, "below");
                           if (upload && (upload.url || upload.path)) {
-                            const src =
-                              upload.url ||
-                              `/api/image/proxy?path=${encodeURIComponent(upload.path)}`;
+                            const src = getProxyImageUrl(upload.url || upload.path);
                             return (
                               <video
                                 className="w-full h-full rounded-md object-cover"
@@ -3226,10 +3255,7 @@ export default function NewBlogPage() {
                 <div className="relative mb-2 w-full h-32 rounded-md bg-slate-200 flex items-center justify-center text-[10px] text-slate-500 overflow-hidden">
                   {heroImageUpload && (heroImageUpload.url || heroImageUpload.path) ? (
                     <Image
-                      src={
-                        heroImageUpload.url ||
-                        `/api/image/proxy?path=${encodeURIComponent(heroImageUpload.path)}`
-                      }
+                      src={getProxyImageUrl(heroImageUpload.url || heroImageUpload.path)}
                       alt="Blog hero image preview"
                       fill
                       sizes="100vw"
@@ -3253,7 +3279,7 @@ export default function NewBlogPage() {
                           if (upload && (upload.url || upload.path)) {
                             return (
                               <Image
-                                src={upload.url || `/api/image/proxy?path=${encodeURIComponent(upload.path)}`}
+                                src={getProxyImageUrl(upload.url || upload.path)}
                                 alt={`Content image ${idx} preview`}
                                 fill
                                 sizes="100vw"
@@ -3273,7 +3299,7 @@ export default function NewBlogPage() {
                           if (upload && (upload.url || upload.path)) {
                             return (
                               <video
-                                src={upload.url || `/api/image/proxy?path=${encodeURIComponent(upload.path)}`}
+                                src={getProxyImageUrl(upload.url || upload.path)}
                                 className="absolute inset-0 w-full h-full object-cover"
                                 controls
                                 preload="auto"
@@ -3300,7 +3326,7 @@ export default function NewBlogPage() {
                           if (upload && (upload.url || upload.path)) {
                             return (
                               <Image
-                                src={upload.url || `/api/image/proxy?path=${encodeURIComponent(upload.path)}`}
+                                src={getProxyImageUrl(upload.url || upload.path)}
                                 alt={`Content image ${idx} preview`}
                                 fill
                                 sizes="100vw"
@@ -3320,7 +3346,7 @@ export default function NewBlogPage() {
                           if (upload && (upload.url || upload.path)) {
                             return (
                               <video
-                                src={upload.url || `/api/image/proxy?path=${encodeURIComponent(upload.path)}`}
+                                src={getProxyImageUrl(upload.url || upload.path)}
                                 className="absolute inset-0 w-full h-full object-cover"
                                 controls
                                 controlsList="nodownload"
@@ -3410,7 +3436,7 @@ export default function NewBlogPage() {
                     <div className="relative aspect-video w-full rounded-2xl bg-slate-100 overflow-hidden mb-8 shadow-inner border border-slate-100">
                       {heroImageUpload && (heroImageUpload.url || heroImageUpload.path) ? (
                         <Image
-                          src={heroImageUpload.url || `/api/image/proxy?path=${encodeURIComponent(heroImageUpload.path)}`}
+                          src={getProxyImageUrl(heroImageUpload.url || heroImageUpload.path)}
                           alt="Hero"
                           fill
                           className="object-cover"
@@ -3446,7 +3472,7 @@ export default function NewBlogPage() {
                               if (upload && (upload.url || upload.path)) {
                                 return (
                                   <Image
-                                    src={upload.url || `/api/image/proxy?path=${encodeURIComponent(upload.path)}`}
+                                    src={getProxyImageUrl(upload.url || upload.path)}
                                     alt="Content"
                                     fill
                                     className="object-cover"
@@ -3466,7 +3492,7 @@ export default function NewBlogPage() {
                               if (upload && (upload.url || upload.path)) {
                                 return (
                                   <video
-                                    src={upload.url || `/api/image/proxy?path=${encodeURIComponent(upload.path)}`}
+                                    src={getProxyImageUrl(upload.url || upload.path)}
                                     className="absolute inset-0 w-full h-full object-contain"
                                     controls
                                     preload="auto"
@@ -3506,7 +3532,7 @@ export default function NewBlogPage() {
                               if (upload && (upload.url || upload.path)) {
                                 return (
                                   <Image
-                                    src={upload.url || `/api/image/proxy?path=${encodeURIComponent(upload.path)}`}
+                                    src={getProxyImageUrl(upload.url || upload.path)}
                                     alt="Content"
                                     fill
                                     className="object-cover"
@@ -3526,7 +3552,7 @@ export default function NewBlogPage() {
                               if (upload && (upload.url || upload.path)) {
                                 return (
                                   <video
-                                    src={upload.url || `/api/image/proxy?path=${encodeURIComponent(upload.path)}`}
+                                    src={getProxyImageUrl(upload.url || upload.path)}
                                     className="absolute inset-0 w-full h-full object-contain"
                                     controls
                                     preload="auto"

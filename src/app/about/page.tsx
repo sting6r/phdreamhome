@@ -1,9 +1,10 @@
 import Link from "next/link";
 import Image from "next/image";
 import MainFooterCards from "@/components/MainFooterCards";
+import { getProxyImageUrl } from "@/lib/supabase";
 
 export default function AboutPage() {
-  const heroBg = process.env.NEXT_PUBLIC_ABOUT_BG || "";
+  const heroBg = getProxyImageUrl(process.env.NEXT_PUBLIC_ABOUT_BG || "");
   return (
     <div className="space-y-10">
       <div className="relative h-[42vh] sm:h-[55vh] rounded-md overflow-hidden">
@@ -117,7 +118,7 @@ export default function AboutPage() {
                 The market moves fast, but so do we. Explore our latest listings or speak with our AI-powered property assistant right now to find a match tailored to your budget and lifestyle.
               </div>
               <div className="mt-4 flex items-center gap-2">
-                <Link prefetch={false} href="/properties/for-sale" className="inline-flex items-center gap-2 rounded-md bg-blue-600 text-white px-4 py-2 text-sm hover:bg-blue-500 shadow-sm">
+                <Link prefetch={false} href="/properties/for-sale" className="inline-flex items-center gap-2 rounded-md bg-blue-600 text-white px-4 py-2 text-sm shadow-sm">
                   Browse Listings
                 </Link>
                 <Link prefetch={false} href="/contact" className="inline-flex items-center gap-2 rounded-md bg-purple-600 text-white px-4 py-2 text-sm hover:bg-purple-500 shadow-sm">

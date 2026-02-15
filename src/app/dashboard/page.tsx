@@ -45,7 +45,7 @@ const salesReportData = [
   { name: "Nov", sales: 5800000 },
   { name: "Dec", sales: 8500000 },
 ];
-const fetcher = async (u: string) => {
+const fetcher = async (u: string, { signal }: { signal?: AbortSignal } = {}) => {
   const { data } = await supabase.auth.getSession();
   const token = data.session?.access_token;
   const headers: Record<string, string> = {};
@@ -54,19 +54,35 @@ const fetcher = async (u: string) => {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
 
+  const combinedSignal = signal 
+    ? (AbortSignal as any).any?.([signal, controller.signal]) ?? controller.signal
+    : controller.signal;
+
   try {
     const r = await fetch(u, { 
       headers,
-      signal: controller.signal
+      signal: combinedSignal
     });
-    clearTimeout(timeoutId);
-    if (!r.ok) throw new Error(`Fetch failed: ${r.status}`);
-    return r.json();
+    
+    const text = await r.text();
+    let resData;
+    try {
+      resData = JSON.parse(text);
+    } catch (e: any) {
+      if (e.name === 'AbortError' || combinedSignal.aborted) return null;
+      console.error(`Fetch parse error for ${u}. Status:`, r.status, "Body:", text.slice(0, 200));
+      resData = { error: "Invalid server response" };
+    }
+
+    if (!r.ok) throw new Error(resData.error || `Fetch failed: ${r.status}`);
+    return resData;
   } catch (err: any) {
-    if (err.name === 'AbortError') {
-      console.warn(`Fetch to ${u} timed out`);
+    if (err.name === 'AbortError' || combinedSignal.aborted) {
+      return null;
     }
     throw err;
+  } finally {
+    clearTimeout(timeoutId);
   }
 };
 
@@ -309,8 +325,11 @@ export default function DashboardPage() {
               </thead>
               <tbody>
                 {(Array.isArray(listings) ? listings : []).slice(0,5).map((l:any)=> (
-                  <tr key={l.id} className="border-t hover:bg-slate-50 transition-colors">
-                    <td className="py-3 truncate max-w-[150px] font-medium">{l.title}</td>
+                  <tr key={l.id} className="border-t text-black hover:bg-slate-50 transition-colors">
+                    <td className="py-3">
+                      <div className="font-medium truncate max-w-[150px]">{l.title}</div>
+                      <div className="text-[10px] text-slate-500">{l.status || "Published"}</div>
+                    </td>
                     <td className="py-3 whitespace-nowrap">{mounted ? `₱${Number(l.price).toLocaleString("en-PH", { minimumFractionDigits: 0 })}` : ""}</td>
                     <td className="py-3 whitespace-nowrap">{mounted && l.createdAt ? new Date(l.createdAt).toLocaleDateString("en-PH") : (mounted ? "-" : "")}</td>
                   </tr>

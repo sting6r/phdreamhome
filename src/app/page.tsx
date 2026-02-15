@@ -4,32 +4,47 @@ import Link from "next/link";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import MainFooterCards from "../components/MainFooterCards";
 import Image from "next/image";
+import { getProxyImageUrl } from "../lib/supabase";
 
 const fetcher = async (u: string, signal?: AbortSignal) => {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 10000);
+  const sig = signal ? (AbortSignal as any).any([signal, controller.signal]) : controller.signal;
+
   try {
     const r = await fetch(u, { 
-      signal, 
+      signal: sig, 
       cache: "no-store",
       headers: {
         'Accept': 'application/json',
       }
     });
+    
     if (!r.ok) {
       if (r.status === 404) return null;
       // Only log errors if not aborted
-      if (signal?.aborted) return null;
+      if (sig.aborted) return null;
       const text = await r.text();
       console.error(`Home fetcher error [${r.status}]:`, u, text.slice(0, 100));
       return null;
     }
-    return await r.json();
+
+    const text = await r.text();
+    try {
+      return JSON.parse(text);
+    } catch (e) {
+      console.error("Home fetcher parse error:", u, r.status, text.slice(0, 100));
+      return null;
+    }
   } catch (e: any) {
-    if (e?.name === "AbortError" || signal?.aborted) return null;
+    if (e?.name === "AbortError" || sig.aborted) return null;
     if (e instanceof TypeError && (e.message === "Failed to fetch" || e.message.includes("aborted"))) {
       return null;
     }
     console.error("Home fetcher error:", u, e);
     return null;
+  } finally {
+    clearTimeout(timeoutId);
   }
 };
 
@@ -45,7 +60,17 @@ function HomePageContent() {
   const [isLoading, setIsLoading] = React.useState(true);
   const [profile, setProfile] = React.useState<any | null>(null);
 
+  const [mounted, setMounted] = React.useState(false);
+  React.useEffect(() => { 
+    setMounted(true); 
+  }, []);
+
+  // Use a ref to track if we've already initialized data to avoid double-fetching
+  const dataInitialized = React.useRef(false);
+
   React.useEffect(() => {
+    if (!mounted || dataInitialized.current) return;
+    
     let alive = true;
     const controller = new AbortController();
     
@@ -65,6 +90,7 @@ function HomePageContent() {
           setProfile(profileData);
         }
         setIsLoading(false);
+        dataInitialized.current = true;
       } catch (err: any) {
         if (!alive || err?.name === 'AbortError') return;
         console.error("Error loading home data:", err);
@@ -77,7 +103,7 @@ function HomePageContent() {
       alive = false;
       controller.abort();
     };
-  }, []);
+  }, [mounted]);
   const searchParams = useSearchParams();
   const router = useRouter();
   
@@ -108,8 +134,6 @@ function HomePageContent() {
   const [activePrice, setActivePrice] = React.useState<string>("Price Range");
   const [sortSel, setSortSel] = React.useState<string>("Sort by Recently Updated");
   const [viewMode, setViewMode] = React.useState<"list" | "map">("list");
-  const [mounted, setMounted] = React.useState(false);
-  React.useEffect(() => { setMounted(true); }, []);
   const [geocodes, setGeocodes] = React.useState<Record<string, { lat: number; lon: number }>>({});
   const mapRootRef = React.useRef<HTMLDivElement | null>(null);
   const mapObjRef = React.useRef<any>(null);
@@ -149,16 +173,28 @@ function HomePageContent() {
       }, 100);
     });
   }
-  async function geocodeOne(l: any) {
+  async function geocodeOne(l: any, signal?: AbortSignal) {
     const q = [l.address, l.city, l.state, l.country].filter(Boolean).join(", ");
     const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q || l.city || l.state || l.country || "Philippines")}`;
     const fallback = { lat: 12.8797, lon: 121.774 };
+    
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+    const sig = signal ? (AbortSignal as any).any([signal, controller.signal]) : controller.signal;
+
     try {
-      const r = await fetch(url, { headers: { Accept: "application/json", "User-Agent": "phdreamhome/1.0" } as any });
+      const r = await fetch(url, { 
+        headers: { Accept: "application/json", "User-Agent": "phdreamhome/1.0" } as any,
+        signal: sig
+      });
+      clearTimeout(timeoutId);
       const d = await r.json();
       const best = Array.isArray(d) ? d[0] : null;
       if (best && best.lat && best.lon) return { lat: Number(best.lat), lon: Number(best.lon) };
-    } catch {}
+    } catch (e: any) {
+      clearTimeout(timeoutId);
+      if (e.name === 'AbortError' || sig.aborted) return null;
+    }
     return fallback;
   }
   function parsePriceRange(s: string): [number|null, number|null] {
@@ -198,6 +234,11 @@ function HomePageContent() {
     }
     return arr;
   }, [filteredListings, sortSel]);
+
+  const pts = React.useMemo(() => {
+    return filteredListings.map((l: any) => ({ l, g: geocodes[String(l.id || "")] })).filter((x) => !!x.g);
+  }, [filteredListings, geocodes]);
+
   function handleSearch() {
     setActiveQ(q);
     setActiveType(typeSel);
@@ -288,8 +329,9 @@ function HomePageContent() {
       }
       const missing = filteredListings.filter((l: any) => !geocodes[String(l.id || "")] );
       for (const l of missing) {
+        if (!alive) break;
         const g = await geocodeOne(l);
-        if (g) setGeocodes((prev) => ({ ...prev, [String(l.id || "")]: g }));
+        if (g && alive) setGeocodes((prev) => ({ ...prev, [String(l.id || "")]: g }));
         await new Promise((res) => setTimeout(res, 300));
       }
     })();
@@ -309,8 +351,6 @@ function HomePageContent() {
     const L: any = (window as any).L;
     if (!leafletReady || !mapObjRef.current || !L) return;
     try { mapObjRef.current.invalidateSize(true); } catch {}
-    
-    const pts = filteredListings.map((l: any) => ({ l, g: geocodes[String(l.id || "")] })).filter((x) => !!x.g);
     
     // Only clear and recreate if the set of listing IDs has actually changed
     // or if we have no markers yet. This prevents popups from closing
@@ -340,8 +380,9 @@ function HomePageContent() {
       const titleText = String(x.l.title || "");
       const typeLabel = String(x.l.type || "").toUpperCase();
       const locText = (() => { const s = String(x.l.address || "").trim().toLowerCase(); return s ? s.replace(/\b\w/g, (c) => c.toUpperCase()) : ""; })();
+      const proxiedImgUrl = getProxyImageUrl(imgUrl);
       const imageBlock = imgUrl
-        ? `<img src="${imgUrl}" alt="${titleText}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">`
+        ? `<img src="${proxiedImgUrl}" alt="${titleText}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">`
         : `<div style="position:absolute;inset:0;background:#e2e8f0"></div>`;
       const html = `
         <a href="/listing/${x.l.slug || x.l.id}" style="display:block;background:#fff;border-radius:12px;box-shadow:0 8px 18px rgba(16,24,40,0.15);width:360px;overflow:hidden;text-decoration:none">
@@ -380,17 +421,25 @@ function HomePageContent() {
     return v.replace(/\s+/g, "-");
   }
   const heroFinal = featuredHeroItems.length ? featuredHeroItems[heroIndex].url : hero;
-  const [baseHero, setBaseHero] = React.useState<string | null>(heroFinal || null);
+  const [baseHero, setBaseHero] = React.useState<string | null>(null);
   const [fadeHero, setFadeHero] = React.useState<string | null>(null);
   const [isFading, setIsFading] = React.useState(false);
+
   React.useEffect(() => {
+    if (!mounted) return;
     if (!heroFinal) return;
+    
+    if (baseHero === null) {
+      setBaseHero(heroFinal);
+      return;
+    }
+
     if (baseHero === heroFinal) return;
     setFadeHero(heroFinal);
     setIsFading(true);
     const t = setTimeout(() => { setBaseHero(heroFinal); setIsFading(false); setFadeHero(null); }, 700);
     return () => clearTimeout(t);
-  }, [heroFinal, baseHero]);
+  }, [heroFinal, baseHero, mounted]);
   const countHeroes = featuredHeroItems.length;
   const prevHero = () => { if (countHeroes > 0) setHeroIndex(i => (i - 1 + countHeroes) % countHeroes); };
   const nextHero = () => { if (countHeroes > 0) setHeroIndex(i => (i + 1) % countHeroes); };
@@ -401,12 +450,12 @@ function HomePageContent() {
         <div className="relative h-[25vh] sm:h-[60vh] rounded-md overflow-hidden">
           <div
             className="absolute inset-0 bg-center bg-no-repeat bg-contain sm:bg-cover"
-            style={{ backgroundImage: baseHero ? `url(${baseHero})` : undefined }}
+            style={{ backgroundImage: baseHero ? `url(${getProxyImageUrl(baseHero)})` : undefined }}
           />
           {fadeHero && (
             <div
               className={`absolute inset-0 bg-center bg-no-repeat bg-contain sm:bg-cover transition-opacity duration-700 ${isFading ? "opacity-100" : "opacity-0"}`}
-              style={{ backgroundImage: `url(${fadeHero})` }}
+              style={{ backgroundImage: `url(${getProxyImageUrl(fadeHero)})` }}
             />
           )}
           <div className="absolute inset-0 bg-black/20" />
@@ -444,7 +493,7 @@ function HomePageContent() {
                   <div className="w-32 h-32 sm:w-44 sm:h-44 rounded-full overflow-hidden bg-transparent relative flex-shrink-0 sm:ml-4">
                     {profile.imageUrl ? (
                       <Image 
-                        src={profile.imageUrl} 
+                        src={getProxyImageUrl(profile.imageUrl)} 
                         alt={profile.name || "Agent"} 
                         fill 
                         sizes="(min-width: 640px) 11rem, 10rem" 
@@ -508,7 +557,7 @@ function HomePageContent() {
                 <>
                   <Link prefetch={false} href="/properties/preselling" className="absolute inset-0 block">
                     <Image 
-                      src={presellingImages[presellIndex]} 
+                      src={getProxyImageUrl(presellingImages[presellIndex])} 
                       alt="Preselling Property" 
                       fill 
                       className="object-cover" 
@@ -533,7 +582,7 @@ function HomePageContent() {
         </div>
       )}
       <div className="container">
-        <div className="card space-y-2 sticky z-30" style={{ top: filterTop }}>
+        <div className="card space-y-2 sticky z-30" style={{ top: mounted ? filterTop : "6.75rem" }}>
           <div className="grid grid-cols-1 md:grid-cols-5 gap-2 sm:gap-3 items-end">
             <div className="md:col-span-4">
               <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1">Location</div>
@@ -616,7 +665,7 @@ function HomePageContent() {
         {isLoading && (
           Array.from({ length: 8 }).map((_, i) => (
             <div key={i} className="card">
-              <div className="w-full h-48 mb-3 rounded bg-slate-200" />
+              <div className="w-full h-44 sm:h-48 mb-3 rounded bg-slate-200" />
               <div className="h-4 w-24 rounded bg-slate-200 mb-2" />
               <div className="h-3 w-40 rounded bg-slate-200 mb-1" />
               <div className="h-3 w-28 rounded bg-slate-200" />
@@ -639,10 +688,10 @@ function HomePageContent() {
           const emphasizeStatus = statusText === "Sold" || statusText === "Occupied";
           const propertySlug = l.slug || l.id;
           return (
-          <Link prefetch={false} key={l.id} href={`/listing/${propertySlug}`} className="card group transition-all duration-300 hover:shadow-[0_15px_40px_rgba(0,0,0,0.25)] hover:scale-[0.98] hover:ring-1 hover:ring-black/10">
-            <div className="relative w-full h-32 sm:h-48 mb-3 rounded overflow-hidden shadow-[0_10px_30px_rgba(0,0,0,0.3)]">
+          <Link prefetch={false} key={l.id || propertySlug} href={`/listing/${propertySlug}`} className="card group transition-all duration-300 hover:shadow-[0_15px_40px_rgba(0,0,0,0.25)] hover:scale-[0.98] hover:ring-1 hover:ring-black/10">
+            <div className="relative w-full h-44 sm:h-48 mb-3 rounded overflow-hidden shadow-[0_10px_30px_rgba(0,0,0,0.3)]">
               {imgUrl ? (
-                <Image src={imgUrl} alt={l.title} fill sizes="(max-width: 640px) 100vw, 33vw" className="object-cover transition-transform duration-500 group-hover:scale-105" unoptimized />
+                <Image src={getProxyImageUrl(imgUrl)} alt={l.title} fill sizes="(max-width: 640px) 100vw, 33vw" className="object-cover transition-transform duration-500 group-hover:scale-105" unoptimized />
               ) : (
                 <div className="absolute inset-0 bg-slate-200 flex items-center justify-center">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-10 h-10 text-gray-500"><path d="M3 9.5l9-7 9 7V20a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9.5Z"/><path d="M9 22V12h6v10"/></svg>
@@ -727,7 +776,7 @@ function HomePageContent() {
             )}
             <div className="grid grid-cols-1 gap-1 mb-2">
               {visibleLandmarks.map((lm:string, idx:number)=> (
-                <div key={idx} className="text-xs text-slate-700 inline-flex items-center gap-2">
+                <div key={`${lid}-landmark-${idx}`} className="text-xs text-slate-700 inline-flex items-center gap-2">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4 text-orange-500">
                     <path d="M12 3a6 6 0 0 1 6 6c0 4.5-6 11-6 11S6 13.5 6 9a6 6 0 0 1 6-6"/>
                     <circle cx="12" cy="9" r="2"/>

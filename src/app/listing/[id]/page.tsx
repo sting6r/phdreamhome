@@ -2,7 +2,7 @@ import { prisma, withRetry } from "@lib/prisma";
 import Image from "next/image";
 import Link from "next/link";
 import MainFooterCards from "@components/MainFooterCards";
-import { createSignedUrl, supabaseAdmin } from "@lib/supabase";
+import { createSignedUrl, supabaseAdmin, getProxyImageUrl } from "@lib/supabase";
 import type { Metadata } from "next";
 import GalleryViewer from "@components/GalleryViewer";
 import SimilarCarousel from "@components/SimilarCarousel";
@@ -131,13 +131,11 @@ export default async function ListingPage({ params, searchParams }: { params: Pr
   }
 
   if (!listing || !listing.published) return <div>Not found</div>;
-  const items = (await Promise.all(listing.images.map(async (i: any) => (await createSignedUrl(i.url)) || null)))
-    .filter((u): u is string => !!u)
-    .map(u => ({ url: u }));
+  const items = listing.images.map((i: any) => ({ url: getProxyImageUrl(i.url) }));
   
   // Ensure listing.user is an object before spreading or accessing properties
   const userData = (listing.user && typeof listing.user === 'object') ? listing.user : {};
-  const agentImageUrl = userData.image ? (await createSignedUrl(userData.image)) : null;
+  const agentImageUrl = userData.image ? getProxyImageUrl(userData.image) : null;
   const agent = { ...userData, imageUrl: agentImageUrl };
 
   const typeText = (() => { const sub = listing.type === "Industrial Properties" ? (listing.industrySubtype || "") : listing.type === "Commercial Space" ? (listing.commercialSubtype || "") : ""; return sub ? `${listing.type} — ${sub}` : listing.type; })();
@@ -178,11 +176,15 @@ export default async function ListingPage({ params, searchParams }: { params: Pr
 
   let totalSimilar = 0;
   try {
-    const timeout = (ms: number) => new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), ms));
+    const countController = new AbortController();
+    const countTimeoutId = setTimeout(() => countController.abort(), 8000);
     totalSimilar = await Promise.race([
       withRetry(() => prisma.listing.count({ where: similarWhere }), 1, 0),
-      timeout(8000)
+      new Promise((_, reject) => {
+        countController.signal.addEventListener('abort', () => reject(new Error("Timeout")));
+      })
     ]) as number;
+    clearTimeout(countTimeoutId);
   } catch (e) {
     console.error("Similar listings count Prisma error, fallback:", e);
     const { count, error } = await supabaseAdmin
@@ -197,7 +199,8 @@ export default async function ListingPage({ params, searchParams }: { params: Pr
 
   let similarRaw = [];
   try {
-    const timeout = (ms: number) => new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), ms));
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
     similarRaw = await Promise.race([
       withRetry(() => prisma.listing.findMany({
         where: similarWhere,
@@ -206,8 +209,11 @@ export default async function ListingPage({ params, searchParams }: { params: Pr
         skip,
         take: perPage
       }), 1, 0),
-      timeout(10000)
+      new Promise((_, reject) => {
+        controller.signal.addEventListener('abort', () => reject(new Error("Timeout")));
+      })
     ]) as any[];
+    clearTimeout(timeoutId);
   } catch (e) {
     if (e instanceof Error && e.message === "Timeout") {
       console.warn("Similar listings Prisma timeout, falling back to Supabase Admin");
@@ -232,14 +238,14 @@ export default async function ListingPage({ params, searchParams }: { params: Pr
       });
     }
   }
-  const similar = await Promise.all(similarRaw.map(async (l: any) => {
-    // Only sign the first image URL for similar properties to save time/requests
+  const similar = similarRaw.map((l: any) => {
     const firstImageUrl = l.images[0]?.url;
-    const imageUrl = firstImageUrl ? (await createSignedUrl(firstImageUrl)) || "" : "";
+    const imageUrl = firstImageUrl ? getProxyImageUrl(firstImageUrl) : "";
     const imageCount = l.images.length;
     return { ...l, imageUrl, imageCount } as any;
-  }));
-  const pricePhpText = `Php ${Number(listing.price).toLocaleString("en-PH", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+  });
+  const mounted = true; // Server component, assume mounted for formatting
+  const pricePhpText = mounted ? `Php ${Number(listing.price).toLocaleString("en-PH", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}` : "";
   const locationText = [listing.address, listing.city, listing.state, listing.country].filter(Boolean).join("  ");
   const floorAreaText = Number(listing.floorArea) > 0 ? `${Number(listing.floorArea)} Sq.M.` : "N/A";
   const mapQuery = locationText || "Philippines";
@@ -255,6 +261,12 @@ export default async function ListingPage({ params, searchParams }: { params: Pr
   })();
   const pageUrlCanonical = `https://www.phdreamhome.com/listing/${id}`;
   const description = listing.seoDescription || listing.description?.slice(0, 160) || `Check out this ${listing.type} in ${listing.city}, ${listing.state}.`;
+
+  const priceCalcText = mounted ? new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP" }).format(priceCalc) : "";
+  const grossMonthlySuggestedText = mounted ? new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP" }).format(grossMonthlySuggested) : "";
+  const monthlyPaymentText = mounted ? new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP" }).format(monthlyPayment) : "";
+  const dpAmountText = mounted ? new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP" }).format(dpAmount) : "";
+  const loanableText = mounted ? new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP" }).format(loanable) : "";
 
   const jsonLd = {
     "@context": "https://schema.org",
@@ -378,7 +390,7 @@ export default async function ListingPage({ params, searchParams }: { params: Pr
               <div className="mt-3 space-y-2">
                 <div className="flex flex-col sm:flex-row items-start sm:items-baseline gap-1 sm:gap-6">
                   <div className="text-sm text-slate-700 w-full sm:w-24">Price:</div>
-                  <div className="text-sm font-bold">{new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP" }).format(priceCalc)}</div>
+                  <div className="text-sm font-bold">{priceCalcText}</div>
                 </div>
                 <div className="flex flex-col sm:flex-row items-start sm:items-baseline gap-1 sm:gap-6">
                   <div className="text-sm text-slate-700 w-full sm:w-24">Location:</div>
@@ -407,26 +419,26 @@ export default async function ListingPage({ params, searchParams }: { params: Pr
             <div className="mt-6">
               <div className="text-sm font-bold text-[#223B55] uppercase tracking-wide border-b-2 border-[#223B55] pb-1">Affordability Checker</div>
               <div className="mt-3">
-                <div className="text-sm text-slate-700">Property Price: <span className="font-bold">{new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP" }).format(priceCalc)}</span></div>
+                <div className="text-sm text-slate-700">Property Price: <span className="font-bold">{priceCalcText}</span></div>
                 <div className="text-sm text-slate-700 mt-1">Suggested Gross Household Income/Salary</div>
-                <div className="text-xl font-bold">{new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP" }).format(grossMonthlySuggested)}</div>
+                <div className="text-xl font-bold">{grossMonthlySuggestedText}</div>
                 <div className="text-sm text-slate-700">{termYears} years to pay at {ratePercent}% interest</div>
               </div>
               <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="rounded border border-[#DE6A4A] px-3 py-2">
                   <div className="text-sm text-slate-700">Monthly Payment</div>
-                  <div className="text-lg font-bold">{new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP" }).format(monthlyPayment)}</div>
+                  <div className="text-lg font-bold">{monthlyPaymentText}</div>
                 </div>
                 <div className="rounded border border-[#DE6A4A] px-3 py-2">
                   <div className="text-sm text-slate-700">{Math.round(dpPercent)}% Down Payment</div>
-                  <div className="text-lg font-bold">{new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP" }).format(dpAmount)}</div>
+                  <div className="text-lg font-bold">{dpAmountText}</div>
                 </div>
                 <div className="rounded border border-[#DE6A4A] px-3 py-2">
                   <div className="text-sm font-bold">{ratePercent}% Interest Rate</div>
                 </div>
                 <div className="rounded border border-[#DE6A4A] px-3 py-2">
                   <div className="text-sm text-slate-700">Loanable Amount</div>
-                  <div className="text-lg font-bold">{new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP" }).format(loanable)}</div>
+                  <div className="text-lg font-bold">{loanableText}</div>
                 </div>
               </div>
             </div>

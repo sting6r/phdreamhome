@@ -2,7 +2,7 @@
 import Image from "next/image";
 import { type ReactNode, useEffect, useRef, useState, use } from "react";
 import { useRouter } from "next/navigation";
-import { supabase } from "@lib/supabase";
+import { supabase, getProxyImageUrl } from "@lib/supabase";
 type MediaItem = {
   id?: string;
   path: string;
@@ -289,17 +289,29 @@ export default function EditBlogPage({ params }: { params: Promise<{ id: string 
     }
     setUploadingIndex(index);
     setUploadError(null);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
     try {
       const form = new FormData();
       form.append("files", file);
       const res = await fetch("/api/upload?scope=blog", {
         method: "POST",
         body: form,
-        credentials: "include"
+        credentials: "include",
+        signal: controller.signal
       });
-      const data = await res.json();
+      
+      const text = await res.text();
+      let data;
+      try {
+        data = JSON.parse(text);
+      } catch (e) {
+        console.error("Video upload parse error. Status:", res.status, "Body:", text.slice(0, 200));
+        data = { error: "Invalid server response" };
+      }
+
       if (!res.ok) {
-        throw new Error(data?.error || "Upload failed");
+        throw new Error(data?.error || `Upload failed with status ${res.status}`);
       }
       const path = Array.isArray(data.paths) ? data.paths[0] : null;
       const url = Array.isArray(data.signedUrls) ? data.signedUrls[0] : null;
@@ -312,11 +324,16 @@ export default function EditBlogPage({ params }: { params: Promise<{ id: string 
       });
       setUploadSuccess("Successfully added video");
     } catch (e: any) {
-      setUploadError(String(e?.message || e));
+      if (e.name === "AbortError") {
+        setUploadError("Upload timed out. Please try again.");
+      } else {
+        setUploadError(String(e?.message || e));
+      }
     } finally {
       setUploadingIndex(null);
       setPendingVideoIndex(null);
       e.target.value = "";
+      if (typeof timeoutId !== 'undefined') clearTimeout(timeoutId);
     }
   }
 
@@ -328,17 +345,29 @@ export default function EditBlogPage({ params }: { params: Promise<{ id: string 
     }
     setUploadingImageIndex(index);
     setUploadError(null);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
     try {
       const form = new FormData();
       form.append("files", file);
       const res = await fetch("/api/upload?scope=blog", {
         method: "POST",
         body: form,
-        credentials: "include"
+        credentials: "include",
+        signal: controller.signal
       });
-      const data = await res.json();
+      
+      const text = await res.text();
+      let data;
+      try {
+        data = JSON.parse(text);
+      } catch (e) {
+        console.error("Image upload parse error. Status:", res.status, "Body:", text.slice(0, 200));
+        data = { error: "Invalid server response" };
+      }
+
       if (!res.ok) {
-        throw new Error(data?.error || "Upload failed");
+        throw new Error(data?.error || `Upload failed with status ${res.status}`);
       }
       const path = Array.isArray(data.paths) ? data.paths[0] : null;
       const url = Array.isArray(data.signedUrls) ? data.signedUrls[0] : null;
@@ -351,11 +380,16 @@ export default function EditBlogPage({ params }: { params: Promise<{ id: string 
       });
       setUploadSuccess("Successfully added image");
     } catch (e: any) {
-      setUploadError(String(e?.message || e));
+      if (e.name === "AbortError") {
+        setUploadError("Upload timed out. Please try again.");
+      } else {
+        setUploadError(String(e?.message || e));
+      }
     } finally {
       setUploadingImageIndex(null);
       setPendingImageIndex(null);
       e.target.value = "";
+      if (typeof timeoutId !== 'undefined') clearTimeout(timeoutId);
     }
   }
 
@@ -366,17 +400,29 @@ export default function EditBlogPage({ params }: { params: Promise<{ id: string 
     }
     setUploadingHeroImage(true);
     setUploadError(null);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
     try {
       const form = new FormData();
       form.append("files", file);
       const res = await fetch("/api/upload?scope=blog", {
         method: "POST",
         body: form,
-        credentials: "include"
+        credentials: "include",
+        signal: controller.signal
       });
-      const data = await res.json();
+      
+      const text = await res.text();
+      let data;
+      try {
+        data = JSON.parse(text);
+      } catch (e) {
+        console.error("Hero image upload parse error. Status:", res.status, "Body:", text.slice(0, 200));
+        data = { error: "Invalid server response" };
+      }
+
       if (!res.ok) {
-        throw new Error(data?.error || "Upload failed");
+        throw new Error(data?.error || `Upload failed with status ${res.status}`);
       }
       const path = Array.isArray(data.paths) ? data.paths[0] : null;
       const url = Array.isArray(data.signedUrls) ? data.signedUrls[0] : null;
@@ -386,10 +432,15 @@ export default function EditBlogPage({ params }: { params: Promise<{ id: string 
       setHeroImageUpload({ path, url });
       setUploadSuccess("Successfully added hero image");
     } catch (e: any) {
-      setUploadError(String(e?.message || e));
+      if (e.name === "AbortError") {
+        setUploadError("Upload timed out. Please try again.");
+      } else {
+        setUploadError(String(e?.message || e));
+      }
     } finally {
       setUploadingHeroImage(false);
       e.target.value = "";
+      if (typeof timeoutId !== 'undefined') clearTimeout(timeoutId);
     }
   }
 
@@ -854,13 +905,22 @@ export default function EditBlogPage({ params }: { params: Promise<{ id: string 
   useEffect(() => {
     let alive = true;
     (async () => {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
       try {
         const { data } = await supabase.auth.getSession();
         const token = data.session?.access_token;
         const headers: Record<string, string> = {};
         if (token) headers["Authorization"] = `Bearer ${token}`;
-        const r = await fetch(`/api/blog/${id}`, { headers });
-        const j = await r.json();
+        const r = await fetch(`/api/blog/${id}`, { headers, signal: controller.signal });
+        const text = await r.text();
+        let j;
+        try {
+          j = JSON.parse(text);
+        } catch (e) {
+          console.error("Blog fetch parse error. Status:", r.status, "Body:", text.slice(0, 200));
+          throw new Error("Invalid server response");
+        }
         const p = j.post;
         if (!p) throw new Error("Not found");
         const rawDesc = String(p.description || "");
@@ -997,9 +1057,12 @@ export default function EditBlogPage({ params }: { params: Promise<{ id: string 
           }
         }
       } catch (e: any) {
+        if (e.name === "AbortError") return;
         if (alive) setSaveErr(String(e?.message || e));
+      } finally {
+        clearTimeout(timeoutId);
+        if (alive) setLoading(false);
       }
-      if (alive) setLoading(false);
     })();
     return () => {
       alive = false;
@@ -1191,28 +1254,45 @@ export default function EditBlogPage({ params }: { params: Promise<{ id: string 
         published: publish,
         media: mediaBody
       };
-      const r = await fetch(`/api/blog/${id}`, {
-        method: "PUT",
-        headers,
-        body: JSON.stringify(body)
-      });
-      
-      let j;
-      const contentType = r.headers.get("content-type");
-      if (contentType && contentType.includes("application/json")) {
-        j = await r.json();
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
+      try {
+        const r = await fetch(`/api/blog/${id}`, {
+          method: "PUT",
+          headers,
+          body: JSON.stringify(body),
+          signal: controller.signal
+        });
+        
+        const text = await r.text();
+        let j;
+        try {
+          j = JSON.parse(text);
+        } catch (e) {
+          console.error("Blog save parse error. Status:", r.status, "Body:", text.slice(0, 200));
+          j = { error: "Invalid server response" };
+        }
+        
+        if (!r.ok) {
+          throw new Error(j?.error || `Save failed with status ${r.status}`);
+        }
+        
+        setPublished(publish);
+        setSaveMsg(publish ? "Published successfully" : "Draft saved successfully");
+        router.refresh();
+      } catch (e: any) {
+        if (e.name === "AbortError") {
+          setSaveErr("Save timed out. Please try again.");
+        } else {
+          setSaveErr(String(e?.message || e));
+        }
+      } finally {
+        clearTimeout(timeoutId);
+        setSaving(false);
       }
-      
-      if (!r.ok) {
-        throw new Error(j?.error || `Save failed with status ${r.status}`);
-      }
-      
-      setPublished(publish);
-      setSaveMsg(publish ? "Published successfully" : "Draft saved successfully");
-      router.refresh();
-    } catch (e: any) {
-      setSaveErr(String(e?.message || e));
-    } finally {
+    } catch (err: any) {
+      console.error("Outer saveBlog error:", err);
+      setSaveErr(String(err?.message || err));
       setSaving(false);
     }
   }
@@ -1929,18 +2009,15 @@ export default function EditBlogPage({ params }: { params: Promise<{ id: string 
                   }}
                 >
                   {heroImageUpload && (heroImageUpload.url || heroImageUpload.path) ? (
-                    <Image
-                      src={
-                        heroImageUpload.url ||
-                        `/api/image/proxy?path=${encodeURIComponent(heroImageUpload.path)}`
-                      }
-                      alt="Blog hero image"
-                      fill
-                      sizes="100vw"
-                      className="object-cover rounded-md"
-                      unoptimized
-                    />
-                  ) : (
+                  <Image
+                    src={getProxyImageUrl(heroImageUpload.url || heroImageUpload.path)}
+                    alt="Blog hero image"
+                    fill
+                    sizes="100vw"
+                    className="object-cover rounded-md"
+                    unoptimized
+                  />
+                ) : (
                     <>
                       <svg
                         viewBox="0 0 24 24"
@@ -2098,9 +2175,7 @@ export default function EditBlogPage({ params }: { params: Promise<{ id: string 
                     {(() => {
                       const upload = getImageUpload(0, "above");
                       if (upload && (upload.url || upload.path)) {
-                        const src =
-                          upload.url ||
-                          `/api/image/proxy?path=${encodeURIComponent(upload.path)}`;
+                        const src = getProxyImageUrl(upload.url || upload.path);
                         return (
                           <div className="relative w-full h-full">
                             <Image
@@ -2232,9 +2307,7 @@ export default function EditBlogPage({ params }: { params: Promise<{ id: string 
                     {(() => {
                       const upload = getVideoUpload(0, "above");
                       if (upload && (upload.url || upload.path)) {
-                        const src =
-                          upload.url ||
-                          `/api/image/proxy?path=${encodeURIComponent(upload.path)}`;
+                        const src = getProxyImageUrl(upload.url || upload.path);
                         return (
                           <video
                             className="w-full h-full rounded-md object-cover"
@@ -2553,9 +2626,7 @@ export default function EditBlogPage({ params }: { params: Promise<{ id: string 
                     {(() => {
                       const upload = getImageUpload(0, "below");
                       if (upload && (upload.url || upload.path)) {
-                        const src =
-                          upload.url ||
-                          `/api/image/proxy?path=${encodeURIComponent(upload.path)}`;
+                        const src = getProxyImageUrl(upload.url || upload.path);
                         return (
                           <div className="relative w-full h-full">
                             <Image
@@ -2630,9 +2701,7 @@ export default function EditBlogPage({ params }: { params: Promise<{ id: string 
                     {(() => {
                       const upload = getVideoUpload(0, "below");
                       if (upload && (upload.url || upload.path)) {
-                        const src =
-                          upload.url ||
-                          `/api/image/proxy?path=${encodeURIComponent(upload.path)}`;
+                        const src = getProxyImageUrl(upload.url || upload.path);
                         return (
                           <video
                             className="w-full h-full rounded-md object-cover"
@@ -2769,9 +2838,7 @@ export default function EditBlogPage({ params }: { params: Promise<{ id: string 
                         {(() => {
                           const upload = getImageUpload(i + 1, "above");
                           if (upload && (upload.url || upload.path)) {
-                            const src =
-                              upload.url ||
-                              `/api/image/proxy?path=${encodeURIComponent(upload.path)}`;
+                            const src = getProxyImageUrl(upload.url || upload.path);
                             return (
                               <div className="relative w-full h-full">
                                 <Image
@@ -2903,9 +2970,7 @@ export default function EditBlogPage({ params }: { params: Promise<{ id: string 
                         {(() => {
                           const upload = getVideoUpload(i + 1, "above");
                           if (upload && (upload.url || upload.path)) {
-                            const src =
-                              upload.url ||
-                              `/api/image/proxy?path=${encodeURIComponent(upload.path)}`;
+                            const src = getProxyImageUrl(upload.url || upload.path);
                             return (
                               <video
                                 className="w-full h-full rounded-md object-cover"
@@ -3262,9 +3327,7 @@ export default function EditBlogPage({ params }: { params: Promise<{ id: string 
                         {(() => {
                           const upload = getImageUpload(i + 1, "below");
                           if (upload && (upload.url || upload.path)) {
-                            const src =
-                              upload.url ||
-                              `/api/image/proxy?path=${encodeURIComponent(upload.path)}`;
+                            const src = getProxyImageUrl(upload.url || upload.path);
                             return (
                               <div className="relative w-full h-full">
                                 <Image
@@ -3339,9 +3402,7 @@ export default function EditBlogPage({ params }: { params: Promise<{ id: string 
                         {(() => {
                           const upload = getVideoUpload(i + 1, "below");
                           if (upload && (upload.url || upload.path)) {
-                            const src =
-                              upload.url ||
-                              `/api/image/proxy?path=${encodeURIComponent(upload.path)}`;
+                            const src = getProxyImageUrl(upload.url || upload.path);
                             return (
                               <video
                                 className="w-full h-full rounded-md object-cover"
@@ -3528,10 +3589,7 @@ export default function EditBlogPage({ params }: { params: Promise<{ id: string 
                   <div className="relative mb-2 w-full h-32 rounded-md bg-slate-200 flex items-center justify-center text-[10px] text-slate-500 overflow-hidden">
                     {heroImageUpload && (heroImageUpload.url || heroImageUpload.path) ? (
                       <Image
-                        src={
-                          heroImageUpload.url ||
-                          `/api/image/proxy?path=${encodeURIComponent(heroImageUpload.path)}`
-                        }
+                        src={getProxyImageUrl(heroImageUpload.url || heroImageUpload.path)}
                         alt="Blog hero image preview"
                         fill
                         sizes="100vw"
@@ -3560,7 +3618,7 @@ export default function EditBlogPage({ params }: { params: Promise<{ id: string 
                             if (upload && (upload.url || upload.path)) {
                               return (
                                 <Image
-                                  src={upload.url || `/api/image/proxy?path=${encodeURIComponent(upload.path)}`}
+                                  src={getProxyImageUrl(upload.url || upload.path)}
                                   alt={`Content image ${idx} preview`}
                                   fill
                                   sizes="100vw"
@@ -3580,7 +3638,7 @@ export default function EditBlogPage({ params }: { params: Promise<{ id: string 
                             if (upload && (upload.url || upload.path)) {
                               return (
                                 <video
-                                  src={upload.url || `/api/image/proxy?path=${encodeURIComponent(upload.path)}`}
+                                  src={getProxyImageUrl(upload.url || upload.path)}
                                   className="absolute inset-0 w-full h-full object-cover"
                                   controls
                                   controlsList="nodownload"
@@ -3618,7 +3676,7 @@ export default function EditBlogPage({ params }: { params: Promise<{ id: string 
                             if (upload && (upload.url || upload.path)) {
                               return (
                                 <Image
-                                  src={upload.url || `/api/image/proxy?path=${encodeURIComponent(upload.path)}`}
+                                  src={getProxyImageUrl(upload.url || upload.path)}
                                   alt={`Content image ${idx} preview`}
                                   fill
                                   sizes="100vw"
@@ -3638,7 +3696,7 @@ export default function EditBlogPage({ params }: { params: Promise<{ id: string 
                             if (upload && (upload.url || upload.path)) {
                               return (
                                 <video
-                                  src={upload.url || `/api/image/proxy?path=${encodeURIComponent(upload.path)}`}
+                                  src={getProxyImageUrl(upload.url || upload.path)}
                                   className="absolute inset-0 w-full h-full object-cover"
                                   controls
                                   controlsList="nodownload"
@@ -3694,7 +3752,7 @@ export default function EditBlogPage({ params }: { params: Promise<{ id: string 
                   <div className="relative aspect-video w-full rounded-2xl bg-slate-100 overflow-hidden mb-8 shadow-inner border border-slate-100">
                     {heroImageUpload && (heroImageUpload.url || heroImageUpload.path) ? (
                       <Image
-                        src={heroImageUpload.url || `/api/image/proxy?path=${encodeURIComponent(heroImageUpload.path)}`}
+                        src={getProxyImageUrl(heroImageUpload.url || heroImageUpload.path)}
                         alt="Hero"
                         fill
                         className="object-cover"
@@ -3730,7 +3788,7 @@ export default function EditBlogPage({ params }: { params: Promise<{ id: string 
                             if (upload && (upload.url || upload.path)) {
                               return (
                                 <Image
-                                  src={upload.url || `/api/image/proxy?path=${encodeURIComponent(upload.path)}`}
+                                  src={getProxyImageUrl(upload.url || upload.path)}
                                   alt="Content"
                                   fill
                                   className="object-cover"
@@ -3750,7 +3808,7 @@ export default function EditBlogPage({ params }: { params: Promise<{ id: string 
                             if (upload && (upload.url || upload.path)) {
                               return (
                                 <video
-                                  src={upload.url || `/api/image/proxy?path=${encodeURIComponent(upload.path)}`}
+                                  src={getProxyImageUrl(upload.url || upload.path)}
                                   className="absolute inset-0 w-full h-full object-contain"
                                   controls
                                   preload="auto"
@@ -3790,7 +3848,7 @@ export default function EditBlogPage({ params }: { params: Promise<{ id: string 
                             if (upload && (upload.url || upload.path)) {
                               return (
                                 <Image
-                                  src={upload.url || `/api/image/proxy?path=${encodeURIComponent(upload.path)}`}
+                                  src={getProxyImageUrl(upload.url || upload.path)}
                                   alt="Content"
                                   fill
                                   className="object-cover"
@@ -3810,7 +3868,7 @@ export default function EditBlogPage({ params }: { params: Promise<{ id: string 
                             if (upload && (upload.url || upload.path)) {
                               return (
                                 <video
-                                  src={upload.url || `/api/image/proxy?path=${encodeURIComponent(upload.path)}`}
+                                  src={getProxyImageUrl(upload.url || upload.path)}
                                   className="absolute inset-0 w-full h-full object-contain"
                                   controls
                                   preload="auto"
