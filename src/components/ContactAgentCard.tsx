@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { getProxyImageUrl } from "@/lib/supabase";
+import { getProxyImageUrl } from "@/lib/image-utils";
 
 interface Agent {
   name: string | null;

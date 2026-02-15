@@ -2,7 +2,7 @@
 import Image from "next/image";
 import { useEffect, useState, useRef } from "react";
 import ShareButtons from "./ShareButtons";
-import { getProxyImageUrl } from "@/lib/supabase";
+import { getProxyImageUrl } from "@/lib/image-utils";
 
   function isVideo(url: string) {
     if (!url) return false;

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import MainFooterCards from "../components/MainFooterCards";
 import Image from "next/image";
-import { getProxyImageUrl } from "../lib/supabase";
+import { getProxyImageUrl } from "../lib/image-utils";
 
 const fetcher = async (u: string, signal?: AbortSignal) => {
   const controller = new AbortController();

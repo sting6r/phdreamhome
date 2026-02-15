@@ -2,7 +2,7 @@
 import React from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { getProxyImageUrl } from "@/lib/supabase";
+import { getProxyImageUrl } from "@/lib/image-utils";
 
 export default function SimilarCarousel({ items }: { items: any[] }) {
   const safeItems = Array.isArray(items) ? items : [];

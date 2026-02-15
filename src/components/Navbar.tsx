@@ -3,7 +3,8 @@ import Link from "next/link";
 import Image from "next/image";
 import { useEffect, useState, useRef, useMemo } from "react";
 import { usePathname } from "next/navigation";
-import { createClientSideClient, getProxyImageUrl } from "@lib/supabase";
+import { createClientSideClient } from "@lib/supabase";
+import { getProxyImageUrl } from "@lib/image-utils";
 
 export default function Navbar() {
   const [mounted, setMounted] = useState(false);

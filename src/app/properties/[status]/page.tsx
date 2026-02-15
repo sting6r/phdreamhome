@@ -3,7 +3,7 @@ import React, { useState, useMemo, useEffect, Suspense, use } from "react";
 import MainFooterCards from "../../../components/MainFooterCards";
 import Link from "next/link";
 import Image from "next/image";
-import { getProxyImageUrl } from "../../../lib/supabase";
+import { getProxyImageUrl } from "../../../lib/image-utils";
 import { useSearchParams, useRouter } from "next/navigation";
 import QuickLinksSelector from "../../../components/QuickLinksSelector";
 

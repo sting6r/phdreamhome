@@ -1,7 +1,8 @@
 "use client";
 import { useEffect, useRef, useState, useCallback } from "react";
 import Image from "next/image";
-import { supabase, getProxyImageUrl } from "@lib/supabase";
+import { supabase } from "@lib/supabase";
+import { getProxyImageUrl } from "@lib/image-utils";
 
 export default function ProfilePage() {
   const [form, setForm] = useState({ name: "", email: "", address: "", phone: "", image: "", role: "", licenseNo: "", dhsudAccredNo: "", facebook: "", whatsapp: "", viber: "", instagram: "", telegram: "", youtube: "", twitter: "" });

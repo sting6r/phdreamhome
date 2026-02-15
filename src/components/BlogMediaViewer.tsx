@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
-import { getProxyImageUrl } from "../lib/supabase";
+import { getProxyImageUrl } from "../lib/image-utils";
 
 type Item = { path: string; type: "image" | "video"; url: string | null };
 

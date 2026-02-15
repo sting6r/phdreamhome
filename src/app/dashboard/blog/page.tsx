@@ -2,7 +2,8 @@
 import Image from "next/image";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { supabase, getProxyImageUrl } from "@lib/supabase";
+import { supabase } from "@lib/supabase";
+import { getProxyImageUrl } from "@lib/image-utils";
 
 function renderInlineFormatting(text: string) {
   if (typeof text !== "string") return text;
