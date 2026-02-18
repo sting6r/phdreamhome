@@ -1,4 +1,4 @@
-Ôªø"use client";
+"use client";
 
 import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { useChat, type UIMessage as Message } from "@ai-sdk/react";
@@ -417,7 +417,7 @@ export default function AIAgent() {
         if (safeListings.length) {
           const lines = safeListings.map((l: any, i: number) => {
             const country = String(l?.country || "").toLowerCase();
-            let currency = "‚Ç±";
+            let currency = "?";
             if (country.includes("usa") || country.includes("united states")) currency = "$";
             else if (country.includes("dubai") || country.includes("uae") || country.includes("emirates")) currency = "AED ";
             else if (country.includes("singapore")) currency = "S$";
@@ -426,7 +426,7 @@ export default function AIAgent() {
             const link = l?.slug ? `/listing/${l.slug}` : `/listing/${l?.id}`;
             const img = l?.images?.[0]?.url ? `![${l.title}](${l.images[0].url})\n` : '';
             const loc = [l?.city, l?.state, l?.country].filter(Boolean).join(', ');
-            return `${img}${i + 1}. ${String(l?.title || '')}${price ? ` ‚Äî ${price}` : ''}${loc ? ` ‚Ä¢ ${loc}` : ''}\nView: ${link}`;
+            return `${img}${i + 1}. ${String(l?.title || '')}${price ? ` ó ${price}` : ''}${loc ? ` ï ${loc}` : ''}\nView: ${link}`;
           }).join('\n\n');
           listingsSnippet = lines;
         }
@@ -437,7 +437,7 @@ export default function AIAgent() {
         title ? `Title: ${title}` : "",
         description ? `Description: ${description}` : "",
         pathname ? `Path: ${pathname}` : "",
-        hs.length ? `Headings: ${hs.join(' ‚Ä¢ ')}` : "",
+        hs.length ? `Headings: ${hs.join(' ï ')}` : "",
         mainText ? `Page Text: ${mainText}` : "",
         listingsSnippet ? `Featured Listings:\n\n${listingsSnippet}` : ""
       ].filter(Boolean).join('\n');
@@ -632,8 +632,8 @@ export default function AIAgent() {
                 const greeting = {
                   id: 'greeting-' + Date.now(),
                   role: 'assistant' as const,
-                  content: "üëã Hi there! I am Kyuubi, your PhDreamHome AI Assistant. Let me help you today.",
-                  parts: [{ type: 'text' as const, text: "üëã Hi there! I am Kyuubi, your PhDreamHome AI Assistant. Let me help you today." }]
+                  content: "?? Hi there! I am Kyuubi, your PhDreamHome AI Assistant. Let me help you today.",
+                  parts: [{ type: 'text' as const, text: "?? Hi there! I am Kyuubi, your PhDreamHome AI Assistant. Let me help you today." }]
                 };
                 if (chatInstance.messages.length === 0) {
                   chatInstance.setMessages([greeting]);
@@ -765,8 +765,8 @@ export default function AIAgent() {
             const greeting = {
               id: 'greeting-' + Date.now(),
               role: 'assistant' as const,
-              content: "üëã Hi there! I am Kyuubi, your PhDreamHome AI Assistant. Let me help you today.",
-              parts: [{ type: 'text' as const, text: "üëã Hi there! I am Kyuubi, your PhDreamHome AI Assistant. Let me help you today." }]
+              content: "?? Hi there! I am Kyuubi, your PhDreamHome AI Assistant. Let me help you today.",
+              parts: [{ type: 'text' as const, text: "?? Hi there! I am Kyuubi, your PhDreamHome AI Assistant. Let me help you today." }]
             };
             chatInstance.setMessages([greeting]);
             
@@ -1172,8 +1172,8 @@ export default function AIAgent() {
                     const assistantMsg = {
                       id: (Date.now() + 1).toString(),
                       role: 'assistant' as const,
-                      content: `Perfect! üóìÔ∏è Your ${type} has been requested for **${date}** at **${time}**. One of our agents will contact you shortly to confirm the appointment.`,
-                      parts: [{ type: 'text' as const, text: `Perfect! üóìÔ∏è Your ${type} has been requested for **${date}** at **${time}**. One of our agents will contact you shortly to confirm the appointment.` }]
+                      content: `Perfect! ??? Your ${type} has been requested for **${date}** at **${time}**. One of our agents will contact you shortly to confirm the appointment.`,
+                      parts: [{ type: 'text' as const, text: `Perfect! ??? Your ${type} has been requested for **${date}** at **${time}**. One of our agents will contact you shortly to confirm the appointment.` }]
                     };
 
                     const newMsgs = [...chatInstance.messages, userMsg, assistantMsg];
@@ -1280,7 +1280,7 @@ export default function AIAgent() {
                       <PesoSign size={10} /> {data.Mode === 'Rent' ? 'Monthly Rent' : 'Selling Price'}
                     </div>
                     <div className="text-xs font-bold text-purple-600">
-                      {mounted ? (isNaN(Number(data.Price)) ? data.Price : `‚Ç±${Number(data.Price).toLocaleString('en-PH')}`) : ""}
+                      {mounted ? (isNaN(Number(data.Price)) ? data.Price : `?${Number(data.Price).toLocaleString('en-PH')}`) : ""}
                     </div>
                   </div>
 
@@ -1409,7 +1409,7 @@ export default function AIAgent() {
                   onClick={() => setShowPropertyForm(true)}
                   className="mt-2 w-full flex items-center justify-center gap-2 bg-purple-600 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-md hover:bg-purple-700 transition-all active:scale-95"
                 >
-                  <Image src="/girl.png" alt="AI" width={18} height={18} className="rounded-full" />
+                  <Image src="/Cat.png" alt="AI" width={18} height={18} className="rounded-full" />
                   Fill Out Property Form
                 </button>
               </span>
@@ -1565,10 +1565,10 @@ export default function AIAgent() {
       const assistantMsg = { 
         id: (Date.now() + 1).toString(), 
         role: 'assistant' as const, 
-        content: "I'd be happy to help you schedule a property visit! üè†\n\nYou can schedule a tour by clicking the link below:\n\n/contact\n\nAlternatively, tell me which property you're interested in, and I can help you coordinate with an agent directly.",
+        content: "I'd be happy to help you schedule a property visit! ??\n\nYou can schedule a tour by clicking the link below:\n\n/contact\n\nAlternatively, tell me which property you're interested in, and I can help you coordinate with an agent directly.",
         parts: [{ 
           type: 'text' as const, 
-          text: "I'd be happy to help you schedule a property visit! üè†\n\nYou can schedule a tour by clicking the link below:\n\n/contact\n\nAlternatively, tell me which property you're interested in, and I can help you coordinate with an agent directly." 
+          text: "I'd be happy to help you schedule a property visit! ??\n\nYou can schedule a tour by clicking the link below:\n\n/contact\n\nAlternatively, tell me which property you're interested in, and I can help you coordinate with an agent directly." 
         }]
       };
       
@@ -1664,7 +1664,7 @@ export default function AIAgent() {
           if (country.includes("usa") || country.includes("united states")) return "$";
           if (country.includes("dubai") || country.includes("uae") || country.includes("emirates")) return "AED ";
           if (country.includes("singapore")) return "S$";
-          return "‚Ç±";
+          return "?";
         };
         const build = samples.map((l: any, idx: number) => {
           const currency = getCurrency(l);
@@ -1674,14 +1674,14 @@ export default function AIAgent() {
           const baths = Number(l.bathrooms) > 0 ? `${l.bathrooms} BA` : "";
           const type = l.type ? `${l.type}` : "";
           const statusText = l.status ? `${l.status}` : "";
-          const img = (Array.isArray(l.images) && l.images[0]?.url) ? `![${l.title} ‚Äî ${price}](${l.images[0].url})\n` : "";
+          const img = (Array.isArray(l.images) && l.images[0]?.url) ? `![${l.title} ó ${price}](${l.images[0].url})\n` : "";
           const link = l.slug ? `/listing/${l.slug}` : `/listing/${l.id}`;
           const lines = [
             `${idx + 1}. ${l.title}`,
-            loc ? `‚Ä¢ Location: ${loc}` : "",
-            `‚Ä¢ Price: ${price}`,
-            [type, statusText, beds, baths].filter(Boolean).length ? `‚Ä¢ Details: ${[type, statusText, beds, baths].filter(Boolean).join(" ‚Ä¢ ")}` : "",
-            `‚Ä¢ View: ${link}`
+            loc ? `ï Location: ${loc}` : "",
+            `ï Price: ${price}`,
+            [type, statusText, beds, baths].filter(Boolean).length ? `ï Details: ${[type, statusText, beds, baths].filter(Boolean).join(" ï ")}` : "",
+            `ï View: ${link}`
           ].filter(Boolean).join("\n");
           return `${img}${lines}`;
         }).join("\n\n");
@@ -1723,7 +1723,7 @@ export default function AIAgent() {
       }
     }
 
-    if (/^Budget ‚â§ \d+$/i.test(text)) {
+    if (/^Budget = \d+$/i.test(text)) {
       const max = Number(text.replace(/[^0-9]/g, ""));
       setInquireMaxPrice(max);
       const userMsg = { 
@@ -1760,7 +1760,7 @@ export default function AIAgent() {
           if (country.includes("usa") || country.includes("united states")) return "$";
           if (country.includes("dubai") || country.includes("uae") || country.includes("emirates")) return "AED ";
           if (country.includes("singapore")) return "S$";
-          return "‚Ç±";
+          return "?";
         };
         const build = samples.map((l: any, idx: number) => {
           const currency = getCurrency(l);
@@ -1770,14 +1770,14 @@ export default function AIAgent() {
           const baths = Number(l.bathrooms) > 0 ? `${l.bathrooms} BA` : "";
           const type = l.type ? `${l.type}` : "";
           const statusText = l.status ? `${l.status}` : "";
-          const img = (Array.isArray(l.images) && l.images[0]?.url) ? `![${l.title} ‚Äî ${price}](${l.images[0].url})\n` : "";
+          const img = (Array.isArray(l.images) && l.images[0]?.url) ? `![${l.title} ó ${price}](${l.images[0].url})\n` : "";
           const link = l.slug ? `/listing/${l.slug}` : `/listing/${l.id}`;
           const lines = [
             `${idx + 1}. ${l.title}`,
-            loc ? `‚Ä¢ Location: ${loc}` : "",
-            `‚Ä¢ Price: ${price}`,
-            [type, statusText, beds, baths].filter(Boolean).length ? `‚Ä¢ Details: ${[type, statusText, beds, baths].filter(Boolean).join(" ‚Ä¢ ")}` : "",
-            `‚Ä¢ View: ${link}`
+            loc ? `ï Location: ${loc}` : "",
+            `ï Price: ${price}`,
+            [type, statusText, beds, baths].filter(Boolean).length ? `ï Details: ${[type, statusText, beds, baths].filter(Boolean).join(" ï ")}` : "",
+            `ï View: ${link}`
           ].filter(Boolean).join("\n");
           return `${img}${lines}`;
         }).join("\n\n");
@@ -1850,20 +1850,20 @@ export default function AIAgent() {
         const samples = listings.slice(0, Math.max(1, Math.min(3, listings.length)));
         const makeLoc = (l: any) => [l.address, l.city, l.state, l.country].filter(Boolean).join(", ");
         const build = samples.map((l: any, idx: number) => {
-          const price = `‚Ç±${Number(l.price).toLocaleString("en-PH", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+          const price = `?${Number(l.price).toLocaleString("en-PH", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
           const loc = makeLoc(l);
           const btxt = Number(l.bedrooms) > 0 ? `${l.bedrooms} BR` : "";
           const baths = Number(l.bathrooms) > 0 ? `${l.bathrooms} BA` : "";
           const type = l.type ? `${l.type}` : "";
           const statusText = l.status ? `${l.status}` : "";
-          const img = (Array.isArray(l.images) && l.images[0]?.url) ? `![${l.title} ‚Äî ${price}](${l.images[0].url})\n` : "";
+          const img = (Array.isArray(l.images) && l.images[0]?.url) ? `![${l.title} ó ${price}](${l.images[0].url})\n` : "";
           const link = l.slug ? `/listing/${l.slug}` : `/listing/${l.id}`;
           const lines = [
             `${idx + 1}. ${l.title}`,
-            loc ? `‚Ä¢ Location: ${loc}` : "",
-            `‚Ä¢ Price: ${price}`,
-            [type, statusText, btxt, baths].filter(Boolean).length ? `‚Ä¢ Details: ${[type, statusText, btxt, baths].filter(Boolean).join(" ‚Ä¢ ")}` : "",
-            `‚Ä¢ View: ${link}`
+            loc ? `ï Location: ${loc}` : "",
+            `ï Price: ${price}`,
+            [type, statusText, btxt, baths].filter(Boolean).length ? `ï Details: ${[type, statusText, btxt, baths].filter(Boolean).join(" ï ")}` : "",
+            `ï View: ${link}`
           ].filter(Boolean).join("\n");
           return `${img}${lines}`;
         }).join("\n\n");
@@ -1912,7 +1912,7 @@ export default function AIAgent() {
       };
       const statusSlug = (inquireFilterStatus || "").toLowerCase().replace(/\s+/g, "-");
       const pageLink = inquireFilterStatus ? `/properties/${statusSlug}` : "/properties/for-sale";
-      const assistantText = `You can browse more properties here:\n\n${pageLink}\n\nTell me your budget and target location, and I‚Äôll refine the listings.`;
+      const assistantText = `You can browse more properties here:\n\n${pageLink}\n\nTell me your budget and target location, and Iíll refine the listings.`;
       const assistantMsg = { 
         id: (Date.now() + 1).toString(), 
         role: 'assistant' as const, 
@@ -1939,10 +1939,10 @@ export default function AIAgent() {
       const assistantMsg = { 
         id: (Date.now() + 1).toString(), 
         role: 'assistant' as const, 
-        content: `I'd be happy to help you ${isRent ? 'rent out' : 'sell'} your property! üè†\n\nTo get started, could you please provide some details like the location, type, and your desired ${isRent ? 'monthly rent' : 'selling price'}?\n\n**Alternatively, you can click the button below to fill out a quick form:**`,
+        content: `I'd be happy to help you ${isRent ? 'rent out' : 'sell'} your property! ??\n\nTo get started, could you please provide some details like the location, type, and your desired ${isRent ? 'monthly rent' : 'selling price'}?\n\n**Alternatively, you can click the button below to fill out a quick form:**`,
         parts: [{ 
           type: 'text' as const, 
-          text: `I'd be happy to help you ${isRent ? 'rent out' : 'sell'} your property! üè†\n\nTo get started, could you please provide some details like the location, type, and your desired ${isRent ? 'monthly rent' : 'selling price'}?\n\n**Alternatively, you can click the button below to fill out a quick form:**` 
+          text: `I'd be happy to help you ${isRent ? 'rent out' : 'sell'} your property! ??\n\nTo get started, could you please provide some details like the location, type, and your desired ${isRent ? 'monthly rent' : 'selling price'}?\n\n**Alternatively, you can click the button below to fill out a quick form:**` 
         }]
       };
       
@@ -2129,20 +2129,20 @@ export default function AIAgent() {
         const samples = listings.slice(0, Math.max(1, Math.min(3, listings.length)));
         const makeLoc = (l: any) => [l.address, l.city, l.state, l.country].filter(Boolean).join(", ");
         const build = samples.map((l: any, idx: number) => {
-          const price = `‚Ç±${Number(l.price).toLocaleString("en-PH", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+          const price = `?${Number(l.price).toLocaleString("en-PH", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
           const loc = makeLoc(l);
           const beds = Number(l.bedrooms) > 0 ? `${l.bedrooms} BR` : "";
           const baths = Number(l.bathrooms) > 0 ? `${l.bathrooms} BA` : "";
           const type = l.type ? `${l.type}` : "";
           const statusText = l.status ? `${l.status}` : "";
-          const img = (Array.isArray(l.images) && l.images[0]?.url) ? `![${l.title} ‚Äî ${price}](${l.images[0].url})\n` : "";
+          const img = (Array.isArray(l.images) && l.images[0]?.url) ? `![${l.title} ó ${price}](${l.images[0].url})\n` : "";
           const link = l.slug ? `/listing/${l.slug}` : `/listing/${l.id}`;
           const lines = [
             `${idx + 1}. ${l.title}`,
-            loc ? `‚Ä¢ Location: ${loc}` : "",
-            `‚Ä¢ Price: ${price}`,
-            [type, statusText, beds, baths].filter(Boolean).length ? `‚Ä¢ Details: ${[type, statusText, beds, baths].filter(Boolean).join(" ‚Ä¢ ")}` : "",
-            `‚Ä¢ View: ${link}`
+            loc ? `ï Location: ${loc}` : "",
+            `ï Price: ${price}`,
+            [type, statusText, beds, baths].filter(Boolean).length ? `ï Details: ${[type, statusText, beds, baths].filter(Boolean).join(" ï ")}` : "",
+            `ï View: ${link}`
           ].filter(Boolean).join("\n");
           return `${img}${lines}`;
         }).join("\n\n");
@@ -2162,7 +2162,7 @@ export default function AIAgent() {
         if (currentInquiryId) {
           syncTranscriptToDb(newMsgs, currentInquiryId);
         }
-        setQuickActionList(["Budget ‚â§ 2000000", "Budget ‚â§ 5000000", "Budget ‚â§ 10000000", "Bedrooms 1+", "Bedrooms 2+", "Bedrooms 3+", "Open Properties Page"]);
+        setQuickActionList(["Budget = 2000000", "Budget = 5000000", "Budget = 10000000", "Bedrooms 1+", "Bedrooms 2+", "Bedrooms 3+", "Open Properties Page"]);
         setShowInChatQuickActions(true);
         setChatInput("");
         return;
@@ -2242,26 +2242,26 @@ export default function AIAgent() {
         }
         const makeLoc = (l: any) => [l.address, l.city, l.state, l.country].filter(Boolean).join(", ");
         const build = samples.map((l: any, idx: number) => {
-          const price = `‚Ç±${Number(l.price).toLocaleString("en-PH", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+          const price = `?${Number(l.price).toLocaleString("en-PH", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
           const loc = makeLoc(l);
           const beds = Number(l.bedrooms) > 0 ? `${l.bedrooms} BR` : "";
           const baths = Number(l.bathrooms) > 0 ? `${l.bathrooms} BA` : "";
           const type = l.type ? `${l.type}` : "";
           const statusText = l.status ? `${l.status}` : "";
-          const img = (Array.isArray(l.images) && l.images[0]?.url) ? `![${l.title} ‚Äî ${price}](${l.images[0].url})\n` : "";
+          const img = (Array.isArray(l.images) && l.images[0]?.url) ? `![${l.title} ó ${price}](${l.images[0].url})\n` : "";
           const link = l.slug ? `/listing/${l.slug}` : `/listing/${l.id}`;
           const lines = [
             `${idx + 1}. ${l.title}`,
-            loc ? `‚Ä¢ Location: ${loc}` : "",
-            `‚Ä¢ Price: ${price}`,
-            [type, statusText, beds, baths].filter(Boolean).length ? `‚Ä¢ Details: ${[type, statusText, beds, baths].filter(Boolean).join(" ‚Ä¢ ")}` : "",
-            `‚Ä¢ View: ${link}`
+            loc ? `ï Location: ${loc}` : "",
+            `ï Price: ${price}`,
+            [type, statusText, beds, baths].filter(Boolean).length ? `ï Details: ${[type, statusText, beds, baths].filter(Boolean).join(" ï ")}` : "",
+            `ï View: ${link}`
           ].filter(Boolean).join("\n");
           return `${img}${lines}`;
         }).join("\n\n");
         const statusSlug = (inquireFilterStatus || "").toLowerCase().replace(/\s+/g, "-");
         const pageLink = inquireFilterStatus ? `/properties/${statusSlug}` : "/properties/for-sale";
-        const assistantText = `Here ${samples.length === 1 ? "is a sample property" : `are ${samples.length} sample properties`} based on your filter:\n\n${build}\n\nOpen Properties Page: ${pageLink}\n\nYou can choose a budget or bedrooms below, or share your move‚Äëin timeline so I can refine the search.`;
+        const assistantText = `Here ${samples.length === 1 ? "is a sample property" : `are ${samples.length} sample properties`} based on your filter:\n\n${build}\n\nOpen Properties Page: ${pageLink}\n\nYou can choose a budget or bedrooms below, or share your move-in timeline so I can refine the search.`;
         const assistantMsg = { 
           id: (Date.now() + 1).toString(), 
           role: 'assistant' as const, 
@@ -2538,7 +2538,7 @@ export default function AIAgent() {
                       <X size={12} />
                     </button>
                     <p className="text-sm font-medium leading-relaxed">
-                      üëã Hi there! I am Kyuubi, your PhDreamHome AI Assistant. Let me help you today.
+                      ?? Hi there! I am Kyuubi, your PhDreamHome AI Assistant. Let me help you today.
                     </p>
                   </div>
 
@@ -2586,7 +2586,7 @@ export default function AIAgent() {
                         className="flex items-center gap-2 bg-purple-600 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-lg hover:bg-purple-700 transition-all hover:scale-105 active:scale-95 w-full justify-center"
                       >
                         {item.label}
-                        <Image src="/girl.png" alt="AI" width={18} height={18} className="rounded-full shadow-sm" />
+                        <Image src="/Cat.png" alt="AI" width={18} height={18} className="rounded-full shadow-sm" />
                       </button>
                     )
                   ))}
@@ -2619,7 +2619,7 @@ export default function AIAgent() {
             >
               <div className="absolute inset-0 bg-gradient-to-tr from-purple-600/20 to-transparent" />
               <Image 
-                src={getProxyImageUrl(agentProfileImage || "/girl.png")} 
+                src={getProxyImageUrl(agentProfileImage || "/Cat.png")} 
                 alt="AI Assistant" 
                 width={56} 
                 height={56} 
@@ -2731,7 +2731,7 @@ export default function AIAgent() {
                     <ChevronLeft size={14} />
                   </button>
                 )}
-                <Image src="/girl.png" alt="PhDreamHome AI Assistant" width={32} height={32} className="rounded-full" />
+                <Image src="/Cat.png" alt="PhDreamHome AI Assistant" width={32} height={32} className="rounded-full" />
                 <div className="flex flex-col">
                   <span className="font-semibold text-sm">Kyuubi AI</span>
                   <span className="text-[10px] opacity-90 leading-tight">Hi there! I am Kyuubi, your PhDreamHome AI Assistant.</span>
@@ -2866,11 +2866,11 @@ export default function AIAgent() {
                             }}
                           >
                             <div className="flex items-center gap-2">
-                              <Image src="/girl.png" alt="PhDreamHome AI Assistant" width={24} height={24} className="rounded-full" />
+                              <Image src="/Cat.png" alt="PhDreamHome AI Assistant" width={24} height={24} className="rounded-full" />
                               <div className="text-xs font-semibold text-slate-800">Kyuubi AI</div>
                             </div>
                             <div className="text-[10px] text-slate-500">
-                              {formatDate(new Date(session.startedAt))} ¬∑ {formatTime(new Date(session.startedAt))}
+                              {formatDate(new Date(session.startedAt))} ∑ {formatTime(new Date(session.startedAt))}
                             </div>
                           </div>
                         ));
@@ -2901,8 +2901,8 @@ export default function AIAgent() {
                           const greeting = {
                             id: 'greeting-' + Date.now(),
                             role: 'assistant' as const,
-                            content: "üëã Hi there! I am Kyuubi, your PhDreamHome AI Assistant. Let me help you today.",
-                            parts: [{ type: 'text' as const, text: "üëã Hi there! I am Kyuubi, your PhDreamHome AI Assistant. Let me help you today." }]
+                            content: "?? Hi there! I am Kyuubi, your PhDreamHome AI Assistant. Let me help you today.",
+                            parts: [{ type: 'text' as const, text: "?? Hi there! I am Kyuubi, your PhDreamHome AI Assistant. Let me help you today." }]
                           };
                           const firstTs = parseInt(String(greeting.id).match(/(\d{13})/)?.[1] || String(Date.now()), 10);
                           const newSessionId = makeSessionId();
@@ -2970,7 +2970,7 @@ export default function AIAgent() {
                         >
                           <div className="flex items-center justify-between mb-4">
                             <h3 className="font-bold text-slate-800 flex items-center gap-2">
-                              <Image src="/girl.png" alt="AI" width={20} height={20} className="rounded-full" />
+                              <Image src="/Cat.png" alt="AI" width={20} height={20} className="rounded-full" />
                               Property Details
                             </h3>
                             <button 
@@ -3048,7 +3048,7 @@ export default function AIAgent() {
                         <>
                           {chatInstance.messages.length === 0 && (
                             <div className="flex flex-col items-center justify-center h-full text-center space-y-2 opacity-60">
-                              <Image src="/girl.png" alt="AI" width={48} height={48} className="rounded-full shadow-lg border border-purple-100" />
+                              <Image src="/Cat.png" alt="AI" width={48} height={48} className="rounded-full shadow-lg border border-purple-100" />
                               <p className="text-xs font-medium text-slate-600">Start a conversation with PhDreamHome AI Assistant</p>
                             </div>
                           )}
@@ -3114,7 +3114,7 @@ export default function AIAgent() {
                                         }`}
                                       >
                                         <div className="flex items-center gap-1.5 mb-1 opacity-70">
-                                          {m.role === "user" ? <User size={14} /> : <Image src="/girl.png" alt="AI" width={20} height={20} className="rounded-full" />}
+                                          {m.role === "user" ? <User size={14} /> : <Image src="/Cat.png" alt="AI" width={20} height={20} className="rounded-full" />}
                                           <span className="font-bold uppercase tracking-wider text-[10px]">
                                             {m.role === "user" ? "You" : "Kyuubi AI"}
                                           </span>
@@ -3136,7 +3136,7 @@ export default function AIAgent() {
                                                 if (part.type.startsWith("tool-") || part.type === "dynamic-tool") {
                                                   return (
                                                     <div key={i} className="my-2 rounded bg-slate-100 p-2 text-[10px] italic flex items-center gap-2">
-                                                      <Image src="/girl.png" alt="AI" width={14} height={14} className="rounded-full animate-pulse" />
+                                                      <Image src="/Cat.png" alt="AI" width={14} height={14} className="rounded-full animate-pulse" />
                                                       <span>Assistant is performing an action...</span>
                                                     </div>
                                                   );
@@ -3460,7 +3460,7 @@ export default function AIAgent() {
 
             {/* Close hint for desktop */}
             <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-white/30 text-[10px] uppercase tracking-widest hidden md:block">
-              Click anywhere outside to close ‚Ä¢ Press ESC to exit
+              Click anywhere outside to close ï Press ESC to exit
             </div>
           </motion.div>
         )}

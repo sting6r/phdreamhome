@@ -92,7 +92,7 @@ export default function AboutPage() {
             <div className="absolute inset-0 bg-slate-100" />
             <div className="absolute inset-0 flex items-center justify-center">
               <div className="relative w-[88%] max-w-[420px] aspect-[4/3] rounded-2xl overflow-hidden ring-1 ring-black/10 shadow-xl">
-                <Image src="/girl.png" alt="PH Dream Home Team" fill className="object-cover" />
+                <Image src="/Cat.png" alt="PH Dream Home Team" fill className="object-cover" />
               </div>
             </div>
           </div>

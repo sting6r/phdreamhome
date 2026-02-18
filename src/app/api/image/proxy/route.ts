@@ -27,7 +27,7 @@ export async function GET(req: Request) {
     if (path.startsWith('http://') || path.startsWith('https://')) {
       try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 10000); // Standard 10s timeout
+        const timeoutId = setTimeout(() => controller.abort(), 15000); // Increased timeout to 15s
         const response = await fetch(path, {
           signal: controller.signal,
           headers: {
@@ -38,11 +38,24 @@ export async function GET(req: Request) {
         clearTimeout(timeoutId);
         
         if (response.ok) {
-          const contentType = response.headers.get('content-type') || 'image/jpeg';
+          const contentType = response.headers.get('content-type');
+          if (!contentType || !contentType.startsWith('image/')) {
+            console.warn(`Proxy received non-image content-type: ${contentType} for ${path}`);
+            // If it's application/octet-stream, we might try to guess, but otherwise it's risky
+            if (contentType !== 'application/octet-stream') {
+              return NextResponse.redirect(path);
+            }
+          }
+
           const buffer = await response.arrayBuffer();
+          if (!buffer || buffer.byteLength === 0) {
+             console.warn(`Proxy received empty body for ${path}`);
+             return NextResponse.redirect(path);
+          }
+
           return new Response(buffer, {
             headers: {
-              'Content-Type': contentType,
+              'Content-Type': contentType || 'image/jpeg',
               'Cache-Control': 'public, max-age=31536000, stale-while-revalidate=86400',
               'Access-Control-Allow-Origin': '*'
             }
