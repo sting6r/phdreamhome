@@ -48,11 +48,11 @@ export async function PUT(req: Request) {
         exists = await Promise.race([
         withRetry(() => prisma.user.findFirst({
           where: { username: body.username, NOT: { id: userId } }
-        })),
-        timeout(8000)
+        }), 3, 1000),
+        timeout(15000)
       ]);
     } catch (e) {
-      console.warn("Prisma username check failed/timed out (8s), falling back to Supabase", e);
+      console.warn("Prisma username check failed/timed out (15s), falling back to Supabase", e);
         const { data: u } = await supabaseAdmin.from('User').select('id').eq('username', body.username).neq('id', userId).maybeSingle();
         exists = !!u;
       }
@@ -65,11 +65,11 @@ export async function PUT(req: Request) {
         emailExists = await Promise.race([
         withRetry(() => prisma.user.findFirst({
           where: { email: body.email, NOT: { id: userId } }
-        })),
-        timeout(8000)
+        }), 3, 1000),
+        timeout(15000)
       ]);
     } catch (e) {
-      console.warn("Prisma email check failed/timed out (8s), falling back to Supabase", e);
+      console.warn("Prisma email check failed/timed out (15s), falling back to Supabase", e);
         const { data: u } = await supabaseAdmin.from('User').select('id').eq('email', body.email).neq('id', userId).maybeSingle();
         emailExists = !!u;
       }
@@ -166,11 +166,11 @@ export async function GET(req: Request) {
     let dbUser, totalListings;
     try {
       const timeout = (ms: number) => new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), ms));
-      const userTask = withRetry(() => prisma.user.findUnique({ where: { id: userId } }));
-      const countTask = withRetry(() => prisma.listing.count({ where: { userId } }));
+      const userTask = withRetry(() => prisma.user.findUnique({ where: { id: userId } }), 3, 1000);
+      const countTask = withRetry(() => prisma.listing.count({ where: { userId } }), 3, 1000);
       const [resUser, resCount] = await Promise.race([
         Promise.all([userTask, countTask]),
-        timeout(10000)
+        timeout(15000)
       ]) as [any, number];
       
       dbUser = resUser;

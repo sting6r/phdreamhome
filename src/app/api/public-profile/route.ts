@@ -22,10 +22,10 @@ export async function GET() {
                 phone: true, image: true, emailVerified: true, role: true, 
                 licenseNo: true, dhsudAccredNo: true, youtube: true
               }
-            }), 1, 0);
+            }), 3, 1000);
           })(),
-          timeout(8000)
-        ]) as any;
+      timeout(15000)
+    ]) as any;
 
         if (user) {
           try {

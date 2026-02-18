@@ -37,8 +37,8 @@ export async function GET(req: Request) {
           },
           include: { images: { orderBy: { sortOrder: "asc" } } },
           orderBy: { createdAt: "desc" }
-        }), 1, 0),
-        timeout(8000)
+        }), 3, 1000),
+        timeout(15000)
       ]);
     } catch (dbError) {
       console.error("Prisma failed in public-listings, attempting Supabase fallback:", dbError);

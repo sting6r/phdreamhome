@@ -545,32 +545,32 @@ function HomePageContent() {
                 </div>
               </div>
             </div>
-            <div className="card relative overflow-hidden min-h-[200px] lg:min-h-16 w-full h-full hover:shadow-[0_10px_30px_rgba(0,0,0,0.15)] hover:scale-[0.98] hover:ring-1 hover:ring-black/10 transition-all duration-300">
-              {presellingImages.length ? (
-                <>
-                  <Link prefetch={false} href="/properties/preselling" className="absolute inset-0 block">
-                    <Image 
-                      src={getProxyImageUrl(presellingImages[presellIndex])} 
-                      alt="Preselling Property" 
-                      fill 
-                      className="object-cover" 
-                      onError={() => {
-                        console.error("Home: Preselling image failed to load:", presellingImages[presellIndex]);
-                      }}
-                    />
-                  </Link>
-                  {presellingImages.length > 1 && (
-                    <>
-                      <button type="button" onClick={prevPresell} className="absolute left-2 top-1/2 -translate-y-1/2 z-10 bg-white/80 text-black rounded-full w-8 h-8 flex items-center justify-center">‹</button>
-                      <button type="button" onClick={nextPresell} className="absolute right-2 top-1/2 -translate-y-1/2 z-10 bg-white/80 text-black rounded-full w-8 h-8 flex items-center justify-center">›</button>
-                    </>
-                  )}
-                </>
-              ) : (
-                <div className="absolute inset-0 bg-slate-200" />
-              )}
-              <div className="absolute top-2 left-2 z-10 px-3 py-1 rounded bg-black/60 text-white text-xs sm:text-sm pointer-events-none">Featured Preselling Properties</div>
-            </div>
+          </div>
+          <div className="card relative overflow-hidden min-h-[200px] lg:min-h-16 w-full h-full hover:shadow-[0_10px_30px_rgba(0,0,0,0.15)] hover:scale-[0.98] hover:ring-1 hover:ring-black/10 transition-all duration-300">
+            {presellingImages.length ? (
+              <>
+                <Link prefetch={false} href="/properties/preselling" className="absolute inset-0 block">
+                  <Image 
+                    src={getProxyImageUrl(presellingImages[presellIndex])} 
+                    alt="Preselling Property" 
+                    fill 
+                    className="object-cover" 
+                    onError={() => {
+                      console.error("Home: Preselling image failed to load:", presellingImages[presellIndex]);
+                    }}
+                  />
+                </Link>
+                {presellingImages.length > 1 && (
+                  <>
+                    <button type="button" onClick={prevPresell} className="absolute left-2 top-1/2 -translate-y-1/2 z-10 bg-white/80 text-black rounded-full w-8 h-8 flex items-center justify-center">‹</button>
+                    <button type="button" onClick={nextPresell} className="absolute right-2 top-1/2 -translate-y-1/2 z-10 bg-white/80 text-black rounded-full w-8 h-8 flex items-center justify-center">›</button>
+                  </>
+                )}
+              </>
+            ) : (
+              <div className="absolute inset-0 bg-slate-200" />
+            )}
+            <div className="absolute top-2 left-2 z-10 px-3 py-1 rounded bg-black/60 text-white text-xs sm:text-sm pointer-events-none">Featured Preselling Properties</div>
           </div>
         </div>
       </div>

@@ -26,7 +26,7 @@ export async function POST(req: Request) {
           create: { id: userId, email: emailCreate, name: name ?? undefined, username: username ?? undefined, phone: phone ?? undefined }
         });
       }),
-      timeout(5000)
+      timeout(15000)
     ]);
 
     return NextResponse.json({ ok: true, user: result });

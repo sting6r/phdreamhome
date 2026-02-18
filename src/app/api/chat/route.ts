@@ -105,7 +105,7 @@ Use the chat history and the provided listing context to provide personalized he
         temperature: 0.2,
         max_tokens: 1000,
       }),
-      signal: AbortSignal.timeout(10000)
+      signal: AbortSignal.timeout(30000)
     });
 
     if (!response.ok) {

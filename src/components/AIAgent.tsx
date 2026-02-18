@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { useChat, type UIMessage as Message } from "@ai-sdk/react";
@@ -1409,7 +1409,7 @@ export default function AIAgent() {
                   onClick={() => setShowPropertyForm(true)}
                   className="mt-2 w-full flex items-center justify-center gap-2 bg-purple-600 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-md hover:bg-purple-700 transition-all active:scale-95"
                 >
-                  <Image src="/Cat.png" alt="AI" width={18} height={18} className="rounded-full" />
+                  <Image src="/girl.png" alt="AI" width={18} height={18} className="rounded-full" />
                   Fill Out Property Form
                 </button>
               </span>
@@ -2586,7 +2586,7 @@ export default function AIAgent() {
                         className="flex items-center gap-2 bg-purple-600 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-lg hover:bg-purple-700 transition-all hover:scale-105 active:scale-95 w-full justify-center"
                       >
                         {item.label}
-                        <Image src="/Cat.png" alt="AI" width={18} height={18} className="rounded-full shadow-sm" />
+                        <Image src="/girl.png" alt="AI" width={18} height={18} className="rounded-full shadow-sm" />
                       </button>
                     )
                   ))}
@@ -2731,7 +2731,7 @@ export default function AIAgent() {
                     <ChevronLeft size={14} />
                   </button>
                 )}
-                <Image src="/Cat.png" alt="PhDreamHome AI Assistant" width={32} height={32} className="rounded-full" />
+                <Image src="/girl.png" alt="PhDreamHome AI Assistant" width={32} height={32} className="rounded-full" />
                 <div className="flex flex-col">
                   <span className="font-semibold text-sm">Kyuubi AI</span>
                   <span className="text-[10px] opacity-90 leading-tight">Hi there! I am Kyuubi, your PhDreamHome AI Assistant.</span>
@@ -2866,7 +2866,7 @@ export default function AIAgent() {
                             }}
                           >
                             <div className="flex items-center gap-2">
-                              <Image src="/Cat.png" alt="PhDreamHome AI Assistant" width={24} height={24} className="rounded-full" />
+                              <Image src="/girl.png" alt="PhDreamHome AI Assistant" width={24} height={24} className="rounded-full" />
                               <div className="text-xs font-semibold text-slate-800">Kyuubi AI</div>
                             </div>
                             <div className="text-[10px] text-slate-500">
@@ -2970,7 +2970,7 @@ export default function AIAgent() {
                         >
                           <div className="flex items-center justify-between mb-4">
                             <h3 className="font-bold text-slate-800 flex items-center gap-2">
-                              <Image src="/Cat.png" alt="AI" width={20} height={20} className="rounded-full" />
+                              <Image src="/girl.png" alt="AI" width={20} height={20} className="rounded-full" />
                               Property Details
                             </h3>
                             <button 
@@ -3048,7 +3048,7 @@ export default function AIAgent() {
                         <>
                           {chatInstance.messages.length === 0 && (
                             <div className="flex flex-col items-center justify-center h-full text-center space-y-2 opacity-60">
-                              <Image src="/Cat.png" alt="AI" width={48} height={48} className="rounded-full shadow-lg border border-purple-100" />
+                              <Image src="/girl.png" alt="AI" width={48} height={48} className="rounded-full shadow-lg border border-purple-100" />
                               <p className="text-xs font-medium text-slate-600">Start a conversation with PhDreamHome AI Assistant</p>
                             </div>
                           )}
@@ -3114,7 +3114,7 @@ export default function AIAgent() {
                                         }`}
                                       >
                                         <div className="flex items-center gap-1.5 mb-1 opacity-70">
-                                          {m.role === "user" ? <User size={14} /> : <Image src="/Cat.png" alt="AI" width={20} height={20} className="rounded-full" />}
+                                          {m.role === "user" ? <User size={14} /> : <Image src="/girl.png" alt="AI" width={20} height={20} className="rounded-full" />}
                                           <span className="font-bold uppercase tracking-wider text-[10px]">
                                             {m.role === "user" ? "You" : "Kyuubi AI"}
                                           </span>
@@ -3136,7 +3136,7 @@ export default function AIAgent() {
                                                 if (part.type.startsWith("tool-") || part.type === "dynamic-tool") {
                                                   return (
                                                     <div key={i} className="my-2 rounded bg-slate-100 p-2 text-[10px] italic flex items-center gap-2">
-                                                      <Image src="/Cat.png" alt="AI" width={14} height={14} className="rounded-full animate-pulse" />
+                                                      <Image src="/girl.png" alt="AI" width={14} height={14} className="rounded-full animate-pulse" />
                                                       <span>Assistant is performing an action...</span>
                                                     </div>
                                                   );
