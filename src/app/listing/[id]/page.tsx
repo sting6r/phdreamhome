@@ -2,7 +2,8 @@ import { prisma, withRetry } from "@lib/prisma";
 import Image from "next/image";
 import Link from "next/link";
 import MainFooterCards from "@components/MainFooterCards";
-import { createSignedUrl, supabaseAdmin, getProxyImageUrl } from "@lib/supabase";
+import { createSignedUrl, supabaseAdmin } from "@lib/supabase";
+import { getProxyImageUrl } from "@lib/image-utils";
 import type { Metadata } from "next";
 import GalleryViewer from "@components/GalleryViewer";
 import SimilarCarousel from "@components/SimilarCarousel";
@@ -274,7 +275,7 @@ export default async function ListingPage({ params, searchParams }: { params: Pr
     "name": listing.title,
     "description": description,
     "url": pageUrlCanonical,
-    "image": items.map(i => i.url),
+    "image": items.map((i: { url: string }) => i.url),
     "address": {
       "@type": "PostalAddress",
       "addressLocality": listing.city,

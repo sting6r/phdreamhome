@@ -380,7 +380,7 @@ function PropertiesByStatusPageContent({ params }: { params: Promise<{ status: s
       mapObjRef.current.fitBounds(bounds, { padding: [20, 20] });
       setTimeout(() => { isProgrammaticMoveRef.current = false; }, 0);
     }
-  }, [viewMode, filtered, geocodes, leafletReady, mounted]);
+  }, [viewMode, leafletReady, mounted, pts]);
 
   const isRentView = normalizedStatus === "for rent";
   const title = statusTitle ? `Properties for ${statusTitle}` : "Properties";

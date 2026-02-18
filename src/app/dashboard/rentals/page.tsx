@@ -11,11 +11,22 @@ const fetcher = async (u: string, { signal }: { signal?: AbortSignal } = {}) => 
   if (token) headers["Authorization"] = `Bearer ${token}`;
   
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+  const timeoutId = setTimeout(() => controller.abort("timeout"), 10000);
 
-  const combinedSignal = signal 
-    ? (AbortSignal as any).any?.([signal, controller.signal]) ?? controller.signal
-    : controller.signal;
+  let combinedSignal: AbortSignal = controller.signal;
+  const anyFn = (AbortSignal as any).any;
+  if (signal && typeof anyFn === "function") {
+    combinedSignal = anyFn([signal, controller.signal]);
+  } else if (signal) {
+    if (signal.aborted) controller.abort();
+    else signal.addEventListener("abort", () => controller.abort(), { once: true });
+  }
+
+  const isAbortError = (e: any) => {
+    const name = String(e?.name || "").toLowerCase();
+    const msg = String(e?.message || "").toLowerCase();
+    return name.includes("abort") || msg.includes("abort") || combinedSignal.aborted || e?.code === 20;
+  };
 
   try {
     const r = await fetch(u, { 
@@ -29,16 +40,18 @@ const fetcher = async (u: string, { signal }: { signal?: AbortSignal } = {}) => 
       if (!r.ok) throw new Error(json.error || `Fetch failed: ${r.status}`);
       return json;
     } catch (e: any) {
-      if (e.name === 'AbortError' || combinedSignal.aborted) return null;
-      console.error("Rentals fetcher parse error:", u, r.status, text.slice(0, 200));
-      throw new Error(`Failed to parse response from ${u}: ${e.message}`);
-    }
-  } catch (err: any) {
-    if (err.name === 'AbortError' || combinedSignal.aborted) {
+      if (isAbortError(e)) return null;
+      console.warn("Rentals fetcher parse warning:", u, r.status);
       return null;
     }
-    console.error("Fetcher error:", err);
-    throw err;
+  } catch (err: any) {
+    if (isAbortError(err)) {
+      return null;
+    }
+    const msg = String(err?.message || "").toLowerCase();
+    if (err instanceof TypeError && (msg.includes("failed to fetch") || msg.includes("network"))) return null;
+    console.warn("Rentals fetcher warning:", err?.message || err);
+    return null;
   } finally {
     clearTimeout(timeoutId);
   }
@@ -80,7 +93,8 @@ const Icons = {
 };
 
 export default function RentalsPage() {
-  const { data: salesData, error } = useSWR("/api/sales", fetcher);
+  const swrCfg = { onError: (err: any) => { const msg = String(err?.message || ""); if (err?.name === "AbortError" || /abort/.test(msg)) return; } };
+  const { data: salesData, error } = useSWR("/api/sales", fetcher, swrCfg);
   const [activeTab, setActiveTab] = useState("Active");
   const [mounted, setMounted] = useState(false);
   const [selectedRental, setSelectedRental] = useState<any>(null);

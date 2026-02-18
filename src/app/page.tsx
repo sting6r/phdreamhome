@@ -412,7 +412,7 @@ function HomePageContent() {
       mapObjRef.current.fitBounds(bounds, { padding: [20, 20] });
       setTimeout(() => { isProgrammaticMoveRef.current = false; }, 0);
     }
-  }, [viewMode, filteredListings, geocodes, leafletReady, mounted]);
+  }, [viewMode, leafletReady, mounted, pts]);
   
   function toStatusSlug(s: string) {
     const v = (s || "").trim().toLowerCase();

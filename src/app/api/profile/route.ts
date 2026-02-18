@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma, withRetry } from "@lib/prisma";
 import { cookies } from "next/headers";
-import { supabaseAdmin, createSignedUrl, getProxyImageUrl } from "@lib/supabase";
+import { supabaseAdmin, createSignedUrl } from "@lib/supabase";
+import { getProxyImageUrl } from "@lib/image-utils";
 import { createServerSideClient } from "@lib/supabase-server";
 export const runtime = "nodejs";
 

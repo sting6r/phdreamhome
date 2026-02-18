@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { randomBytes } from "crypto";
-import { supabaseAdmin, bucket, bucketVideos, bucketBlogImages, bucketBlogVideos, createSignedUrl, parseBucketSpec, getProxyImageUrl } from "@lib/supabase";
+import { supabaseAdmin, bucket, bucketVideos, bucketBlogImages, bucketBlogVideos, createSignedUrl, parseBucketSpec } from "@lib/supabase";
+import { getProxyImageUrl } from "@lib/image-utils";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";

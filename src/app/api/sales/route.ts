@@ -31,6 +31,10 @@ export async function GET(req: Request) {
           listing: {
             select: {
               title: true,
+              address: true,
+              city: true,
+              state: true,
+              country: true,
             }
           }
         },
@@ -43,7 +47,7 @@ export async function GET(req: Request) {
       
       const { data, error: sbError } = await supabaseAdmin
         .from('Sale')
-        .select('*, listing:Listing(title)')
+        .select('*, listing:Listing(title,address,city,state,country)')
         .eq('userId', userId)
         .order('createdAt', { ascending: false });
 
@@ -64,10 +68,54 @@ export async function POST(req: Request) {
     if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const body = await req.json();
-    const { listingId, clientName, clientAddress, clientEmail, clientMessenger, clientPhone, amount, status, salesCategory, saleDate, notes, rentalStartDate, rentalDueDate } = body;
+    const { listingId, clientName, clientAddress, clientEmail, clientMessenger, clientPhone, amount, status, salesCategory, saleDate, notes, rentalStartDate, rentalDueDate, depositConfig, roomNo, floor } = body;
 
     if (!clientName || !amount || !status) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+    }
+
+    // Merge depositConfig and meta (roomNo/floor) into notes JSON if provided
+    let nextNotes = notes;
+    const sanitizeDeposits = (d: any) => {
+      if (!d || typeof d !== "object") return undefined;
+      const advM = Number(d.advanceMonths);
+      const secM = Number(d.securityMonths);
+      const advA = Number(d.advanceAmount);
+      const secA = Number(d.securityAmount);
+      const out: any = {};
+      if (!Number.isNaN(advM) && advM >= 0) out.advanceMonths = advM;
+      if (!Number.isNaN(secM) && secM >= 0) out.securityMonths = secM;
+      if (!Number.isNaN(advA) && advA >= 0) out.advanceAmount = advA;
+      if (!Number.isNaN(secA) && secA >= 0) out.securityAmount = secA;
+      return Object.keys(out).length ? out : undefined;
+    };
+    const sanitizeMeta = (m: any) => {
+      const out: any = {};
+      if (typeof m?.roomNo === "string") out.roomNo = m.roomNo;
+      if (typeof m?.floor === "string") out.floor = m.floor;
+      return Object.keys(out).length ? out : undefined;
+    };
+    const dep = sanitizeDeposits(depositConfig);
+    const meta = sanitizeMeta({ roomNo, floor });
+    if (dep || meta) {
+      let base: any = {};
+      if (typeof notes === "string" && notes?.trim()) {
+        try {
+          const parsed = JSON.parse(notes);
+          if (parsed && typeof parsed === "object") {
+            base = parsed;
+          } else {
+            base = { text: notes };
+          }
+        } catch {
+          base = { text: notes };
+        }
+      } else if (typeof notes === "string" && !notes?.trim()) {
+        base = {};
+      }
+      if (dep) base.deposits = dep;
+      if (meta) base.meta = meta;
+      nextNotes = JSON.stringify(base);
     }
 
     const sale = await Promise.race([
@@ -86,7 +134,7 @@ export async function POST(req: Request) {
           saleDate: saleDate ? new Date(saleDate) : undefined,
           rentalStartDate: rentalStartDate ? new Date(rentalStartDate) : null,
           rentalDueDate: rentalDueDate ? new Date(rentalDueDate) : null,
-          notes,
+          notes: nextNotes,
         }
       })),
       timeout(5000)

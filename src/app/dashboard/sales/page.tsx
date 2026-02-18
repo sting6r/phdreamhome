@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import useSWR from "swr";
 import { supabase } from "@lib/supabase";
 import CurrencyInput from "@components/CurrencyInput";
@@ -12,13 +12,22 @@ const fetcher = async (u: string, { signal }: { signal?: AbortSignal } = {}) => 
   if (token) headers["Authorization"] = `Bearer ${token}`;
   
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
-  
-  // Use AbortSignal.any if available, otherwise just use our controller signal
-  // This allows SWR to abort the request when component unmounts
-  const combinedSignal = signal 
-    ? (AbortSignal as any).any?.([signal, controller.signal]) ?? controller.signal
-    : controller.signal;
+  const timeoutId = setTimeout(() => controller.abort("timeout"), 10000); // 10s timeout
+
+  let combinedSignal: AbortSignal = controller.signal;
+  const anyFn = (AbortSignal as any).any;
+  if (signal && typeof anyFn === "function") {
+    combinedSignal = anyFn([signal, controller.signal]);
+  } else if (signal) {
+    if (signal.aborted) controller.abort();
+    else signal.addEventListener("abort", () => controller.abort(), { once: true });
+  }
+
+  const isAbortError = (e: any) => {
+    const name = String(e?.name || "").toLowerCase();
+    const msg = String(e?.message || "").toLowerCase();
+    return name.includes("abort") || msg.includes("abort") || combinedSignal.aborted || e?.code === 20;
+  };
 
   try {
     const r = await fetch(u, { 
@@ -32,16 +41,16 @@ const fetcher = async (u: string, { signal }: { signal?: AbortSignal } = {}) => 
       if (!r.ok) throw new Error(json.error || `Fetch failed: ${r.status}`);
       return json;
     } catch (e: any) {
-      if (e.name === 'AbortError' || combinedSignal.aborted) return null;
-      console.error("Sales fetcher parse error:", u, r.status, text.slice(0, 200));
-      throw new Error(`Failed to parse response from ${u}: ${e.message}`);
+      if (isAbortError(e)) return null;
+      console.warn("Sales fetcher parse warning:", u, r.status);
+      return null;
     }
   } catch (err: any) {
-    if (err.name === 'AbortError' || combinedSignal.aborted) {
-      return null; // Return null instead of throwing for aborted requests
-    }
-    console.error("Fetcher error:", err);
-    throw err;
+    if (isAbortError(err)) return null;
+    const msg = String(err?.message || "").toLowerCase();
+    if (err instanceof TypeError && (msg.includes("failed to fetch") || msg.includes("network"))) return null;
+    console.warn("Sales fetcher warning:", err?.message || err);
+    return null;
   } finally {
     clearTimeout(timeoutId);
   }
@@ -71,8 +80,9 @@ const Icons = {
 };
 
 export default function SalesPage() {
-  const { data: salesData, error: salesError, mutate: mutateSales } = useSWR("/api/sales", fetcher);
-  const { data: listingsData, error: listingsError } = useSWR("/api/listings", fetcher);
+  const swrCfg = { onError: (err: any) => { const msg = String(err?.message || ""); if (err?.name === "AbortError" || /abort/.test(msg)) return; } };
+  const { data: salesData, error: salesError, mutate: mutateSales } = useSWR("/api/sales", fetcher, swrCfg);
+  const { data: listingsData, error: listingsError } = useSWR("/api/listings", fetcher, swrCfg);
   
   const sales = Array.isArray(salesData) ? salesData : null;
   const listings = listingsData?.listings ?? [];
@@ -83,8 +93,8 @@ export default function SalesPage() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("In Progress");
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [selectedSale, setSelectedSale] = useState<any>(null);
+  const [clientInfoOpen, setClientInfoOpen] = useState(true);
   const [formData, setFormData] = useState({
     listingId: "",
     clientName: "",
@@ -92,11 +102,17 @@ export default function SalesPage() {
     clientEmail: "",
     clientMessenger: "",
     clientPhone: "",
+    roomNo: "",
+    floor: "",
     amount: "",
     salesCategory: "Sale",
     saleDate: "",
     rentalStartDate: "",
     rentalDueDate: "",
+    advanceDeposit: "",
+    advanceDepositMonths: "",
+    securityDeposit: "",
+    securityDepositMonths: "",
     notes: "",
   });
 
@@ -125,6 +141,24 @@ export default function SalesPage() {
   const [modalPos, setModalPos] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+
+  const liveSale = useMemo(() => {
+    if (!selectedSale) return null;
+    if (isFormOpen && editingId && selectedSale.id === editingId) {
+      let notesObj: any = {};
+      try {
+        notesObj = selectedSale.notes ? JSON.parse(selectedSale.notes) : {};
+      } catch {
+        notesObj = {};
+      }
+      const nextMeta = { ...(notesObj.meta || {}) };
+      if (typeof formData.roomNo === "string") nextMeta.roomNo = formData.roomNo;
+      if (typeof formData.floor === "string") nextMeta.floor = formData.floor;
+      const nextNotes = { ...notesObj, meta: nextMeta };
+      return { ...selectedSale, roomNo: formData.roomNo, floor: formData.floor, notes: JSON.stringify(nextNotes) };
+    }
+    return selectedSale;
+  }, [selectedSale, isFormOpen, editingId, formData.roomNo, formData.floor]);
 
   const handleMouseDown = (e: React.MouseEvent) => {
     // Only allow dragging from the header, not its children buttons
@@ -197,11 +231,17 @@ export default function SalesPage() {
       clientEmail: "",
       clientMessenger: "",
       clientPhone: "",
+      roomNo: "",
+      floor: "",
       amount: "",
       salesCategory: "Sale",
       saleDate: new Date().toISOString().split("T")[0],
       rentalStartDate: "",
       rentalDueDate: "",
+      advanceDeposit: "",
+      advanceDepositMonths: "",
+      securityDeposit: "",
+      securityDepositMonths: "",
       notes: "",
     });
     setActiveTab("In Progress");
@@ -213,6 +253,31 @@ export default function SalesPage() {
 
   const handleEdit = (sale: any) => {
     setEditingId(sale.id);
+    let notesText = sale.notes || "";
+    let advMonths = "";
+    let secMonths = "";
+    let advAmtStr = "";
+    let secAmtStr = "";
+    try {
+      if (sale.notes) {
+        const parsed = JSON.parse(sale.notes);
+        if (Array.isArray(parsed)) {
+          notesText = "";
+        } else if (parsed && typeof parsed === "object") {
+          notesText = typeof parsed.text === "string" ? parsed.text : "";
+          if (parsed.deposits && typeof parsed.deposits === "object") {
+            if (typeof parsed.deposits.advanceMonths === "number") advMonths = String(parsed.deposits.advanceMonths);
+            if (typeof parsed.deposits.securityMonths === "number") secMonths = String(parsed.deposits.securityMonths);
+            if (typeof parsed.deposits.advanceAmount === "number") {
+              advAmtStr = parsed.deposits.advanceAmount.toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            }
+            if (typeof parsed.deposits.securityAmount === "number") {
+              secAmtStr = parsed.deposits.securityAmount.toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            }
+          }
+        }
+      }
+    } catch {}
     setFormData({
       listingId: sale.listingId || "",
       clientName: sale.clientName,
@@ -220,16 +285,21 @@ export default function SalesPage() {
       clientEmail: sale.clientEmail || "",
       clientMessenger: sale.clientMessenger || "",
       clientPhone: sale.clientPhone || "",
+      roomNo: sale.roomNo || "",
+      floor: sale.floor || "",
       amount: (sale.amount || 0).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
       salesCategory: sale.salesCategory || "Sale",
       saleDate: sale.saleDate ? new Date(sale.saleDate).toISOString().split("T")[0] : new Date().toISOString().split("T")[0],
       rentalStartDate: sale.rentalStartDate ? new Date(sale.rentalStartDate).toISOString().split("T")[0] : "",
       rentalDueDate: sale.rentalDueDate ? new Date(sale.rentalDueDate).toISOString().split("T")[0] : "",
-      notes: sale.notes || "",
+      advanceDeposit: advAmtStr,
+      advanceDepositMonths: advMonths,
+      securityDeposit: secAmtStr,
+      securityDepositMonths: secMonths,
+      notes: notesText,
     });
     setActiveTab(sale.status);
     setIsFormOpen(true);
-    setOpenMenuId(null);
   };
 
   const handleDelete = async (id: string) => {
@@ -241,7 +311,7 @@ export default function SalesPage() {
       if (token) headers["Authorization"] = `Bearer ${token}`;
 
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000);
+      const timeoutId = setTimeout(() => controller.abort("timeout"), 10000);
       try {
         await fetch(`/api/sales/${id}`, { 
           method: "DELETE", 
@@ -249,12 +319,13 @@ export default function SalesPage() {
           signal: controller.signal
         });
         mutateSales();
-        setOpenMenuId(null);
       } catch (err: any) {
-        if (err.name === 'AbortError') {
-          console.warn("Delete sale request timed out");
+        const msg = String(err?.message || "").toLowerCase();
+        if (err?.name === 'AbortError' || (err instanceof TypeError && (msg.includes("failed to fetch") || msg.includes("network") || msg.includes("abort")))) {
+          console.warn("Delete sale request aborted/timeout or network issue");
+        } else {
+          console.error("Delete sale error:", err);
         }
-        console.error(err);
       } finally {
         clearTimeout(timeoutId);
       }
@@ -310,7 +381,17 @@ export default function SalesPage() {
 
     // Strip commas before sending to API
     const amountValue = formData.amount.replace(/,/g, "");
-    const payload = { ...formData, amount: amountValue, status: activeTab };
+    const advMonthsNum = Number(formData.advanceDepositMonths);
+    const secMonthsNum = Number(formData.securityDepositMonths);
+    const advAmtNum = formData.advanceDeposit ? Number(formData.advanceDeposit.replace(/,/g, "")) : NaN;
+    const secAmtNum = formData.securityDeposit ? Number(formData.securityDeposit.replace(/,/g, "")) : NaN;
+    const depositConfig: any = {};
+    if (!Number.isNaN(advMonthsNum) && advMonthsNum >= 0) depositConfig.advanceMonths = advMonthsNum;
+    if (!Number.isNaN(secMonthsNum) && secMonthsNum >= 0) depositConfig.securityMonths = secMonthsNum;
+    if (!Number.isNaN(advAmtNum) && advAmtNum >= 0) depositConfig.advanceAmount = advAmtNum;
+    if (!Number.isNaN(secAmtNum) && secAmtNum >= 0) depositConfig.securityAmount = secAmtNum;
+    const payload: any = { ...formData, amount: amountValue, status: activeTab };
+    if (Object.keys(depositConfig).length) payload.depositConfig = depositConfig;
     
     try {
       const { data } = await supabase.auth.getSession();
@@ -322,7 +403,7 @@ export default function SalesPage() {
       const method = editingId ? "PATCH" : "POST";
       
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000);
+      const timeoutId = setTimeout(() => controller.abort("timeout"), 10000);
       try {
         const res = await fetch(url, {
           method,
@@ -332,13 +413,20 @@ export default function SalesPage() {
         });
         if (res.ok) {
           mutateSales();
+          if (editingId) {
+            alert("Sales record updated successfully.");
+          } else {
+            alert("New Sale is successfully Save");
+          }
           resetForm();
         }
       } catch (err: any) {
-        if (err.name === 'AbortError') {
-          console.warn("Submit sale request timed out");
+        const msg = String(err?.message || "").toLowerCase();
+        if (err?.name === 'AbortError' || (err instanceof TypeError && (msg.includes("failed to fetch") || msg.includes("network") || msg.includes("abort")))) {
+          console.warn("Submit sale request aborted/timeout or network issue");
+        } else {
+          console.error("Submit sale error:", err);
         }
-        console.error(err);
       } finally {
         clearTimeout(timeoutId);
       }
@@ -373,7 +461,12 @@ export default function SalesPage() {
           return (
             <button
               key={status}
-              onClick={() => setActiveTab(status)}
+              onClick={() => {
+                setActiveTab(status);
+                if (status === "In Progress" && count === 0) {
+                  setSelectedSale(null);
+                }
+              }}
               className={`flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-bold transition-all border-b-2 relative ${
                 isActive 
                   ? "border-blue-600 text-blue-600" 
@@ -445,6 +538,17 @@ export default function SalesPage() {
                         className="w-full rounded border border-slate-300 bg-slate-100 py-0 text-[10px] text-black focus:ring-1 focus:ring-purple-500 outline-none h-[18px]"
                       />
                     </div>
+                    <div className="space-y-0 mt-1">
+                      <label className="text-[9px] font-medium text-slate-700 leading-none">Sales Category</label>
+                      <select
+                        value={formData.salesCategory}
+                        onChange={(e) => setFormData({ ...formData, salesCategory: e.target.value })}
+                        className="w-full rounded border border-slate-300 bg-slate-100 px-2 py-0 text-[10px] text-black focus:ring-1 focus:ring-blue-500 outline-none h-[18px]"
+                      >
+                        <option value="Sale">Sale</option>
+                        <option value="Rental">Rental</option>
+                      </select>
+                    </div>
                   </div>
                   <div className="space-y-0">
                     <label className="text-[9px] font-medium text-slate-700 leading-none">Property / Listing</label>
@@ -458,126 +562,228 @@ export default function SalesPage() {
                         <option key={l.id} value={l.id}>{l.title}</option>
                       ))}
                     </select>
-                  </div>
-
-                  <div className="space-y-0">
-                    <label className="text-[9px] font-medium text-slate-700 leading-none">Sales Category</label>
-                    <select
-                      value={formData.salesCategory}
-                      onChange={(e) => setFormData({ ...formData, salesCategory: e.target.value })}
-                      className="w-full rounded border border-slate-300 bg-slate-100 px-2 py-0 text-[10px] text-black focus:ring-1 focus:ring-blue-500 outline-none h-[18px]"
-                    >
-                      <option value="Sale">Sale</option>
-                      <option value="Rental">Rental</option>
-                    </select>
-                  </div>
-
-                  <div className="space-y-0">
-                    <label className="text-[9px] font-medium text-slate-700 leading-none">Amount (PHP)</label>
-                    <CurrencyInput
-                      required
-                      value={formData.amount}
-                      onChange={(val) => setFormData({ ...formData, amount: val })}
-                      className="w-full rounded border border-slate-300 bg-slate-100 px-2 py-0 text-[10px] text-black focus:ring-1 focus:ring-blue-500 outline-none h-[18px]"
-                      placeholder="0.00"
-                    />
-                  </div>
-
-                  {formData.salesCategory === "Rental" && (
-                    <>
+                    <div className="grid grid-cols-2 gap-2 mt-1">
                       <div className="space-y-0">
-                    <label className="text-[9px] font-medium text-slate-700 leading-none">Date Started</label>
-                    <div className="date-input-container">
-                      <input
-                        type="date"
-                        value={formData.rentalStartDate}
-                        onChange={(e) => setFormData({ ...formData, rentalStartDate: e.target.value })}
-                        className="w-full rounded border border-slate-300 bg-slate-100 py-0 text-[10px] text-black focus:ring-1 focus:ring-purple-500 outline-none h-[18px]"
-                      />
+                        <label className="text-[9px] font-medium text-slate-700 leading-none">Room No</label>
+                        <input
+                          type="text"
+                          value={formData.roomNo}
+                          onChange={(e) => setFormData({ ...formData, roomNo: e.target.value })}
+                          className="w-full rounded border border-slate-300 bg-slate-100 px-2 py-0 text-[10px] text-black focus:ring-1 focus:ring-blue-500 outline-none h-[18px]"
+                          placeholder="Room No"
+                        />
+                      </div>
+                      <div className="space-y-0">
+                        <label className="text-[9px] font-medium text-slate-700 leading-none">Floor:</label>
+                        <input
+                          type="text"
+                          value={formData.floor}
+                          onChange={(e) => setFormData({ ...formData, floor: e.target.value })}
+                          className="w-full rounded border border-slate-300 bg-slate-100 px-2 py-0 text-[10px] text-black focus:ring-1 focus:ring-blue-500 outline-none h-[18px]"
+                          placeholder="Floor"
+                        />
+                      </div>
                     </div>
                   </div>
-                  <div className="space-y-0">
-                    <label className="text-[9px] font-medium text-slate-700 leading-none">Date Due</label>
-                    <div className="date-input-container">
-                      <input
-                        type="date"
-                        value={formData.rentalDueDate}
-                        onChange={(e) => setFormData({ ...formData, rentalDueDate: e.target.value })}
-                        className="w-full rounded border border-slate-300 bg-slate-100 py-0 text-[10px] text-black focus:ring-1 focus:ring-purple-500 outline-none h-[18px]"
-                      />
-                    </div>
-                  </div>
-                    </>
-                  )}
-                  <div className="space-y-0">
-                    <label className="text-[9px] font-medium text-slate-700 leading-none">Client Name</label>
-                    <input
-                      type="text"
-                      required
-                      value={formData.clientName}
-                      onChange={(e) => setFormData({ ...formData, clientName: e.target.value })}
-                      className="w-full rounded border border-slate-300 bg-slate-100 px-2 py-0 text-[10px] text-black focus:ring-1 focus:ring-blue-500 outline-none h-[18px]"
-                      placeholder="Full name"
-                    />
-                  </div>
-                  <div className="space-y-0">
-                    <label className="text-[9px] font-medium text-slate-700 leading-none">Address</label>
-                    <input
-                      type="text"
-                      value={formData.clientAddress}
-                      onChange={(e) => setFormData({ ...formData, clientAddress: e.target.value })}
-                      className="w-full rounded border border-slate-300 bg-slate-100 px-2 py-0 text-[10px] text-black focus:ring-1 focus:ring-blue-500 outline-none h-[18px]"
-                      placeholder="Client's complete address"
-                    />
-                  </div>
-                  <div className="space-y-0">
-                    <label className="text-[9px] font-medium text-slate-700 leading-none">Client Email</label>
-                    <div className="relative">
-                      <input
-                        type="email"
-                        value={formData.clientEmail}
-                        onChange={(e) => handleEmailChange(e.target.value)}
+
+                  
+
+                  {formData.salesCategory !== "Rental" && (
+                    <div className="space-y-0">
+                      <label className="text-[9px] font-medium text-slate-700 leading-none">Amount (Php)</label>
+                      <CurrencyInput
+                        required
+                        value={formData.amount}
+                        onChange={(val) => setFormData({ ...formData, amount: val })}
                         className="w-full rounded border border-slate-300 bg-slate-100 px-2 py-0 text-[10px] text-black focus:ring-1 focus:ring-blue-500 outline-none h-[18px]"
-                        placeholder="email@example.com"
+                        placeholder="0.00"
                       />
-                      {emailSuggestion && (
-                        <div className="absolute left-0 top-full z-10 w-full bg-white border border-slate-200 shadow-lg rounded mt-0.5 p-0.5">
-                          <p className="text-[8px] text-slate-500 mb-0">Did you mean?</p>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setFormData({ ...formData, clientEmail: emailSuggestion });
-                              setEmailSuggestion(null);
-                            }}
-                            className="text-[9px] text-blue-600 hover:underline font-medium text-left w-full truncate"
-                          >
-                            {emailSuggestion}
-                          </button>
-                        </div>
-                      )}
                     </div>
+                  )}
+
+                  
+                  <div className="space-y-1">
+                    <button
+                      type="button"
+                      onClick={() => setClientInfoOpen(v => !v)}
+                      className="text-[10px] font-bold text-slate-800 mb-1 flex items-center justify-between w-full"
+                      aria-expanded={clientInfoOpen}
+                    >
+                      <span>Client Information</span>
+                      <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={`transition-transform text-blue-600 ${clientInfoOpen ? "rotate-180" : ""}`}>
+                        <polyline points="6 9 12 15 18 9"></polyline>
+                      </svg>
+                    </button>
+                    {clientInfoOpen && (
+                      <div className="space-y-0">
+                      <label className="text-[9px] font-medium text-slate-700 leading-none">Client Name</label>
+                      <input
+                        type="text"
+                        required
+                        value={formData.clientName}
+                        onChange={(e) => setFormData({ ...formData, clientName: e.target.value })}
+                        className="w-full rounded border border-slate-300 bg-slate-100 px-2 py-0 text-[10px] text-black focus:ring-1 focus:ring-blue-500 outline-none h-[18px]"
+                        placeholder="Full name"
+                      />
+                    </div>
+                    )}
+                    {clientInfoOpen && (
+                      <div className="space-y-0">
+                      <label className="text-[9px] font-medium text-slate-700 leading-none">Address</label>
+                      <input
+                        type="text"
+                        value={formData.clientAddress}
+                        onChange={(e) => setFormData({ ...formData, clientAddress: e.target.value })}
+                        className="w-full rounded border border-slate-300 bg-slate-100 px-2 py-0 text-[10px] text-black focus:ring-1 focus:ring-blue-500 outline-none h-[18px]"
+                        placeholder="Client's complete address"
+                      />
+                    </div>
+                    )}
+                    {clientInfoOpen && (
+                      <div className="space-y-0">
+                      <label className="text-[9px] font-medium text-slate-700 leading-none">Client Email</label>
+                      <div className="relative">
+                        <input
+                          type="email"
+                          value={formData.clientEmail}
+                          onChange={(e) => handleEmailChange(e.target.value)}
+                          className="w-full rounded border border-slate-300 bg-slate-100 px-2 py-0 text-[10px] text-black focus:ring-1 focus:ring-blue-500 outline-none h-[18px]"
+                          placeholder="email@example.com"
+                        />
+                        {emailSuggestion && (
+                          <div className="absolute left-0 top-full z-10 w-full bg-white border border-slate-200 shadow-lg rounded mt-0.5 p-0.5">
+                            <p className="text-[8px] text-slate-500 mb-0">Did you mean?</p>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setFormData({ ...formData, clientEmail: emailSuggestion });
+                                setEmailSuggestion(null);
+                              }}
+                              className="text-[9px] text-blue-600 hover:underline font-medium text-left w-full truncate"
+                            >
+                              {emailSuggestion}
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    )}
+                    {clientInfoOpen && (
+                      <div className="space-y-0">
+                      <label className="text-[9px] font-medium text-slate-700 leading-none">Messenger</label>
+                      <input
+                        type="text"
+                        value={formData.clientMessenger}
+                        onChange={(e) => setFormData({ ...formData, clientMessenger: e.target.value })}
+                        className="w-full rounded border border-slate-300 bg-slate-100 px-2 py-0 text-[10px] text-black focus:ring-1 focus:ring-blue-500 outline-none h-[18px]"
+                        placeholder="Messenger link or username"
+                      />
+                    </div>
+                    )}
+                    {clientInfoOpen && (
+                      <div className="space-y-0">
+                      <label className="text-[9px] font-medium text-slate-700 leading-none">Client Phone</label>
+                      <input
+                        type="text"
+                        value={formData.clientPhone}
+                        onChange={(e) => setFormData({ ...formData, clientPhone: formatPhone(e.target.value) })}
+                        className="w-full rounded border border-slate-300 bg-slate-100 px-2 py-0 text-[10px] text-black focus:ring-1 focus:ring-blue-500 outline-none h-[18px]"
+                        placeholder="09123456789"
+                        maxLength={11}
+                      />
+                    </div>
+                    )}
                   </div>
-                  <div className="space-y-0">
-                    <label className="text-[9px] font-medium text-slate-700 leading-none">Messenger</label>
-                    <input
-                      type="text"
-                      value={formData.clientMessenger}
-                      onChange={(e) => setFormData({ ...formData, clientMessenger: e.target.value })}
-                      className="w-full rounded border border-slate-300 bg-slate-100 px-2 py-0 text-[10px] text-black focus:ring-1 focus:ring-blue-500 outline-none h-[18px]"
-                      placeholder="Messenger link or username"
-                    />
-                  </div>
-                  <div className="space-y-0">
-                    <label className="text-[9px] font-medium text-slate-700 leading-none">Client Phone</label>
-                    <input
-                      type="text"
-                      value={formData.clientPhone}
-                      onChange={(e) => setFormData({ ...formData, clientPhone: formatPhone(e.target.value) })}
-                      className="w-full rounded border border-slate-300 bg-slate-100 px-2 py-0 text-[10px] text-black focus:ring-1 focus:ring-blue-500 outline-none h-[18px]"
-                      placeholder="09123456789"
-                      maxLength={11}
-                    />
-                  </div>
+                  
+                  {formData.salesCategory === "Rental" && (
+                    <div className="space-y-1">
+                      <div className="text-[10px] font-bold text-slate-800 mb-1">Contract</div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <div className="space-y-0">
+                          <label className="text-[9px] font-medium text-slate-700 leading-none">Monthly Rent (Php)</label>
+                          <CurrencyInput
+                            required
+                            value={formData.amount}
+                            onChange={(val) => setFormData({ ...formData, amount: val })}
+                            className="w-full rounded border border-slate-300 bg-slate-100 px-2 py-0 text-[10px] text-black focus:ring-1 focus:ring-blue-500 outline-none h-[18px]"
+                            placeholder="0.00"
+                          />
+                        </div>
+                        <div className="space-y-0">
+                          <label className="text-[9px] font-medium text-slate-700 leading-none">Date Started</label>
+                          <div className="date-input-container">
+                            <input
+                              type="date"
+                              value={formData.rentalStartDate}
+                              onChange={(e) => setFormData({ ...formData, rentalStartDate: e.target.value })}
+                              className="w-full rounded border border-slate-300 bg-slate-100 py-0 text-[10px] text-black focus:ring-1 focus:ring-purple-500 outline-none h-[18px]"
+                            />
+                          </div>
+                        </div>
+                        <div className="space-y-0">
+                          <label className="text-[9px] font-medium text-slate-700 leading-none">Date Due</label>
+                          <div className="date-input-container">
+                            <input
+                              type="date"
+                              value={formData.rentalDueDate}
+                              onChange={(e) => setFormData({ ...formData, rentalDueDate: e.target.value })}
+                              className="w-full rounded border border-slate-300 bg-slate-100 py-0 text-[10px] text-black focus:ring-1 focus:ring-purple-500 outline-none h-[18px]"
+                            />
+                          </div>
+                        </div>
+                        <div className="space-y-0">
+                          <div className="flex items-center justify-between">
+                            <label className="text-[9px] text-slate-700 leading-none">Adv. Deposit Amount</label>
+                            <div className="flex items-center gap-1">
+                              <input
+                                type="number"
+                                min={0}
+                                step={1}
+                                value={formData.advanceDepositMonths}
+                                onChange={(e) => setFormData({ ...formData, advanceDepositMonths: e.target.value })}
+                                className="rounded border border-slate-300 bg-slate-100 px-1 py-0 text-[9px] text-black h-[18px] w-[46px]"
+                                placeholder="0"
+                                aria-label="Advance deposit months"
+                                title="Number of months"
+                              />
+                              <span className="text-[9px] text-slate-500">mos</span>
+                            </div>
+                          </div>
+                          <CurrencyInput
+                            value={formData.advanceDeposit}
+                            onChange={(val) => setFormData({ ...formData, advanceDeposit: val })}
+                            className="w-full rounded border border-slate-300 bg-slate-100 px-2 py-0 text-[10px] text-black focus:ring-1 focus:ring-blue-500 outline-none h-[18px]"
+                            placeholder="0.00"
+                          />
+                        </div>
+                        <div className="space-y-0">
+                          <div className="flex items-center justify-between">
+                            <label className="text-[9px] text-slate-700 leading-none">Sec. Deposit Amount</label>
+                            <div className="flex items-center gap-1">
+                              <input
+                                type="number"
+                                min={0}
+                                step={1}
+                                value={formData.securityDepositMonths}
+                                onChange={(e) => setFormData({ ...formData, securityDepositMonths: e.target.value })}
+                                className="rounded border border-slate-300 bg-slate-100 px-1 py-0 text-[9px] text-black h-[18px] w-[46px]"
+                                placeholder="0"
+                                aria-label="Security deposit months"
+                                title="Number of months"
+                              />
+                              <span className="text-[9px] text-slate-500">mos</span>
+                            </div>
+                          </div>
+                          <CurrencyInput
+                            value={formData.securityDeposit}
+                            onChange={(val) => setFormData({ ...formData, securityDeposit: val })}
+                            className="w-full rounded border border-slate-300 bg-slate-100 px-2 py-0 text-[10px] text-black focus:ring-1 focus:ring-blue-500 outline-none h-[18px]"
+                            placeholder="0.00"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
                   <div className="md:col-span-2 space-y-0">
                     <label className="text-[9px] font-medium text-slate-700 leading-none">Notes</label>
                     <textarea
@@ -660,23 +866,22 @@ export default function SalesPage() {
                         </span>
                       </td>
                       <td className="px-4 py-3 text-center relative">
-                        <button 
-                          onClick={(e) => { e.stopPropagation(); setOpenMenuId(openMenuId === sale.id ? null : sale.id); }}
-                          className="p-1.5 hover:bg-white rounded-full transition-colors text-slate-400 hover:text-slate-600"
-                        >
-                          <Icons.MoreVertical />
-                        </button>
-                        
-                        {openMenuId === sale.id && (
-                          <div className="absolute right-4 top-10 bg-white border border-slate-200 rounded-lg shadow-xl z-20 py-1 min-w-[120px]">
-                            <button onClick={() => handleEdit(sale)} className="w-full px-3 py-1.5 text-left text-[10px] font-medium text-slate-700 hover:bg-slate-50 flex items-center gap-2">
-                              <Icons.Pencil /> Edit
-                            </button>
-                            <button onClick={() => handleDelete(sale.id)} className="w-full px-3 py-1.5 text-left text-[10px] font-medium text-red-600 hover:bg-red-50 flex items-center gap-2">
-                              <Icons.Trash2 /> Delete
-                            </button>
-                          </div>
-                        )}
+                        <div className="flex items-center justify-center gap-1">
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleEdit(sale); }}
+                            className="p-1 rounded text-blue-600 hover:bg-blue-50"
+                            aria-label="Edit"
+                          >
+                            <Icons.Pencil />
+                          </button>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleDelete(sale.id); }}
+                            className="p-1 rounded text-red-600 hover:bg-red-50"
+                            aria-label="Delete"
+                          >
+                            <Icons.Trash2 />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))
@@ -687,7 +892,7 @@ export default function SalesPage() {
       </div>
       
       <div className="mt-6">
-        <SalesRentalDetailCard sale={selectedSale} />
+        <SalesRentalDetailCard sale={liveSale} />
       </div>
     </div>
   );

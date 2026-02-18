@@ -2,7 +2,8 @@
 import { useEffect, useState, useRef, use } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { supabase, getProxyImageUrl } from "@lib/supabase";
+import { supabase } from "@lib/supabase";
+import { getProxyImageUrl } from "@lib/image-utils";
 import CurrencyInput from "@components/CurrencyInput";
 
 import { Suspense } from "react";
@@ -93,7 +94,7 @@ function EditListingPageContent({ params }: { params: Promise<{ id: string }> })
           if ((found.images || []).length > 0) setFeaturedIndex(0);
         }
       } catch (err: any) {
-        if (err.name === 'AbortError') return;
+        if (err.name === 'AbortError' || err.message?.includes('aborted')) return;
         console.error("Fetch listing error:", err);
       } finally {
         clearTimeout(timeoutId);

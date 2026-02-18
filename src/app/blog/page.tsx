@@ -3,7 +3,7 @@ import Link from "next/link";
 import MainFooterCards from "../../components/MainFooterCards";
 import { cookies, headers } from "next/headers";
 import type { Metadata } from "next";
-import { getProxyImageUrl } from "@lib/supabase";
+import { getProxyImageUrl } from "@lib/image-utils";
 
 export const dynamic = "force-dynamic";
 

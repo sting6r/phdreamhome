@@ -249,7 +249,7 @@ export default function NewBlogPage() {
         const rows = Array.isArray(j.blogs) ? j.blogs : [];
         if (alive) setMyBlogs(rows);
       } catch (e: any) {
-        if (e.name === "AbortError") return;
+        if (e.name === "AbortError" || e.message?.includes('aborted')) return;
         if (alive) setMyBlogsErr(String(e?.message || e));
       } finally {
         clearTimeout(timeoutId);

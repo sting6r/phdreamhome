@@ -3,7 +3,8 @@ import { cookies } from "next/headers";
 import { prisma, withRetry } from "@lib/prisma";
 // Type safety check
 import type { Prisma } from "@prisma/client";
-import { supabaseAdmin, createSignedUrl, getProxyImageUrl } from "@lib/supabase";
+import { supabaseAdmin, createSignedUrl } from "@lib/supabase";
+import { getProxyImageUrl } from "@lib/image-utils";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";

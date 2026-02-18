@@ -1,7 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import MainFooterCards from "@/components/MainFooterCards";
-import { getProxyImageUrl } from "@/lib/supabase";
+import { getProxyImageUrl } from "@/lib/image-utils";
 
 export default function AboutPage() {
   const heroBg = getProxyImageUrl(process.env.NEXT_PUBLIC_ABOUT_BG || "");

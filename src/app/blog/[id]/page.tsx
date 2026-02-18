@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import MainFooterCards from "@components/MainFooterCards";
-import { getProxyImageUrl } from "@/lib/supabase";
+import { getProxyImageUrl } from "@/lib/image-utils";
 import BlogMediaViewer from "@components/BlogMediaViewer";
 import ShareButtons from "@components/ShareButtons";
 import type { Metadata } from "next";

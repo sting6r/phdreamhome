@@ -52,11 +52,22 @@ const fetcher = async (u: string, { signal }: { signal?: AbortSignal } = {}) => 
   if (token) headers["Authorization"] = `Bearer ${token}`;
   
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+  const timeoutId = setTimeout(() => controller.abort("timeout"), 10000);
 
-  const combinedSignal = signal 
-    ? (AbortSignal as any).any?.([signal, controller.signal]) ?? controller.signal
-    : controller.signal;
+  let combinedSignal: AbortSignal = controller.signal;
+  const anyFn = (AbortSignal as any).any;
+  if (signal && typeof anyFn === "function") {
+    combinedSignal = anyFn([signal, controller.signal]);
+  } else if (signal) {
+    if (signal.aborted) controller.abort();
+    else signal.addEventListener("abort", () => controller.abort(), { once: true });
+  }
+
+  const isAbortError = (e: any) => {
+    const name = String(e?.name || "").toLowerCase();
+    const msg = String(e?.message || "").toLowerCase();
+    return name.includes("abort") || msg.includes("abort") || combinedSignal.aborted || e?.code === 20;
+  };
 
   try {
     const r = await fetch(u, { 
@@ -69,27 +80,32 @@ const fetcher = async (u: string, { signal }: { signal?: AbortSignal } = {}) => 
     try {
       resData = JSON.parse(text);
     } catch (e: any) {
-      if (e.name === 'AbortError' || combinedSignal.aborted) return null;
-      console.error(`Fetch parse error for ${u}. Status:`, r.status, "Body:", text.slice(0, 200));
+      if (isAbortError(e)) return null;
+      console.warn(`Dashboard fetcher parse warning:`, u, r.status);
       resData = { error: "Invalid server response" };
     }
 
-    if (!r.ok) throw new Error(resData.error || `Fetch failed: ${r.status}`);
-    return resData;
-  } catch (err: any) {
-    if (err.name === 'AbortError' || combinedSignal.aborted) {
+    if (!r.ok) {
+      console.warn("Dashboard fetcher HTTP warning:", u, r.status, resData?.error);
       return null;
     }
-    throw err;
+    return resData;
+  } catch (err: any) {
+    if (isAbortError(err)) return null;
+    const msg = String(err?.message || "").toLowerCase();
+    if (err instanceof TypeError && (msg.includes("failed to fetch") || msg.includes("network"))) return null;
+    console.warn("Dashboard fetcher warning:", err?.message || err);
+    return null;
   } finally {
     clearTimeout(timeoutId);
   }
 };
 
 export default function DashboardPage() {
-  const { data: listingsData } = useSWR("/api/listings", fetcher);
-  const { data: salesData } = useSWR("/api/sales", fetcher);
-  const { data: visitorReportData } = useSWR("/api/analytics/monthly-visitors", fetcher);
+  const swrCfg = { onError: (err: any) => { const msg = String(err?.message || ""); if (err?.name === "AbortError" || /abort/.test(msg)) return; } };
+  const { data: listingsData } = useSWR("/api/listings", fetcher, swrCfg);
+  const { data: salesData } = useSWR("/api/sales", fetcher, swrCfg);
+  const { data: visitorReportData } = useSWR("/api/analytics/monthly-visitors", fetcher, swrCfg);
   
   const [mounted, setMounted] = useState(false);
   const [visitorCount, setVisitorCount] = useState(0);

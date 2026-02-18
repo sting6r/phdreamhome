@@ -11,7 +11,8 @@ import Script from "next/script";
 import { X, Send, User, Minimize2, Maximize2, Loader2, ExternalLink, Image as ImageIcon, ChevronLeft, Undo2, GripHorizontal, Building2, MapPin, Info, Sparkles, ClipboardList, ChevronRight, Share2, Copy, Facebook, Twitter, Check, Mic, MicOff, Phone, Mail, Link as LinkIcon, Calendar, Clock
 } from "lucide-react";
 import Link from "next/link";
-import { supabase, getProxyImageUrl } from "@/lib/supabase";
+import { supabase } from "@/lib/supabase";
+import { getProxyImageUrl } from "@/lib/image-utils";
 
 const PesoSign = ({ size = 16, className = "" }: { size?: number; className?: string }) => (
   <svg 

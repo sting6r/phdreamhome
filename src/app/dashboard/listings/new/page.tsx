@@ -1,7 +1,8 @@
 "use client";
 import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
-import { supabase, getProxyImageUrl } from "@lib/supabase";
+import { supabase } from "@lib/supabase";
+import { getProxyImageUrl } from "@lib/image-utils";
 import CurrencyInput from "@components/CurrencyInput";
 
 export default function NewListingPage() {
@@ -147,7 +148,13 @@ export default function NewListingPage() {
       } finally {
         clearTimeout(timeoutId);
       }
+  } catch (e: any) {
+    setError(e?.message || "Failed to save");
+    setSaving(false);
+  } finally {
+    clearInterval(timer);
   }
+}
 
   useEffect(() => {
     const adjustHeight = (el: HTMLTextAreaElement) => {
@@ -577,5 +584,3 @@ export default function NewListingPage() {
     </div>
   );
 }
-
-
