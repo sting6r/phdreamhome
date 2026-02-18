@@ -484,70 +484,63 @@ function HomePageContent() {
           )}
         </div>
       </div>
-      {profile && (
-        <div className="container">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-stretch">
-            <div className="card relative overflow-hidden min-h-16 w-full h-full hover:shadow-[0_10px_30px_rgba(0,0,0,0.15)] hover:scale-[0.98] hover:ring-1 hover:ring-black/10 transition-all duration-300" style={{ backgroundColor: '#F9F5FF' }}>
-              <div className="relative p-3 sm:p-4 text-black">
-                <div className="flex flex-col sm:flex-row items-center sm:items-center justify-center gap-3 sm:gap-6">
-                  <div className="w-32 h-32 sm:w-44 sm:h-44 rounded-full overflow-hidden bg-transparent relative flex-shrink-0 sm:ml-4">
-                    {profile.imageUrl ? (
-                      <Image 
-                        src={getProxyImageUrl(profile.imageUrl)} 
-                        alt={profile.name || "Agent"} 
-                        fill 
-                        sizes="(min-width: 640px) 11rem, 10rem" 
-                        className="object-cover"
-                        onError={(e) => {
-                          console.error("Home: Profile image failed to load:", profile.imageUrl);
-                          setProfile({...profile, imageUrl: null});
-                        }}
-                      />
-                    ) : (
-                      <div className="w-full h-full grid place-items-center">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-10 h-10 text-gray-500"><circle cx="12" cy="7" r="4"/><path d="M5 21a7 7 0 0 1 14 0"/></svg>
+      <div className="container">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-stretch">
+          <div className="card relative overflow-hidden min-h-16 w-full h-full hover:shadow-[0_10px_30px_rgba(0,0,0,0.15)] hover:scale-[0.98] hover:ring-1 hover:ring-black/10 transition-all duration-300" style={{ backgroundColor: '#F9F5FF' }}>
+            <div className="relative p-3 sm:p-4 text-black">
+              <div className="flex flex-col sm:flex-row items-center sm:items-center justify-center gap-3 sm:gap-6">
+                <div className="w-32 h-32 sm:w-44 sm:h-44 rounded-full overflow-hidden bg-transparent relative flex-shrink-0 sm:ml-4">
+                  <Image 
+                    src={profile && profile.imageUrl ? getProxyImageUrl(profile.imageUrl) : "/karen.png"} 
+                    alt={(profile?.name || "Agent")} 
+                    fill 
+                    sizes="(min-width: 640px) 11rem, 10rem" 
+                    className="object-cover"
+                    onError={() => {
+                      if (profile?.imageUrl) {
+                        setProfile({ ...(profile as any), imageUrl: null });
+                      }
+                    }}
+                  />
+                </div>
+                <div className="space-y-1 text-center sm:text-left">
+                  <div className="flex flex-col sm:flex-row items-center gap-2">
+                    <div className="text-xl sm:text-2xl font-semibold capitalize">{profile?.name || "Agent"}</div>
+                    {profile?.verified ? (
+                      <div className="inline-flex items-center gap-1 text-green-700 bg-green-50 px-2 py-0.5 rounded-full text-xs">
+                        <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4"><path d="M12 2l2.4 2.4L17 4l1 2.6L21 8l-1.6 2.6.6 2.8-2.6.9-1.4 2.5-2.8-.6L12 19l-2.6-1.6-2.8.6-1.4-2.5-2.6-.9.6-2.8L3 8l3-1.4L7 4l2.6.4L12 2zm0 5l-4 4 1.4 1.4L12 10.8l4.6 4.6L18 14l-6-6z"/></svg>
+                        <span>Verified</span>
                       </div>
-                    )}
+                    ) : null}
                   </div>
-                  <div className="space-y-1 text-center sm:text-left">
-                    <div className="flex flex-col sm:flex-row items-center gap-2">
-                      <div className="text-xl sm:text-2xl font-semibold capitalize">{profile.name || "Agent"}</div>
-                      {profile.verified ? (
-                        <div className="inline-flex items-center gap-1 text-green-700 bg-green-50 px-2 py-0.5 rounded-full text-xs">
-                          <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4"><path d="M12 2l2.4 2.4L17 4l1 2.6L21 8l-1.6 2.6.6 2.8-2.6.9-1.4 2.5-2.8-.6L12 19l-2.6-1.6-2.8.6-1.4-2.5-2.6-.9.6-2.8L3 8l3-1.4L7 4l2.6.4L12 2zm0 5l-4 4 1.4 1.4L12 10.8l4.6 4.6L18 14l-6-6z"/></svg>
-                          <span>Verified</span>
-                        </div>
-                      ) : null}
-                    </div>
-                    <div className="text-xs text-slate-700 uppercase tracking-wider">{(profile.role || "").toUpperCase() || "REAL ESTATE BROKER"}</div>
-                    {profile.licenseNo ? (
-                      <div className="text-sm text-slate-800"><span className="font-bold">PRC Accred. No:</span> {profile.licenseNo}</div>
+                  <div className="text-xs text-slate-700 uppercase tracking-wider">{(profile?.role || "REAL ESTATE BROKER").toUpperCase()}</div>
+                  {profile?.licenseNo ? (
+                    <div className="text-sm text-slate-800"><span className="font-bold">PRC Accred. No:</span> {profile.licenseNo}</div>
+                  ) : null}
+                  {profile?.dhsudAccredNo ? (
+                    <div className="text-sm text-slate-800"><span className="font-bold">DHSUD Accred. No:</span> {profile.dhsudAccredNo}</div>
+                  ) : null}
+                  <div className="flex flex-col items-center sm:items-start gap-1 mt-2">
+                    {profile?.phone ? (
+                      <div className="flex items-center gap-2 text-sm text-slate-800"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4 text-green-600"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.63A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.12 .88.33 1.74.62 2.56a2 2 0 0 1-.45 2.11L8 9a16 16 0 0 0 7 7l.61-.28a2 2 0 0 1 2.11-.45c.82 .29 1.68 .5 2.56 .62A2 2 0 0 1 22 16.92z"/></svg>{profile.phone}</div>
                     ) : null}
-                    {profile.dhsudAccredNo ? (
-                      <div className="text-sm text-slate-800"><span className="font-bold">DHSUD Accred. No:</span> {profile.dhsudAccredNo}</div>
+                    {profile?.email ? (
+                      <div className="flex items-center gap-2 text-sm text-slate-800"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4 text-blue-600"><path d="M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/><path d="M22 6l-10 7L2 6"/></svg>{profile.email}</div>
                     ) : null}
-                    <div className="flex flex-col items-center sm:items-start gap-1 mt-2">
-                      {profile.phone ? (
-                        <div className="flex items-center gap-2 text-sm text-slate-800"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4 text-green-600"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.63A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.12 .88.33 1.74.62 2.56a2 2 0 0 1-.45 2.11L8 9a16 16 0 0 0 7 7l.61-.28a2 2 0 0 1 2.11-.45c.82 .29 1.68 .5 2.56 .62A2 2 0 0 1 22 16.92z"/></svg>{profile.phone}</div>
-                      ) : null}
-                      {profile.email ? (
-                        <div className="flex items-center gap-2 text-sm text-slate-800"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4 text-blue-600"><path d="M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/><path d="M22 6l-10 7L2 6"/></svg>{profile.email}</div>
-                      ) : null}
-                    </div>
-                    <div className="text-sm mt-1"><span className="text-lg font-bold text-green-700">{profile.totalListings ?? 0}</span> Total Listings</div>
-                    <div className="flex items-center justify-center sm:justify-start gap-3 mt-4">
-                      <Link prefetch={false} href="/contact" className="inline-flex items-center gap-2 rounded-md bg-green-600 text-white px-4 py-2 text-sm hover:bg-green-500 shadow-sm transition-all active:scale-95">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4"><path d="M21 15a2 2 0 0 1-2 2h-3l-4 4v-4H7a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v9z"/></svg>
-                        <span>Send Inquiry</span>
-                      </Link>
-                      <button
-                        className="inline-flex items-center gap-2 rounded-md bg-slate-100 text-slate-800 px-4 py-2 text-sm hover:bg-slate-200 transition-all active:scale-95"
-                        onClick={() => { try { navigator.clipboard.writeText(`${window.location.origin}/`); } catch {} }}
-                      >
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4"><path d="M8 7h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2z"/><path d="M16 3H6a2 2 0 0 0-2 2v10"/></svg>
-                        <span>Copy Link</span>
-                      </button>
-                    </div>
+                  </div>
+                  <div className="text-sm mt-1"><span className="text-lg font-bold text-green-700">{profile?.totalListings ?? 0}</span> Total Listings</div>
+                  <div className="flex items-center justify-center sm:justify-start gap-3 mt-4">
+                    <Link prefetch={false} href="/contact" className="inline-flex items-center gap-2 rounded-md bg-green-600 text-white px-4 py-2 text-sm hover:bg-green-500 shadow-sm transition-all active:scale-95">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4"><path d="M21 15a2 2 0 0 1-2 2h-3l-4 4v-4H7a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v9z"/></svg>
+                      <span>Send Inquiry</span>
+                    </Link>
+                    <button
+                      className="inline-flex items-center gap-2 rounded-md bg-slate-100 text-slate-800 px-4 py-2 text-sm hover:bg-slate-200 transition-all active:scale-95"
+                      onClick={() => { try { navigator.clipboard.writeText(`${window.location.origin}/`); } catch {} }}
+                    >
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4"><path d="M8 7h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2z"/><path d="M16 3H6a2 2 0 0 0-2 2v10"/></svg>
+                      <span>Copy Link</span>
+                    </button>
                   </div>
                 </div>
               </div>
@@ -580,7 +573,7 @@ function HomePageContent() {
             </div>
           </div>
         </div>
-      )}
+      </div>
       <div className="container">
         <div className="card space-y-2 sticky z-30" style={{ top: mounted ? filterTop : "6.75rem" }}>
           <div className="grid grid-cols-1 md:grid-cols-5 gap-2 sm:gap-3 items-end">
