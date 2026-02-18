@@ -40,6 +40,7 @@ export async function GET(req: Request) {
         }), 3, 1000),
         timeout(15000)
       ]);
+      console.log("[public-listings] Prisma listings fetch result count:", Array.isArray(listings) ? listings.length : "Not an array");
     } catch (dbError) {
       console.error("Prisma failed in public-listings, attempting Supabase fallback:", dbError);
       
@@ -85,36 +86,52 @@ export async function GET(req: Request) {
       });
     }
 
-    const { createSignedUrls } = await import("@lib/supabase");
+    const { supabasePublic, parseBucketSpec, createSignedUrls } = await import("@lib/supabase");
     
     // Process images in bulk to ensure we have signed URLs efficiently
     if (listings && Array.isArray(listings)) {
-      const allImages: { listingIndex: number; imageIndex: number; url: string }[] = [];
-      
+      const urlsToSign: string[] = [];
+      const mapping: { lIdx: number; iIdx: number }[] = [];
+
       listings.forEach((l: any, lIdx: number) => {
         if (l.images && Array.isArray(l.images)) {
           l.images.forEach((img: any, iIdx: number) => {
-            if (img.url && !img.url.startsWith("http")) {
-              allImages.push({ listingIndex: lIdx, imageIndex: iIdx, url: img.url });
+            if (img.url) {
+              const { bucketName, objectPath } = parseBucketSpec(img.url);
+              
+              if (bucketName === "images") {
+                // Collect for batch signing
+                urlsToSign.push(img.url);
+                mapping.push({ lIdx, iIdx });
+              } else if (bucketName) {
+                // Use public URL for other buckets (sync)
+                const { data } = supabasePublic.storage.from(bucketName).getPublicUrl(objectPath);
+                if (data?.publicUrl) {
+                  listings[lIdx].images[iIdx].url = data.publicUrl;
+                }
+              }
             }
           });
         }
       });
 
-      if (allImages.length > 0) {
-        const paths = allImages.map(img => img.url);
-        const signedUrls = await createSignedUrls(paths);
-        
-        allImages.forEach((imgInfo, i) => {
-          if (signedUrls[i]) {
-            listings[imgInfo.listingIndex].images[imgInfo.imageIndex].url = signedUrls[i];
-          }
-        });
+      if (urlsToSign.length > 0) {
+        try {
+          const signedUrls = await createSignedUrls(urlsToSign);
+          signedUrls.forEach((signed, idx) => {
+            if (signed) {
+              const { lIdx, iIdx } = mapping[idx];
+              listings[lIdx].images[iIdx].url = signed;
+            }
+          });
+        } catch (e) {
+          console.error("Error batch signing images:", e);
+        }
       }
     }
 
     const headers = new Headers();
-    headers.set("Cache-Control", "public, max-age=60");
+    headers.set("Cache-Control", "public, max-age=300, stale-while-revalidate=600");
     return new NextResponse(JSON.stringify({ listings: listings || [] }), { headers });
   } catch (error: any) {
     console.error("CRITICAL Error in public-listings API:", {

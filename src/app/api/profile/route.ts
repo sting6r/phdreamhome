@@ -112,7 +112,7 @@ export async function PUT(req: Request) {
           where: { id: userId },
           data: updateData
         })),
-        timeout(10000)
+        timeout(30000)
       ]);
     } catch (e) {
       console.warn("Prisma update failed/timed out (10s), falling back to Supabase", e);
@@ -133,6 +133,7 @@ export async function PUT(req: Request) {
 
 export async function GET(req: Request) {
   try {
+    console.log("[profile-get] Starting request processing...");
     const supabase = await createServerSideClient();
     let { data: { user: authUser }, error: userError } = await supabase.auth.getUser();
 
@@ -175,6 +176,7 @@ export async function GET(req: Request) {
       
       dbUser = resUser;
       totalListings = resCount;
+      console.log("[profile-get] Prisma fetch result - User found:", !!dbUser, "Listings count:", totalListings);
 
       // If Prisma returns null (e.g. not found or sync issue), force fallback to Supabase
       if (!dbUser) {

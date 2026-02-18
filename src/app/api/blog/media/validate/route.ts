@@ -14,7 +14,7 @@ async function exists(bucketName: string, objectPath: string): Promise<boolean> 
     const url = data.publicUrl || null;
     if (url) {
       const controller = new AbortController();
-      const id = setTimeout(() => controller.abort(), 10000);
+      const id = setTimeout(() => controller.abort(), 30000);
       try {
         const r = await fetch(url, { method: "HEAD", cache: "no-store", signal: controller.signal });
         clearTimeout(id);
@@ -28,7 +28,7 @@ async function exists(bucketName: string, objectPath: string): Promise<boolean> 
     const url = await createSignedUrl(`${bucketName}:${objectPath}`);
     if (url) {
       const controller = new AbortController();
-      const id = setTimeout(() => controller.abort(), 10000);
+      const id = setTimeout(() => controller.abort(), 30000);
       try {
         const r = await fetch(url, { method: "HEAD", cache: "no-store", signal: controller.signal });
         clearTimeout(id);

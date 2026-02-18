@@ -11,7 +11,7 @@ const fetcher = async (u: string, { signal }: { signal?: AbortSignal } = {}) => 
   if (token) headers["Authorization"] = `Bearer ${token}`;
   
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort("timeout"), 10000);
+  const timeoutId = setTimeout(() => controller.abort("timeout"), 30000);
 
   let combinedSignal: AbortSignal = controller.signal;
   const anyFn = (AbortSignal as any).any;

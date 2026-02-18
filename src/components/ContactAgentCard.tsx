@@ -110,7 +110,7 @@ export default function ContactAgentCard({
     setLoading(true);
     setError(null);
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
     try {
       const res = await fetch("/api/mail-inquiry", {
         method: "POST",
@@ -151,7 +151,7 @@ export default function ContactAgentCard({
     setLoading(true);
     setTourError(null);
     const tourController = new AbortController();
-    const tourTimeoutId = setTimeout(() => tourController.abort(), 10000);
+    const tourTimeoutId = setTimeout(() => tourController.abort(), 30000);
     try {
       const res = await fetch("/api/mail-inquiry", {
         method: "POST",

@@ -44,7 +44,7 @@ type BlogPost = { id: string; userId: string; title: string; description: string
 
 async function fetchPost(id: string): Promise<BlogPost | null> {
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 10000);
+  const timeoutId = setTimeout(() => controller.abort(), 30000);
   try {
     const h = await headers();
     const host = h.get("host");
@@ -79,7 +79,7 @@ async function fetchPost(id: string): Promise<BlogPost | null> {
 
 async function fetchBlogs(): Promise<{ createdAt: number }[]> {
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 10000);
+  const timeoutId = setTimeout(() => controller.abort(), 30000);
   try {
     const h = await headers();
     const host = h.get("host");

@@ -44,7 +44,7 @@ export default function NewListingPage() {
     await new Promise<void>((resolve, reject) => {
       const xhr = new XMLHttpRequest();
       xhr.open("POST", "/api/upload");
-      xhr.timeout = 10000; // 10 second timeout
+      xhr.timeout = 30000; // 30 second timeout
       xhr.upload.onprogress = (ev) => {
         if (ev.lengthComputable) {
           const pct = Math.round((ev.loaded / ev.total) * 100);
@@ -106,7 +106,7 @@ export default function NewListingPage() {
       if (token) headers["Authorization"] = `Bearer ${token}`;
       
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000);
+      const timeoutId = setTimeout(() => controller.abort(), 30000);
       try {
         const res = await fetch("/api/listings", { 
           method: "POST", 
@@ -173,7 +173,7 @@ export default function NewListingPage() {
     if (token) headers["Authorization"] = `Bearer ${token}`;
     
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
     try {
       await fetch(`/api/media/delete`, { 
         method: "POST", 

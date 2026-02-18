@@ -228,7 +228,7 @@ export default function NewBlogPage() {
   useEffect(() => {
     let alive = true;
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
     (async () => {
       try {
         setMyBlogsLoading(true);
@@ -265,7 +265,7 @@ export default function NewBlogPage() {
 
   async function publishExisting(id: string) {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
     try {
       setActionBusyId(id);
       const { data } = await supabase.auth.getSession();
@@ -301,7 +301,7 @@ export default function NewBlogPage() {
 
   async function deleteExisting(id: string) {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
     try {
       setActionBusyId(id);
       const { data } = await supabase.auth.getSession();
@@ -894,7 +894,7 @@ export default function NewBlogPage() {
     setUploadError(null);
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000);
+      const timeoutId = setTimeout(() => controller.abort(), 30000);
       const form = new FormData();
       form.append("files", file);
       const res = await fetch("/api/upload?scope=blog", {
@@ -937,7 +937,7 @@ export default function NewBlogPage() {
     setUploadError(null);
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000);
+      const timeoutId = setTimeout(() => controller.abort(), 30000);
       const form = new FormData();
       form.append("files", file);
       const res = await fetch("/api/upload?scope=blog", {
@@ -1000,7 +1000,7 @@ export default function NewBlogPage() {
     setUploadError(null);
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000);
+      const timeoutId = setTimeout(() => controller.abort(), 30000);
       const form = new FormData();
       form.append("files", file);
       const res = await fetch("/api/upload?scope=blog", {
@@ -1107,7 +1107,7 @@ export default function NewBlogPage() {
         media: mediaBody
       };
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000);
+      const timeoutId = setTimeout(() => controller.abort(), 30000);
       const r = await fetch("/api/blog", {
         method: "POST",
         headers,

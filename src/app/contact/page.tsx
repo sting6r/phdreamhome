@@ -68,7 +68,7 @@ export default function ContactPage() {
     setSent(null);
     setLoading(true);
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
     try {
       if (!form.name || !form.email || !form.subject || !form.message) {
         setError("Please fill all required fields");

@@ -62,7 +62,7 @@ export default function InquiriesTable({
     setLoading(true);
     
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
 
     try {
       const res = await fetch("/api/inquiries/bulk", {
@@ -105,7 +105,7 @@ export default function InquiriesTable({
     setLoading(true);
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
 
     try {
       const res = await fetch("/api/inquiries/bulk", {

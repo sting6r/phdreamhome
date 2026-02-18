@@ -26,7 +26,7 @@ export default function InquiryActions({ inquiryId, currentStatus }: { inquiryId
     }
     setLoading(true);
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
     try {
       const res = await fetch(`/api/inquiries/${inquiryId}`, {
         method: "PATCH",
@@ -67,7 +67,7 @@ export default function InquiryActions({ inquiryId, currentStatus }: { inquiryId
     if (!confirm("Are you sure you want to delete this inquiry?")) return;
     setLoading(true);
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
     try {
       const res = await fetch(`/api/inquiries/${inquiryId}`, {
         method: "DELETE",

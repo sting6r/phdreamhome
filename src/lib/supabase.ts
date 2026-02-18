@@ -83,6 +83,18 @@ export function createClientSideClient() {
 export const supabase = typeof window !== "undefined" ? createClientSideClient() : supabasePublic;
 
 export function parseBucketSpec(p: string) {
+  // Handle full Supabase Storage URLs
+  if (p.startsWith("http://") || p.startsWith("https://")) {
+    const storageMatch = p.match(/\/storage\/v1\/object\/(?:public|sign)\/([^/]+)\/(.+)$/);
+    if (storageMatch) {
+      const b = decodeURIComponent(storageMatch[1]);
+      const q = storageMatch[2].split("?")[0]; // Remove query params
+      return { bucketName: b, objectPath: decodeURIComponent(q) };
+    }
+    // Return default for unknown URLs (will likely be ignored by signing logic)
+    return { bucketName: "", objectPath: p };
+  }
+
   const i = p.indexOf(":");
   if (i > -1) {
     const b = p.slice(0, i).trim();
@@ -94,7 +106,7 @@ export function parseBucketSpec(p: string) {
 
 export async function createSignedUrl(path: string, expires = Number(process.env.SUPABASE_SIGNED_URL_EXPIRES || 604800)) {
   if (!path) return null;
-  if (path.startsWith("http://") || path.startsWith("https://")) return path;
+  if ((path.startsWith("http://") || path.startsWith("https://")) && !path.includes("/storage/v1/object/")) return path;
   
   const { bucketName, objectPath } = parseBucketSpec(path);
   try {

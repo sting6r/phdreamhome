@@ -201,7 +201,7 @@ export default async function ListingPage({ params, searchParams }: { params: Pr
   let similarRaw = [];
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
     similarRaw = await Promise.race([
       withRetry(() => prisma.listing.findMany({
         where: similarWhere,

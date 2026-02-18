@@ -31,9 +31,9 @@ export default function RegisterPage() {
     try {
       console.log("Attempting to sync user from register page.");
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000);
+      const timeoutId = setTimeout(() => controller.abort(), 30000);
       try {
-        await fetch("/api/auth/sync-user", { 
+        await fetch("/api/auth/sync-user", {  
           method: "POST", 
           headers: { "Content-Type": "application/json" }, 
           body: JSON.stringify({ userId: data.user.id, email: form.email }),

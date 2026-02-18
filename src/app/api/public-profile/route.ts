@@ -9,11 +9,14 @@ export async function GET() {
     let user: any = null;
     let totalListings = 0;
 
+    console.log("[public-profile] Starting request processing...");
+
     try {
       const timeout = (ms: number) => new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), ms));
       
       // Simpler Prisma query: just get the first user with an image if possible, or any user
       try {
+        console.log("[public-profile] Attempting Prisma user fetch...");
         user = await Promise.race([
           (async () => {
             return await withRetry(() => prisma.user.findFirst({ 
@@ -24,15 +27,18 @@ export async function GET() {
               }
             }), 3, 1000);
           })(),
-      timeout(15000)
-    ]) as any;
+          timeout(15000)
+        ]) as any;
+        console.log("[public-profile] Prisma user fetch result:", user ? "Found" : "Null");
 
         if (user) {
           try {
+            console.log("[public-profile] Attempting Prisma listings count...");
             totalListings = await Promise.race([
               withRetry(() => prisma.listing.count({ where: { userId: user.id } }), 1, 0),
               timeout(5000)
             ]) as number;
+            console.log("[public-profile] Prisma listings count:", totalListings);
           } catch (countErr) {
             console.warn("Prisma count failed in public-profile:", countErr);
             // Non-critical, just keep totalListings as 0 or try Supabase for count only
@@ -90,6 +96,10 @@ export async function GET() {
       licenseNo: user.licenseNo ?? "",
       dhsudAccredNo: user.dhsudAccredNo ?? "",
       youtube: user.youtube ?? ""
+    }, {
+      headers: {
+        "Cache-Control": "public, max-age=300, s-maxage=300, stale-while-revalidate=600",
+      }
     });
   } catch (error: any) {
     console.error("CRITICAL Error in public-profile API:", {

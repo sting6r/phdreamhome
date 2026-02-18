@@ -79,8 +79,24 @@ export default function AIAgent() {
     if (typeof window === "undefined") return;
     async function fetchAgentProfile() {
       const agentProfileController = new AbortController();
-      const agentProfileTimeoutId = setTimeout(() => agentProfileController.abort(), 10000);
+      const agentProfileTimeoutId = setTimeout(() => agentProfileController.abort(), 30000);
       try {
+        // Try to get from session storage first
+        const cacheKey = "agent-profile-data";
+        const cacheExpKey = "agent-profile-exp";
+        const now = Date.now();
+        const cached = typeof sessionStorage !== "undefined" ? sessionStorage.getItem(cacheKey) : null;
+        const exp = typeof sessionStorage !== "undefined" ? Number(sessionStorage.getItem(cacheExpKey) || 0) : 0;
+        
+        if (cached && exp > now) {
+           const data = JSON.parse(cached);
+           if (data && data.imageUrl) {
+             setAgentProfileImage(data.imageUrl);
+           }
+           clearTimeout(agentProfileTimeoutId);
+           return;
+        }
+
         let res;
         try {
           res = await fetch('/api/public-profile', { signal: agentProfileController.signal });
@@ -97,6 +113,13 @@ export default function AIAgent() {
             console.error("Agent profile parse error. Status:", res.status, "Body:", text.slice(0, 200));
             return;
           }
+          
+          // Cache the successful response for 5 minutes
+          if (typeof sessionStorage !== "undefined" && data) {
+            sessionStorage.setItem(cacheKey, JSON.stringify(data));
+            sessionStorage.setItem(cacheExpKey, String(now + 300000));
+          }
+
           if (data && data.imageUrl) {
             setAgentProfileImage(data.imageUrl);
           }
@@ -205,7 +228,7 @@ export default function AIAgent() {
       if (syncAbortControllerRef.current?.signal === signal) {
         syncAbortControllerRef.current.abort();
       }
-    }, 10000);
+    }, 30000);
     
     try {
       console.log(`Syncing ${msgs.length} messages to inquiry ${targetId}`);
@@ -388,7 +411,7 @@ export default function AIAgent() {
 
         // Fetch more listings to give the AI better context
         const listingsController = new AbortController();
-        const listingsTimeoutId = setTimeout(() => listingsController.abort(), 10000);
+        const listingsTimeoutId = setTimeout(() => listingsController.abort(), 30000);
         
         // Use the passed signal if available, otherwise use our local controller
         const fetchSignal = signal ? (AbortSignal as any).any([signal, listingsController.signal]) : listingsController.signal;
@@ -426,7 +449,7 @@ export default function AIAgent() {
             const link = l?.slug ? `/listing/${l.slug}` : `/listing/${l?.id}`;
             const img = l?.images?.[0]?.url ? `![${l.title}](${l.images[0].url})\n` : '';
             const loc = [l?.city, l?.state, l?.country].filter(Boolean).join(', ');
-            return `${img}${i + 1}. ${String(l?.title || '')}${price ? ` — ${price}` : ''}${loc ? ` • ${loc}` : ''}\nView: ${link}`;
+            return `${img}${i + 1}. ${String(l?.title || '')}${price ? ` â€” ${price}` : ''}${loc ? ` â€¢ ${loc}` : ''}\nView: ${link}`;
           }).join('\n\n');
           listingsSnippet = lines;
         }
@@ -437,7 +460,7 @@ export default function AIAgent() {
         title ? `Title: ${title}` : "",
         description ? `Description: ${description}` : "",
         pathname ? `Path: ${pathname}` : "",
-        hs.length ? `Headings: ${hs.join(' • ')}` : "",
+        hs.length ? `Headings: ${hs.join(' â€¢ ')}` : "",
         mainText ? `Page Text: ${mainText}` : "",
         listingsSnippet ? `Featured Listings:\n\n${listingsSnippet}` : ""
       ].filter(Boolean).join('\n');
@@ -452,7 +475,7 @@ export default function AIAgent() {
   useEffect(() => {
     if (typeof window === "undefined") return;
     const providerController = new AbortController();
-    const providerTimeoutId = setTimeout(() => providerController.abort(), 10000);
+    const providerTimeoutId = setTimeout(() => providerController.abort(), 30000);
     (async () => {
       try {
         let res;
@@ -524,7 +547,7 @@ export default function AIAgent() {
 
     const profileHistoryController = new AbortController();
     const sig = profileHistoryController.signal;
-    const profileHistoryTimeoutId = setTimeout(() => profileHistoryController.abort(), 10000);
+    const profileHistoryTimeoutId = setTimeout(() => profileHistoryController.abort(), 30000);
 
     const fetchProfileAndHistory = async () => {
       // 1. Try to get from sessionStorage first
@@ -552,7 +575,7 @@ export default function AIAgent() {
       // 2. If not in session, try to get from profile if logged in
       try {
         const profileController = new AbortController();
-        const profileTimeoutId = setTimeout(() => profileController.abort(), 10000);
+        const profileTimeoutId = setTimeout(() => profileController.abort(), 30000);
         
         let res;
         try {
@@ -579,7 +602,7 @@ export default function AIAgent() {
             
             // Auto-check for existing history for this logged-in user
             const leadController = new AbortController();
-            const leadTimeoutId = setTimeout(() => leadController.abort(), 10000);
+            const leadTimeoutId = setTimeout(() => leadController.abort(), 30000);
             
             let leadRes;
             try {
@@ -698,7 +721,7 @@ export default function AIAgent() {
 
     if (hasName && hasEmail && (!isPhoneRequired || hasPhone)) {
       const leadsController = new AbortController();
-      const leadsTimeoutId = setTimeout(() => leadsController.abort(), 10000);
+      const leadsTimeoutId = setTimeout(() => leadsController.abort(), 30000);
       try {
         let response;
         try {
@@ -1409,7 +1432,7 @@ export default function AIAgent() {
                   onClick={() => setShowPropertyForm(true)}
                   className="mt-2 w-full flex items-center justify-center gap-2 bg-purple-600 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-md hover:bg-purple-700 transition-all active:scale-95"
                 >
-                  <Image src="/Cat.png" alt="AI" width={18} height={18} className="rounded-full" />
+                  <Image src="/cat.png" alt="AI" width={18} height={18} className="rounded-full" />
                   Fill Out Property Form
                 </button>
               </span>
@@ -1619,7 +1642,7 @@ export default function AIAgent() {
         parts: [{ type: 'text' as const, text: text }]
       };
       const searchController = new AbortController();
-      const searchTimeoutId = setTimeout(() => searchController.abort(), 10000);
+      const searchTimeoutId = setTimeout(() => searchController.abort(), 30000);
       try {
         const qs = new URLSearchParams();
         if (selected) qs.set("status", selected);
@@ -1674,14 +1697,14 @@ export default function AIAgent() {
           const baths = Number(l.bathrooms) > 0 ? `${l.bathrooms} BA` : "";
           const type = l.type ? `${l.type}` : "";
           const statusText = l.status ? `${l.status}` : "";
-          const img = (Array.isArray(l.images) && l.images[0]?.url) ? `![${l.title} — ${price}](${l.images[0].url})\n` : "";
+          const img = (Array.isArray(l.images) && l.images[0]?.url) ? `![${l.title} â€” ${price}](${l.images[0].url})\n` : "";
           const link = l.slug ? `/listing/${l.slug}` : `/listing/${l.id}`;
           const lines = [
             `${idx + 1}. ${l.title}`,
-            loc ? `• Location: ${loc}` : "",
-            `• Price: ${price}`,
-            [type, statusText, beds, baths].filter(Boolean).length ? `• Details: ${[type, statusText, beds, baths].filter(Boolean).join(" • ")}` : "",
-            `• View: ${link}`
+            loc ? `â€¢ Location: ${loc}` : "",
+            `â€¢ Price: ${price}`,
+            [type, statusText, beds, baths].filter(Boolean).length ? `â€¢ Details: ${[type, statusText, beds, baths].filter(Boolean).join(" â€¢ ")}` : "",
+            `â€¢ View: ${link}`
           ].filter(Boolean).join("\n");
           return `${img}${lines}`;
         }).join("\n\n");
@@ -1733,7 +1756,7 @@ export default function AIAgent() {
         parts: [{ type: 'text' as const, text: text }]
       };
       const budgetController = new AbortController();
-      const budgetTimeoutId = setTimeout(() => budgetController.abort(), 10000);
+      const budgetTimeoutId = setTimeout(() => budgetController.abort(), 30000);
       try {
         const qs = new URLSearchParams();
         if (inquireFilterStatus) qs.set("status", inquireFilterStatus);
@@ -1770,14 +1793,14 @@ export default function AIAgent() {
           const baths = Number(l.bathrooms) > 0 ? `${l.bathrooms} BA` : "";
           const type = l.type ? `${l.type}` : "";
           const statusText = l.status ? `${l.status}` : "";
-          const img = (Array.isArray(l.images) && l.images[0]?.url) ? `![${l.title} — ${price}](${l.images[0].url})\n` : "";
+          const img = (Array.isArray(l.images) && l.images[0]?.url) ? `![${l.title} â€” ${price}](${l.images[0].url})\n` : "";
           const link = l.slug ? `/listing/${l.slug}` : `/listing/${l.id}`;
           const lines = [
             `${idx + 1}. ${l.title}`,
-            loc ? `• Location: ${loc}` : "",
-            `• Price: ${price}`,
-            [type, statusText, beds, baths].filter(Boolean).length ? `• Details: ${[type, statusText, beds, baths].filter(Boolean).join(" • ")}` : "",
-            `• View: ${link}`
+            loc ? `â€¢ Location: ${loc}` : "",
+            `â€¢ Price: ${price}`,
+            [type, statusText, beds, baths].filter(Boolean).length ? `â€¢ Details: ${[type, statusText, beds, baths].filter(Boolean).join(" â€¢ ")}` : "",
+            `â€¢ View: ${link}`
           ].filter(Boolean).join("\n");
           return `${img}${lines}`;
         }).join("\n\n");
@@ -1827,7 +1850,7 @@ export default function AIAgent() {
         parts: [{ type: 'text' as const, text: text }]
       };
       const bedsController = new AbortController();
-      const bedsTimeoutId = setTimeout(() => bedsController.abort(), 10000);
+      const bedsTimeoutId = setTimeout(() => bedsController.abort(), 30000);
       try {
         const qs = new URLSearchParams();
         if (inquireFilterStatus) qs.set("status", inquireFilterStatus);
@@ -1856,14 +1879,14 @@ export default function AIAgent() {
           const baths = Number(l.bathrooms) > 0 ? `${l.bathrooms} BA` : "";
           const type = l.type ? `${l.type}` : "";
           const statusText = l.status ? `${l.status}` : "";
-          const img = (Array.isArray(l.images) && l.images[0]?.url) ? `![${l.title} — ${price}](${l.images[0].url})\n` : "";
+          const img = (Array.isArray(l.images) && l.images[0]?.url) ? `![${l.title} â€” ${price}](${l.images[0].url})\n` : "";
           const link = l.slug ? `/listing/${l.slug}` : `/listing/${l.id}`;
           const lines = [
             `${idx + 1}. ${l.title}`,
-            loc ? `• Location: ${loc}` : "",
-            `• Price: ${price}`,
-            [type, statusText, btxt, baths].filter(Boolean).length ? `• Details: ${[type, statusText, btxt, baths].filter(Boolean).join(" • ")}` : "",
-            `• View: ${link}`
+            loc ? `â€¢ Location: ${loc}` : "",
+            `â€¢ Price: ${price}`,
+            [type, statusText, btxt, baths].filter(Boolean).length ? `â€¢ Details: ${[type, statusText, btxt, baths].filter(Boolean).join(" â€¢ ")}` : "",
+            `â€¢ View: ${link}`
           ].filter(Boolean).join("\n");
           return `${img}${lines}`;
         }).join("\n\n");
@@ -1912,7 +1935,7 @@ export default function AIAgent() {
       };
       const statusSlug = (inquireFilterStatus || "").toLowerCase().replace(/\s+/g, "-");
       const pageLink = inquireFilterStatus ? `/properties/${statusSlug}` : "/properties/for-sale";
-      const assistantText = `You can browse more properties here:\n\n${pageLink}\n\nTell me your budget and target location, and I’ll refine the listings.`;
+      const assistantText = `You can browse more properties here:\n\n${pageLink}\n\nTell me your budget and target location, and Iâ€™ll refine the listings.`;
       const assistantMsg = { 
         id: (Date.now() + 1).toString(), 
         role: 'assistant' as const, 
@@ -2100,7 +2123,7 @@ export default function AIAgent() {
         parts: [{ type: 'text' as const, text: textOnlyAll }]
       };
       const featuredController = new AbortController();
-      const featuredTimeoutId = setTimeout(() => featuredController.abort(), 10000);
+      const featuredTimeoutId = setTimeout(() => featuredController.abort(), 30000);
       try {
         const qs = new URLSearchParams();
         qs.set("featured", "true");
@@ -2135,14 +2158,14 @@ export default function AIAgent() {
           const baths = Number(l.bathrooms) > 0 ? `${l.bathrooms} BA` : "";
           const type = l.type ? `${l.type}` : "";
           const statusText = l.status ? `${l.status}` : "";
-          const img = (Array.isArray(l.images) && l.images[0]?.url) ? `![${l.title} — ${price}](${l.images[0].url})\n` : "";
+          const img = (Array.isArray(l.images) && l.images[0]?.url) ? `![${l.title} â€” ${price}](${l.images[0].url})\n` : "";
           const link = l.slug ? `/listing/${l.slug}` : `/listing/${l.id}`;
           const lines = [
             `${idx + 1}. ${l.title}`,
-            loc ? `• Location: ${loc}` : "",
-            `• Price: ${price}`,
-            [type, statusText, beds, baths].filter(Boolean).length ? `• Details: ${[type, statusText, beds, baths].filter(Boolean).join(" • ")}` : "",
-            `• View: ${link}`
+            loc ? `â€¢ Location: ${loc}` : "",
+            `â€¢ Price: ${price}`,
+            [type, statusText, beds, baths].filter(Boolean).length ? `â€¢ Details: ${[type, statusText, beds, baths].filter(Boolean).join(" â€¢ ")}` : "",
+            `â€¢ View: ${link}`
           ].filter(Boolean).join("\n");
           return `${img}${lines}`;
         }).join("\n\n");
@@ -2193,7 +2216,7 @@ export default function AIAgent() {
         parts: [{ type: 'text' as const, text: typedCity }]
       };
       const cityController = new AbortController();
-      const cityTimeoutId = setTimeout(() => cityController.abort(), 10000);
+      const cityTimeoutId = setTimeout(() => cityController.abort(), 30000);
       try {
         const qs = new URLSearchParams();
         if (inquireFilterStatus) qs.set("status", inquireFilterStatus);
@@ -2248,14 +2271,14 @@ export default function AIAgent() {
           const baths = Number(l.bathrooms) > 0 ? `${l.bathrooms} BA` : "";
           const type = l.type ? `${l.type}` : "";
           const statusText = l.status ? `${l.status}` : "";
-          const img = (Array.isArray(l.images) && l.images[0]?.url) ? `![${l.title} — ${price}](${l.images[0].url})\n` : "";
+          const img = (Array.isArray(l.images) && l.images[0]?.url) ? `![${l.title} â€” ${price}](${l.images[0].url})\n` : "";
           const link = l.slug ? `/listing/${l.slug}` : `/listing/${l.id}`;
           const lines = [
             `${idx + 1}. ${l.title}`,
-            loc ? `• Location: ${loc}` : "",
-            `• Price: ${price}`,
-            [type, statusText, beds, baths].filter(Boolean).length ? `• Details: ${[type, statusText, beds, baths].filter(Boolean).join(" • ")}` : "",
-            `• View: ${link}`
+            loc ? `â€¢ Location: ${loc}` : "",
+            `â€¢ Price: ${price}`,
+            [type, statusText, beds, baths].filter(Boolean).length ? `â€¢ Details: ${[type, statusText, beds, baths].filter(Boolean).join(" â€¢ ")}` : "",
+            `â€¢ View: ${link}`
           ].filter(Boolean).join("\n");
           return `${img}${lines}`;
         }).join("\n\n");
@@ -2340,7 +2363,7 @@ export default function AIAgent() {
         formDataUpload.append("files", imageFile);
         
         const uploadController = new AbortController();
-        const uploadTimeoutId = setTimeout(() => uploadController.abort(), 10000);
+        const uploadTimeoutId = setTimeout(() => uploadController.abort(), 30000);
         let uploadRes;
         try {
           uploadRes = await fetch("/api/upload", {
@@ -2586,7 +2609,7 @@ export default function AIAgent() {
                         className="flex items-center gap-2 bg-purple-600 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-lg hover:bg-purple-700 transition-all hover:scale-105 active:scale-95 w-full justify-center"
                       >
                         {item.label}
-                        <Image src="/Cat.png" alt="AI" width={18} height={18} className="rounded-full shadow-sm" />
+                        <Image src="/cat.png" alt="AI" width={18} height={18} className="rounded-full shadow-sm" />
                       </button>
                     )
                   ))}
@@ -2619,7 +2642,7 @@ export default function AIAgent() {
             >
               <div className="absolute inset-0 bg-gradient-to-tr from-purple-600/20 to-transparent" />
               <Image 
-                src={getProxyImageUrl(agentProfileImage || "/Cat.png")} 
+                src="/cat.png" 
                 alt="AI Assistant" 
                 width={56} 
                 height={56} 
@@ -2731,7 +2754,7 @@ export default function AIAgent() {
                     <ChevronLeft size={14} />
                   </button>
                 )}
-                <Image src="/Cat.png" alt="PhDreamHome AI Assistant" width={32} height={32} className="rounded-full" />
+                <Image src="/cat.png" alt="PhDreamHome AI Assistant" width={32} height={32} className="rounded-full" />
                 <div className="flex flex-col">
                   <span className="font-semibold text-sm">Kyuubi AI</span>
                   <span className="text-[10px] opacity-90 leading-tight">Hi there! I am Kyuubi, your PhDreamHome AI Assistant.</span>
@@ -2866,11 +2889,11 @@ export default function AIAgent() {
                             }}
                           >
                             <div className="flex items-center gap-2">
-                              <Image src="/Cat.png" alt="PhDreamHome AI Assistant" width={24} height={24} className="rounded-full" />
+                              <Image src="/cat.png" alt="PhDreamHome AI Assistant" width={24} height={24} className="rounded-full" />
                               <div className="text-xs font-semibold text-slate-800">Kyuubi AI</div>
                             </div>
                             <div className="text-[10px] text-slate-500">
-                              {formatDate(new Date(session.startedAt))} · {formatTime(new Date(session.startedAt))}
+                              {formatDate(new Date(session.startedAt))} Â· {formatTime(new Date(session.startedAt))}
                             </div>
                           </div>
                         ));
@@ -2921,7 +2944,7 @@ export default function AIAgent() {
                             try {
                               if (formData.name && formData.email) {
                                 const newChatLeadsController = new AbortController();
-                                const newChatLeadsTimeoutId = setTimeout(() => newChatLeadsController.abort(), 10000);
+                                const newChatLeadsTimeoutId = setTimeout(() => newChatLeadsController.abort(), 30000);
                                 let response;
                                 try {
                                   response = await fetch("/api/leads", {
@@ -2970,7 +2993,7 @@ export default function AIAgent() {
                         >
                           <div className="flex items-center justify-between mb-4">
                             <h3 className="font-bold text-slate-800 flex items-center gap-2">
-                              <Image src="/Cat.png" alt="AI" width={20} height={20} className="rounded-full" />
+                              <Image src="/cat.png" alt="AI" width={20} height={20} className="rounded-full" />
                               Property Details
                             </h3>
                             <button 
@@ -3048,7 +3071,7 @@ export default function AIAgent() {
                         <>
                           {chatInstance.messages.length === 0 && (
                             <div className="flex flex-col items-center justify-center h-full text-center space-y-2 opacity-60">
-                              <Image src="/Cat.png" alt="AI" width={48} height={48} className="rounded-full shadow-lg border border-purple-100" />
+                              <Image src="/cat.png" alt="AI" width={48} height={48} className="rounded-full shadow-lg border border-purple-100" />
                               <p className="text-xs font-medium text-slate-600">Start a conversation with PhDreamHome AI Assistant</p>
                             </div>
                           )}
@@ -3114,7 +3137,7 @@ export default function AIAgent() {
                                         }`}
                                       >
                                         <div className="flex items-center gap-1.5 mb-1 opacity-70">
-                                          {m.role === "user" ? <User size={14} /> : <Image src="/Cat.png" alt="AI" width={20} height={20} className="rounded-full" />}
+                                          {m.role === "user" ? <User size={14} /> : <Image src="/cat.png" alt="AI" width={20} height={20} className="rounded-full" />}
                                           <span className="font-bold uppercase tracking-wider text-[10px]">
                                             {m.role === "user" ? "You" : "Kyuubi AI"}
                                           </span>
@@ -3136,7 +3159,7 @@ export default function AIAgent() {
                                                 if (part.type.startsWith("tool-") || part.type === "dynamic-tool") {
                                                   return (
                                                     <div key={i} className="my-2 rounded bg-slate-100 p-2 text-[10px] italic flex items-center gap-2">
-                                                      <Image src="/Cat.png" alt="AI" width={14} height={14} className="rounded-full animate-pulse" />
+                                                      <Image src="/cat.png" alt="AI" width={14} height={14} className="rounded-full animate-pulse" />
                                                       <span>Assistant is performing an action...</span>
                                                     </div>
                                                   );
@@ -3460,7 +3483,7 @@ export default function AIAgent() {
 
             {/* Close hint for desktop */}
             <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-white/30 text-[10px] uppercase tracking-widest hidden md:block">
-              Click anywhere outside to close • Press ESC to exit
+              Click anywhere outside to close â€¢ Press ESC to exit
             </div>
           </motion.div>
         )}

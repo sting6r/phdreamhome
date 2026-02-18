@@ -327,7 +327,7 @@ export default function SalesRentalDetailCard({ sale }: SalesRentalDetailCardPro
       const headers: Record<string, string> = { "Content-Type": "application/json" };
       if (token) headers["Authorization"] = `Bearer ${token}`;
       const controller = new AbortController();
-      const t = setTimeout(() => controller.abort("timeout"), 10000);
+      const t = setTimeout(() => controller.abort("timeout"), 30000);
       try {
         const res = await fetch(`/api/sales/${sale.id}`, {
           method: "PATCH",
@@ -374,7 +374,7 @@ export default function SalesRentalDetailCard({ sale }: SalesRentalDetailCardPro
       const headers: Record<string, string> = { "Content-Type": "application/json" };
       if (token) headers["Authorization"] = `Bearer ${token}`;
       const controller = new AbortController();
-      const t = setTimeout(() => controller.abort("timeout"), 10000);
+      const t = setTimeout(() => controller.abort("timeout"), 30000);
       try {
         const res = await fetch(`/api/sales/${sale.id}`, {
           method: "PATCH",
@@ -401,7 +401,7 @@ export default function SalesRentalDetailCard({ sale }: SalesRentalDetailCardPro
       const headers: Record<string, string> = { "Content-Type": "application/json" };
       if (token) headers["Authorization"] = `Bearer ${token}`;
       const controller = new AbortController();
-      const t = setTimeout(() => controller.abort("timeout"), 10000);
+      const t = setTimeout(() => controller.abort("timeout"), 30000);
       try {
         const res = await fetch(`/api/sales/${sale.id}`, {
           method: "PATCH",
@@ -440,7 +440,7 @@ export default function SalesRentalDetailCard({ sale }: SalesRentalDetailCardPro
       const headers: Record<string, string> = { "Content-Type": "application/json" };
       if (token) headers["Authorization"] = `Bearer ${token}`;
       const controller = new AbortController();
-      const t = setTimeout(() => controller.abort("timeout"), 10000);
+      const t = setTimeout(() => controller.abort("timeout"), 30000);
       try {
         const res = await fetch(`/api/sales/${sale.id}`, {
           method: "PATCH",
@@ -470,7 +470,7 @@ export default function SalesRentalDetailCard({ sale }: SalesRentalDetailCardPro
       const headers: Record<string, string> = { "Content-Type": "application/json" };
       if (token) headers["Authorization"] = `Bearer ${token}`;
       const controller = new AbortController();
-      const t = setTimeout(() => controller.abort("timeout"), 10000);
+      const t = setTimeout(() => controller.abort("timeout"), 30000);
       try {
         const res = await fetch(`/api/sales/${sale.id}`, {
           method: "PATCH",
@@ -669,7 +669,7 @@ export default function SalesRentalDetailCard({ sale }: SalesRentalDetailCardPro
       const headers: Record<string, string> = { "Content-Type": "application/json" };
       if (token) headers["Authorization"] = `Bearer ${token}`;
       const controller = new AbortController();
-      const t = setTimeout(() => controller.abort("timeout"), 10000);
+      const t = setTimeout(() => controller.abort("timeout"), 30000);
       try {
         const res = await fetch(`/api/sales/${sale.id}`, {
           method: "PATCH",
@@ -721,7 +721,7 @@ export default function SalesRentalDetailCard({ sale }: SalesRentalDetailCardPro
       const headers: Record<string, string> = { "Content-Type": "application/json" };
       if (token) headers["Authorization"] = `Bearer ${token}`;
       const controller = new AbortController();
-      const t = setTimeout(() => controller.abort("timeout"), 10000);
+      const t = setTimeout(() => controller.abort("timeout"), 30000);
       try {
         const res = await fetch(`/api/sales/${sale.id}`, {
           method: "PATCH",
@@ -748,7 +748,7 @@ export default function SalesRentalDetailCard({ sale }: SalesRentalDetailCardPro
       const headers: Record<string, string> = { "Content-Type": "application/json" };
       if (token) headers["Authorization"] = `Bearer ${token}`;
       const controller = new AbortController();
-      const t = setTimeout(() => controller.abort("timeout"), 10000);
+      const t = setTimeout(() => controller.abort("timeout"), 30000);
       try {
         const res = await fetch(`/api/sales/${sale.id}`, {
           method: "PATCH",
@@ -777,7 +777,7 @@ export default function SalesRentalDetailCard({ sale }: SalesRentalDetailCardPro
       const headers: Record<string, string> = { "Content-Type": "application/json" };
       if (token) headers["Authorization"] = `Bearer ${token}`;
       const controller = new AbortController();
-      const t = setTimeout(() => controller.abort("timeout"), 10000);
+      const t = setTimeout(() => controller.abort("timeout"), 30000);
       try {
         const res = await fetch(`/api/sales/${sale.id}`, {
           method: "PATCH",
@@ -819,7 +819,7 @@ export default function SalesRentalDetailCard({ sale }: SalesRentalDetailCardPro
       const headers: Record<string, string> = { "Content-Type": "application/json" };
       if (token) headers["Authorization"] = `Bearer ${token}`;
       const controller = new AbortController();
-      const t = setTimeout(() => controller.abort("timeout"), 10000);
+      const t = setTimeout(() => controller.abort("timeout"), 30000);
       try {
         const res = await fetch(`/api/sales/${sale.id}`, {
           method: "PATCH",
@@ -846,7 +846,7 @@ export default function SalesRentalDetailCard({ sale }: SalesRentalDetailCardPro
       const headers: Record<string, string> = { "Content-Type": "application/json" };
       if (token) headers["Authorization"] = `Bearer ${token}`;
       const controller = new AbortController();
-      const t = setTimeout(() => controller.abort("timeout"), 10000);
+      const t = setTimeout(() => controller.abort("timeout"), 30000);
       try {
         const res = await fetch(`/api/sales/${sale.id}`, {
           method: "PATCH",

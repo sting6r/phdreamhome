@@ -42,7 +42,7 @@ export default function TranscriptModal({ isOpen, onClose, transcript, clientNam
     setReplyText("");
     setSaving(true);
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
     try {
       const res = await fetch(`/api/inquiries/${inquiryId}`, {
         method: "PATCH",

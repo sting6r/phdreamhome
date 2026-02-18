@@ -26,7 +26,7 @@ export default function ProfilePage() {
 
   useEffect(() => {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
 
     async function loadProfile() {
       try {
@@ -113,7 +113,7 @@ export default function ProfilePage() {
     const fd = new FormData(); fd.append("files", file);
     
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
 
     try {
       const r = await fetch("/api/upload", { 
@@ -152,7 +152,7 @@ export default function ProfilePage() {
   async function save(e: React.FormEvent) {
     e.preventDefault(); setMsg(null); setErr(null); setSaving(true);
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
 
     try {
       const body = { name: form.name, email: form.email, address: form.address, phone: form.phone, image: form.image, role: form.role, licenseNo: form.licenseNo, dhsudAccredNo: form.dhsudAccredNo, facebook: form.facebook, whatsapp: form.whatsapp, viber: form.viber, instagram: form.instagram, telegram: form.telegram, youtube: form.youtube, twitter: form.twitter };

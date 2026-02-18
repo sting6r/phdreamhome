@@ -116,7 +116,7 @@ export async function GET(req: Request) {
         if (base) {
           try {
             const controller = new AbortController();
-            const id = setTimeout(() => controller.abort(), 10000); // Standard 10s timeout
+            const id = setTimeout(() => controller.abort(), 30000); // Standard 10s timeout
             const r = await fetch(`${base}/storage/v1/object/authenticated/${encodeURIComponent(bucketName)}/${encodeURIComponent(objectPath)}`, { headers: { Authorization: `Bearer ${token}` }, cache: "no-store", signal: controller.signal });
             clearTimeout(id);
             if (r.ok) {
@@ -125,7 +125,7 @@ export async function GET(req: Request) {
             } else {
               // fallback to public if authenticated fails
               const controller2 = new AbortController();
-              const id2 = setTimeout(() => controller2.abort(), 10000); // Standard 10s timeout
+              const id2 = setTimeout(() => controller2.abort(), 30000); // Standard 10s timeout
               const r2 = await fetch(`${base}/storage/v1/object/public/${encodeURIComponent(bucketName)}/${encodeURIComponent(objectPath)}`, { cache: "no-store", signal: controller2.signal });
               clearTimeout(id2);
               if (r2.ok) {
@@ -148,7 +148,7 @@ export async function GET(req: Request) {
       if (!direct) direct = await createSignedUrl(path);
       if (!direct) return NextResponse.json({ error: "Not found" }, { status: 404 });
       const controller = new AbortController();
-      const id = setTimeout(() => controller.abort(), 10000); // Standard 10s timeout
+      const id = setTimeout(() => controller.abort(), 30000); // Standard 10s timeout
       try {
         const r = await fetch(direct, { cache: "no-store", signal: controller.signal });
         clearTimeout(id);

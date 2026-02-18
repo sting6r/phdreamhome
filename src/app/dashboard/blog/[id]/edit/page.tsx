@@ -291,7 +291,7 @@ export default function EditBlogPage({ params }: { params: Promise<{ id: string 
     setUploadingIndex(index);
     setUploadError(null);
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
     try {
       const form = new FormData();
       form.append("files", file);
@@ -347,7 +347,7 @@ export default function EditBlogPage({ params }: { params: Promise<{ id: string 
     setUploadingImageIndex(index);
     setUploadError(null);
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
     try {
       const form = new FormData();
       form.append("files", file);
@@ -402,7 +402,7 @@ export default function EditBlogPage({ params }: { params: Promise<{ id: string 
     setUploadingHeroImage(true);
     setUploadError(null);
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
     try {
       const form = new FormData();
       form.append("files", file);
@@ -907,7 +907,7 @@ export default function EditBlogPage({ params }: { params: Promise<{ id: string 
     let alive = true;
     (async () => {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000);
+      const timeoutId = setTimeout(() => controller.abort(), 30000);
       try {
         const { data } = await supabase.auth.getSession();
         const token = data.session?.access_token;
@@ -1256,7 +1256,7 @@ export default function EditBlogPage({ params }: { params: Promise<{ id: string 
         media: mediaBody
       };
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000);
+      const timeoutId = setTimeout(() => controller.abort(), 30000);
       try {
         const r = await fetch(`/api/blog/${id}`, {
           method: "PUT",

@@ -33,7 +33,7 @@ export default function AboutPage() {
             Your Trusted Partner in the Philippine Real Estate Journey
           </div>
           <div className="text-sm sm:text-base text-slate-800">
-            At PHDreamHome.com, we believe that finding a home is about more than just square footage and floor plans—it’s about finding where your future begins. Whether you are a first-time homebuyer, a Balikbayan returning to your roots, or an investor looking for the next big opportunity in the archipelago, we are here to bridge the gap between your search and your success.
+            At PHDreamHome.com, we believe that finding a home is about more than just square footage and floor plansâ€”itâ€™s about finding where your future begins. Whether you are a first-time homebuyer, a Balikbayan returning to your roots, or an investor looking for the next big opportunity in the archipelago, we are here to bridge the gap between your search and your success.
           </div>
           <div className="text-lg font-semibold">Our Mission</div>
           <div className="text-sm sm:text-base text-slate-800">
@@ -73,7 +73,7 @@ export default function AboutPage() {
                   <div className="w-10 h-10 rounded-full bg-purple-100 text-purple-700 grid place-items-center">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5"><path d="M12 2l3 7h7l-5.5 4.5L18 22l-6-4-6 4 1.5-8.5L2 9h7z"/></svg>
                   </div>
-                  <div className="font-semibold text-slate-900">End‑to‑End Support</div>
+                  <div className="font-semibold text-slate-900">Endâ€‘toâ€‘End Support</div>
                 </div>
                 <div className="text-sm text-slate-700 mt-2">We guide you through legalities, paperwork, and financing hurdles.</div>
               </div>
@@ -92,7 +92,7 @@ export default function AboutPage() {
             <div className="absolute inset-0 bg-slate-100" />
             <div className="absolute inset-0 flex items-center justify-center">
               <div className="relative w-[88%] max-w-[420px] aspect-[4/3] rounded-2xl overflow-hidden ring-1 ring-black/10 shadow-xl">
-                <Image src="/Cat.png" alt="PH Dream Home Team" fill className="object-cover" />
+                <Image src="/cat.png" alt="PH Dream Home Team" fill className="object-cover" />
               </div>
             </div>
           </div>
@@ -106,14 +106,14 @@ export default function AboutPage() {
             <div className="lg:col-span-2 card bg-transparent shadow-none">
               <div className="text-2xl font-bold text-[#32004A]">Our Story</div>
               <div className="mt-2 text-sm sm:text-base text-slate-800">
-                PHDreamHome was founded on a simple observation: the dream of owning a home in the Philippines should be accessible, modern, and stress-free. In a world where technology is evolving, we saw an opportunity to bring world-class digital tools to the local real estate scene, ensuring that every Filipino—at home or abroad—has a reliable place to find their piece of paradise.
+                PHDreamHome was founded on a simple observation: the dream of owning a home in the Philippines should be accessible, modern, and stress-free. In a world where technology is evolving, we saw an opportunity to bring world-class digital tools to the local real estate scene, ensuring that every Filipinoâ€”at home or abroadâ€”has a reliable place to find their piece of paradise.
               </div>
               <div className="mt-4 text-sm sm:text-base italic text-slate-700">
                 &quot;A house is made of bricks and beams; a home is made of hopes and dreams. Our job is to make sure those dreams are built on a solid foundation.&quot;
               </div>
             </div>
             <div className="card">
-              <div className="text-xl font-bold mb-2">Let’s Find Your Dream Home</div>
+              <div className="text-xl font-bold mb-2">Letâ€™s Find Your Dream Home</div>
               <div className="text-sm text-slate-700">
                 The market moves fast, but so do we. Explore our latest listings or speak with our AI-powered property assistant right now to find a match tailored to your budget and lifestyle.
               </div>

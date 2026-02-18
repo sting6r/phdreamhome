@@ -11,7 +11,7 @@ const fetcher = async (u: string, { signal }: { signal?: AbortSignal } = {}) => 
   if (token) headers["Authorization"] = `Bearer ${token}`;
   
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort("timeout"), 10000);
+  const timeoutId = setTimeout(() => controller.abort("timeout"), 30000);
 
   let combinedSignal: AbortSignal = controller.signal;
   const anyFn = (AbortSignal as any).any;
@@ -75,7 +75,7 @@ export default function PropertiesPage() {
     if (token) headers["Authorization"] = `Bearer ${token}`;
     
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
 
     try {
       await fetch(`/api/listings/${id}`, { 
@@ -101,7 +101,7 @@ export default function PropertiesPage() {
     if (token) headers["Authorization"] = `Bearer ${token}`;
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
 
     try {
       await fetch(`/api/listings/${id}`, { 
@@ -126,7 +126,7 @@ export default function PropertiesPage() {
     if (token) headers["Authorization"] = `Bearer ${token}`;
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
 
     try {
       await fetch(`/api/listings/${id}`, { 
@@ -151,7 +151,7 @@ export default function PropertiesPage() {
     if (token) headers["Authorization"] = `Bearer ${token}`;
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
 
     try {
       await fetch(`/api/listings/${id}`, { 
@@ -172,7 +172,7 @@ export default function PropertiesPage() {
 
   async function remove(id: string) {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
 
     try {
       await fetch(`/api/listings/${id}`, { 

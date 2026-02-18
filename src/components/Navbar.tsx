@@ -22,7 +22,7 @@ export default function Navbar() {
   
   async function safePost(url: string, body: any) {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
     try {
       // Use fetch with keepalive as primary method - it handles JSON and headers better than sendBeacon
       await fetch(url, { 
@@ -69,7 +69,7 @@ export default function Navbar() {
   }
   async function loadProfileAvatar(signal?: AbortSignal) {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
     const sig = signal ? (AbortSignal as any).any([signal, controller.signal]) : controller.signal;
     
     try {

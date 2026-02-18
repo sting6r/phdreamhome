@@ -78,7 +78,7 @@ function LoginPageContent() {
     
     // Sync user with Railway DB
     const syncController = new AbortController();
-    const syncTimeoutId = setTimeout(() => syncController.abort(), 10000);
+    const syncTimeoutId = setTimeout(() => syncController.abort(), 30000);
     try {
       await fetch("/api/auth/sync-user", { 
         method: "POST", 
@@ -96,7 +96,7 @@ function LoginPageContent() {
     }
 
     const sessionController = new AbortController();
-    const sessionTimeoutId = setTimeout(() => sessionController.abort(), 10000);
+    const sessionTimeoutId = setTimeout(() => sessionController.abort(), 30000);
     try {
       await fetch("/api/auth/session", { 
         method: "POST", 

@@ -71,7 +71,7 @@ export async function POST(req: Request) {
           }
           if (!direct) throw new Error("download failed");
           const controller = new AbortController();
-          const id = setTimeout(() => controller.abort(), 10000);
+          const id = setTimeout(() => controller.abort(), 30000);
           try {
             const r = await fetch(direct, { signal: controller.signal });
             if (!r.ok) throw new Error("download failed");
@@ -134,7 +134,7 @@ export async function POST(req: Request) {
               }
               if (!direct) throw new Error("download failed");
               const controller = new AbortController();
-              const id = setTimeout(() => controller.abort(), 10000);
+              const id = setTimeout(() => controller.abort(), 30000);
               try {
                 const r = await fetch(direct, { signal: controller.signal });
                 if (!r.ok) throw new Error("download failed");

@@ -71,7 +71,7 @@ export async function GET() {
           },
         ],
       }),
-      timeout(10000) // Increased timeout to 10s for potentially slow GA response
+      timeout(20000) // Increased timeout to 20s for potentially slow GA response
     ]) as any;
 
     const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];

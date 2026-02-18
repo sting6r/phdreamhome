@@ -12,7 +12,7 @@ const fetcher = async (u: string, { signal }: { signal?: AbortSignal } = {}) => 
   if (token) headers["Authorization"] = `Bearer ${token}`;
   
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort("timeout"), 10000); // 10s timeout
+  const timeoutId = setTimeout(() => controller.abort("timeout"), 30000); // 10s timeout
 
   let combinedSignal: AbortSignal = controller.signal;
   const anyFn = (AbortSignal as any).any;
@@ -311,7 +311,7 @@ export default function SalesPage() {
       if (token) headers["Authorization"] = `Bearer ${token}`;
 
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort("timeout"), 10000);
+      const timeoutId = setTimeout(() => controller.abort("timeout"), 30000);
       try {
         await fetch(`/api/sales/${id}`, { 
           method: "DELETE", 
@@ -403,7 +403,7 @@ export default function SalesPage() {
       const method = editingId ? "PATCH" : "POST";
       
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort("timeout"), 10000);
+      const timeoutId = setTimeout(() => controller.abort("timeout"), 30000);
       try {
         const res = await fetch(url, {
           method,

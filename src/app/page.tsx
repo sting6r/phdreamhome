@@ -8,7 +8,7 @@ import { getProxyImageUrl } from "../lib/image-utils";
 
 const fetcher = async (u: string, signal?: AbortSignal) => {
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 10000);
+  const timeoutId = setTimeout(() => controller.abort(), 30000);
   const sig = signal ? (AbortSignal as any).any([signal, controller.signal]) : controller.signal;
 
   try {
@@ -179,7 +179,7 @@ function HomePageContent() {
     const fallback = { lat: 12.8797, lon: 121.774 };
     
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
     const sig = signal ? (AbortSignal as any).any([signal, controller.signal]) : controller.signal;
 
     try {

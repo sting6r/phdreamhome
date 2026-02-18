@@ -46,7 +46,7 @@ export default function UpdatePasswordPage() {
       
       try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 10000);
+        const timeoutId = setTimeout(() => controller.abort(), 30000);
         try {
           await fetch("/api/auth/session", { 
             method: "DELETE", 

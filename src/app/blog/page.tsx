@@ -33,7 +33,7 @@ async function fetchBlogsPublic(): Promise<BlogPost[]> {
     const proto = h.get("x-forwarded-proto") || "http";
     if (!host) return [];
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
     const r = await fetch(`${proto}://${host}/api/blog`, { 
       cache: "no-store",
       signal: controller.signal
@@ -61,7 +61,7 @@ async function fetchBlogsMine(token: string): Promise<BlogPost[]> {
     const proto = h.get("x-forwarded-proto") || "http";
     if (!host) return [];
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
     const r = await fetch(`${proto}://${host}/api/blog?mine=1`, { 
       cache: "no-store", 
       headers: { Authorization: `Bearer ${token}` },
