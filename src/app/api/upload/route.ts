@@ -41,13 +41,13 @@ export async function POST(req: Request) {
           ? bucketProfile
           : (isVideo ? bucketVideos : bucket);
 
-    // Create the profile bucket if it doesn't exist (idempotent)
-    if (scope === "profile") {
+    // Create the profile or videos bucket if it doesn't exist (idempotent)
+    if (scope === "profile" || (isVideo && !scope)) {
       try {
-        await supabaseAdmin.storage.createBucket(bucketProfile, {
+        await supabaseAdmin.storage.createBucket(targetBucket, {
           public: false,
-          fileSizeLimit: "5242880",
-          allowedMimeTypes: ["image/*"]
+          fileSizeLimit: isVideo ? "52428800" : "5242880", // 50MB for video, 5MB for image
+          allowedMimeTypes: isVideo ? ["video/*"] : ["image/*"]
         });
       } catch (e: any) {
         // Ignore if already exists or if policy forbids; upload will fail if not available
