@@ -23,8 +23,8 @@ const fetcher = async (u: string, signal?: AbortSignal) => {
     
     if (!r.ok) {
       if (r.status === 404) return null;
-      if (r.status === 401 || r.status === 403) {
-        // Unauthorized is expected when not logged in; fall back to public data silently
+      // Handle 401/403 (Unauthorized/Forbidden) silently as it just means not logged in
+      if (r.status === 401 || r.status === 403 || r.status?.toString() === '401' || r.status?.toString() === '403') {
         return null;
       }
       // Only log errors if not aborted
