@@ -115,6 +115,7 @@ function EditListingPageContent({ params }: { params: Promise<{ id: string }> })
     if (!files || !files.length) return;
     const fd = new FormData();
     Array.from(files).forEach(f => fd.append("files", f));
+    fd.append("propertyName", form.title);
     setUploading(true);
     setUploadProgress(0);
     await new Promise<void>((resolve, reject) => {
