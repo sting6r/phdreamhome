@@ -36,13 +36,36 @@ export async function GET(req: Request) {
         } else {
           user = await Promise.race([
             (async () => {
-              return await withRetry(() => prisma.user.findFirst({ 
+              // Prioritize users with both email and image (likely the main agent profile)
+              // If none, fallback to any user
+              let foundUser = await withRetry(() => prisma.user.findFirst({ 
+                where: {
+                  AND: [
+                    { email: { not: null } },
+                    { email: { not: '' } },
+                    { image: { not: null } },
+                    { image: { not: '' } }
+                  ]
+                },
+                orderBy: { createdAt: 'desc' },
                 select: {
                   id: true, name: true, username: true, email: true, address: true, 
                   phone: true, image: true, emailVerified: true, role: true, 
                   licenseNo: true, dhsudAccredNo: true, youtube: true
                 }
               }), 3, 1000);
+
+              if (!foundUser) {
+                foundUser = await withRetry(() => prisma.user.findFirst({ 
+                  orderBy: { createdAt: 'desc' },
+                  select: {
+                    id: true, name: true, username: true, email: true, address: true, 
+                    phone: true, image: true, emailVerified: true, role: true, 
+                    licenseNo: true, dhsudAccredNo: true, youtube: true
+                  }
+                }), 3, 1000);
+              }
+              return foundUser;
             })(),
             timeout(15000)
           ]) as any;
