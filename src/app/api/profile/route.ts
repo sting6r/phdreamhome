@@ -345,9 +345,8 @@ export async function GET(req: Request) {
     const signed = await signedTask;
 
     // Construct proxy URL if user has an image path, otherwise use signed URL
-    let imageUrl = dbUser?.image 
-      ? getProxyImageUrl(dbUser.image) 
-      : signed;
+    // Prefer signed URL if available to avoid proxy issues with private buckets
+    let imageUrl = signed || (dbUser?.image ? getProxyImageUrl(dbUser.image) : null);
     
     return NextResponse.json({
       id: dbUser?.id ?? null,
