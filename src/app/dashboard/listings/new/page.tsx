@@ -35,10 +35,16 @@ export default function NewListingPage() {
   const [seoDescription, setSeoDescription] = useState("");
   const [seoKeyword, setSeoKeyword] = useState("");
   async function upload(e: React.ChangeEvent<HTMLInputElement>) {
+    if (!form.title) {
+      alert("Please enter a property title before uploading images.");
+      if (fileRef.current) fileRef.current.value = "";
+      return;
+    }
     const files = e.target.files;
     if (!files || !files.length) return;
     const fd = new FormData();
     Array.from(files).forEach(f => fd.append("files", f));
+    fd.append("propertyName", form.title);
     setUploading(true);
     setUploadProgress(0);
     await new Promise<void>((resolve, reject) => {

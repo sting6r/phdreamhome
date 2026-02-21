@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { useChat, type UIMessage as Message } from "@ai-sdk/react";
+import { DefaultChatTransport } from "ai";
 import { usePathname, useRouter } from "next/navigation";
 
 import { motion, AnimatePresence } from "framer-motion";
@@ -291,7 +292,7 @@ export default function AIAgent() {
     inquiryIdRef.current = currentInquiryId;
   }, [currentInquiryId]);
   
-  const chatInstance = useChat({
+  const transport = useMemo(() => new DefaultChatTransport({
     api: "/api/chat",
     body: {
       sessionId: currentSessionId || currentInquiryId || "default_session",
@@ -300,7 +301,11 @@ export default function AIAgent() {
         email: formData.email,
         phone: formData.phone
       }
-    },
+    }
+  }), [currentSessionId, currentInquiryId, formData.name, formData.email, formData.phone]);
+
+  const chatInstance = useChat({
+    transport,
     id: "ai-agent-chat",
     onError: (error) => {
       console.error("AI Chat Error (useChat onError):", error);

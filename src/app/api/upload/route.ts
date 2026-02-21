@@ -12,6 +12,8 @@ export async function POST(req: Request) {
   const scope = (u.searchParams.get("scope") || "").toLowerCase();
   const form = await req.formData();
   const files = form.getAll("files") as File[];
+  const propertyName = (form.get("propertyName") as string || "").trim();
+
   if (!files.length) return NextResponse.json({ error: "No files" }, { status: 400 });
   const paths: string[] = [];
   const signedUrls: (string | null)[] = [];
@@ -20,7 +22,17 @@ export async function POST(req: Request) {
     const type = (file as any).type || "application/octet-stream";
     const name = `${Date.now()}_${randomBytes(6).toString("hex")}`;
     const ext = file.name.includes(".") ? file.name.split(".").pop() : "bin";
-    const objectPath = `${name}.${ext}`;
+    
+    let objectPath = `${name}.${ext}`;
+    
+    // Only apply folder structure for property listings (empty scope) and when propertyName is provided
+    if (!scope && propertyName) {
+      const folder = propertyName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+      if (folder) {
+        objectPath = `${folder}/${name}.${ext}`;
+      }
+    }
+
     const isVideo = (type || "").startsWith("video/");
     const targetBucket =
       scope === "blog"
