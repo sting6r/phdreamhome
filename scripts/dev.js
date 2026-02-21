@@ -1,10 +1,12 @@
 
 const { spawn } = require('child_process');
+const path = require('path');
 
-// Use npx.cmd on Windows, npx on other platforms
-const next = spawn('npx', ['next', 'dev', '-p', '3000'], { 
-  stdio: 'inherit',
-  shell: true 
+const nextBin = path.join(__dirname, '..', 'node_modules', 'next', 'dist', 'bin', 'next');
+const args = [nextBin, 'dev', '-p', '3000'];
+
+const next = spawn(process.execPath, args, { 
+  stdio: 'inherit'
 });
 
 const cleanup = () => {

@@ -2,7 +2,6 @@
 
 import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { useChat, type UIMessage as Message } from "@ai-sdk/react";
-import { DefaultChatTransport } from "ai";
 import { usePathname, useRouter } from "next/navigation";
 
 import { motion, AnimatePresence } from "framer-motion";
@@ -292,23 +291,17 @@ export default function AIAgent() {
     inquiryIdRef.current = currentInquiryId;
   }, [currentInquiryId]);
   
-  const chatTransport = useMemo(() => {
-    return new DefaultChatTransport({
-      api: "/api/chat",
-      body: {
-        sessionId: currentSessionId || currentInquiryId || "default_session",
-        userData: {
-          name: formData.name,
-          email: formData.email,
-          phone: formData.phone
-        }
-      }
-    });
-  }, [currentSessionId, currentInquiryId, formData.name, formData.email, formData.phone]);
-
   const chatInstance = useChat({
+    api: "/api/chat",
+    body: {
+      sessionId: currentSessionId || currentInquiryId || "default_session",
+      userData: {
+        name: formData.name,
+        email: formData.email,
+        phone: formData.phone
+      }
+    },
     id: "ai-agent-chat",
-    transport: chatTransport,
     onError: (error) => {
       console.error("AI Chat Error (useChat onError):", error);
       let errorMessage = "An error occurred with the AI chat. Please try again.";
