@@ -272,13 +272,13 @@ function HomePageContent() {
   }
   const hero = process.env.NEXT_PUBLIC_WELCOME_BG || (listings[0]?.images?.[0]?.url ?? "");
   const callBg = process.env.NEXT_PUBLIC_CALL_CARD_BG || "";
-  const [expandedListings, setExpandedListings] = React.useState<string[]>([]);
+  const [failedImages, setFailedImages] = React.useState<Set<string>>(new Set());
   const featuredHeroItems = Array.isArray(listings)
     ? (listings
         .filter((l:any)=>!!l.featured)
         .map((l:any)=> {
           const url = Array.isArray(l.images)
-            ? (l.images.map((i:any)=>i?.url).find((u:string)=>u && !/\.(mp4|webm|ogg)$/i.test(((u.split("?")[0]||u)))) || "")
+            ? (l.images.map((i:any)=>i?.url).find((u:string)=>u && !/\.(mp4|webm|ogg)$/i.test(((u.split("?")[0]||u))) && !failedImages.has(u)) || "")
             : "";
           const type = String(l.type || "");
           const status = String(l.status || "");
@@ -289,10 +289,12 @@ function HomePageContent() {
   const presellingImages = Array.isArray(listings)
     ? listings
         .filter((l:any)=> String(l.status || "") === "Preselling" && !!l.featuredPreselling)
-        .map((l:any)=> Array.isArray(l.images) ? (l.images.map((i:any)=>i?.url).find((u:string)=>u && !/\.(mp4|webm|ogg)$/i.test((u.split("?" )[0]||u))) || "") : "")
+        .map((l:any)=> Array.isArray(l.images) ? (l.images.map((i:any)=>i?.url).find((u:string)=>u && !/\.(mp4|webm|ogg)$/i.test((u.split("?" )[0]||u)) && !failedImages.has(u)) || "") : "")
         .filter((u:string)=> !!u)
     : [];
   const [presellIndex, setPresellIndex] = React.useState(0);
+  const safePresellIndex = presellingImages.length > 0 ? presellIndex % presellingImages.length : 0;
+
   const [heroIndex, setHeroIndex] = React.useState(0);
   const [filterTop, setFilterTop] = React.useState<string>("6.75rem");
   React.useEffect(() => {
@@ -569,12 +571,17 @@ function HomePageContent() {
               <>
                 <Link prefetch={false} href="/properties/preselling" className="absolute inset-0 block">
                   <Image 
-                    src={getProxyImageUrl(presellingImages[presellIndex])} 
+                    src={getProxyImageUrl(presellingImages[safePresellIndex])} 
                     alt="Preselling Property" 
                     fill 
                     className="object-cover" 
                     onError={() => {
-                      console.error("Home: Preselling image failed to load:", presellingImages[presellIndex]);
+                      console.error("Home: Preselling image failed to load:", presellingImages[safePresellIndex]);
+                      setFailedImages(prev => {
+                        const next = new Set(prev);
+                        if (presellingImages[safePresellIndex]) next.add(presellingImages[safePresellIndex]);
+                        return next;
+                      });
                     }}
                   />
                 </Link>
