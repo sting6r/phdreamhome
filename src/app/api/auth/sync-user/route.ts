@@ -6,7 +6,6 @@ const timeout = (ms: number) => new Promise((_, reject) => setTimeout(() => reje
 
 export async function POST(req: Request) {
   try {
-    console.log("[sync-user] Starting request processing...");
     const body = await req.json();
     
     const userId = body?.userId as string | undefined;
@@ -32,7 +31,6 @@ export async function POST(req: Request) {
         }, 3, 1000),
         timeout(15000)
       ]);
-      console.log("[sync-user] Prisma upsert success:", !!result);
     } catch (dbError) {
       console.warn("Prisma sync-user failed/timed out (15s), attempting Supabase fallback:", dbError);
       

@@ -85,7 +85,6 @@ export default function Navbar() {
       const exp = expRaw ? Number(expRaw) : 0;
       const cached = typeof sessionStorage !== "undefined" ? sessionStorage.getItem(ck) : null;
       if (cached && cached !== "null" && exp && now < exp) {
-        console.log("Navbar: Using cached avatar:", cached);
         avatarCacheRef.current = cached;
         setAvatar(v => v || cached);
         clearTimeout(timeoutId);
@@ -103,7 +102,7 @@ export default function Navbar() {
       }
 
       const url = j.imageUrl as string | null;
-      console.log("Navbar: /api/profile returned imageUrl:", url);
+      // console.log("Navbar: /api/profile returned imageUrl:", url);
       if (url && url !== "null") {
         avatarCacheRef.current = url;
         setAvatar(url);
@@ -112,7 +111,7 @@ export default function Navbar() {
           sessionStorage.setItem(ek, String(now + 300000));
         }
       } else {
-        console.log("Navbar: No imageUrl in profile, keeping current avatar state.");
+        // console.log("Navbar: No imageUrl in profile, keeping current avatar state.");
         // We do NOT clear the avatar state here because we might still have a Google fallback
         // from the session data. Only clear the cache if it's explicitly null in the DB.
         if (typeof sessionStorage !== "undefined") {
@@ -150,7 +149,7 @@ export default function Navbar() {
             setName((u as any)?.user_metadata?.name || null);
             setEmail(u.email || null);
             const mAvatar = null; // Do not use u?.user_metadata?.avatar_url or u?.user_metadata?.picture
-            console.log("Navbar: Session user avatar:", mAvatar);
+            // console.log("Navbar: Session user avatar:", mAvatar);
             // If we have a cached avatar from the API, prefer that over the session avatar
             if (avatarCacheRef.current) {
               setAvatar(avatarCacheRef.current);
@@ -159,7 +158,7 @@ export default function Navbar() {
             }
             
             if (u.id && u.email && shouldSync(u.id)) {
-              console.log("Navbar: Syncing user from session load.");
+              // console.log("Navbar: Syncing user from session load.");
               safePost("/api/auth/sync-user", { 
                 userId: u.id, 
                 email: u.email, 
@@ -175,7 +174,7 @@ export default function Navbar() {
       });
 
       const { data: sub } = auth.onAuthStateChange((_e: any, session: any) => {
-        console.log("Navbar: Auth state change:", _e);
+        // console.log("Navbar: Auth state change:", _e);
         setLoggedIn(!!session);
         if (session) {
           const token = session.access_token;
@@ -188,7 +187,7 @@ export default function Navbar() {
             setName(u?.user_metadata?.name || null);
             setEmail(u?.email || null);
             const mAvatar = null; // Do not use u?.user_metadata?.avatar_url or u?.user_metadata?.picture
-            console.log("Navbar: Auth state change avatar:", mAvatar);
+            // console.log("Navbar: Auth state change avatar:", mAvatar);
             // If we have a cached avatar from the API, prefer that over the session avatar
             if (avatarCacheRef.current) {
               setAvatar(avatarCacheRef.current);
@@ -197,7 +196,7 @@ export default function Navbar() {
             }
             
             if (u.id && u.email && shouldSync(u.id)) {
-              console.log("Navbar: Syncing user from auth state change.");
+              // console.log("Navbar: Syncing user from auth state change.");
               safePost("/api/auth/sync-user", { 
                 userId: u.id, 
                 email: u.email, 

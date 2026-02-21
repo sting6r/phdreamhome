@@ -214,7 +214,7 @@ export default function AIAgent() {
   const syncTranscriptToDb = useCallback(async (msgs: Message[], id?: string | null) => {
     const targetId = id || inquiryIdRef.current;
     if (!targetId || targetId === "undefined" || targetId === "null" || msgs.length === 0) {
-      console.log("Sync skipped: invalid id or no messages", { targetId, msgCount: msgs.length });
+      // console.log("Sync skipped: invalid id or no messages", { targetId, msgCount: msgs.length });
       return;
     }
     
@@ -231,7 +231,7 @@ export default function AIAgent() {
     }, 30000);
     
     try {
-      console.log(`Syncing ${msgs.length} messages to inquiry ${targetId}`);
+      // console.log(`Syncing ${msgs.length} messages to inquiry ${targetId}`);
       const origin = typeof window !== "undefined" ? window.location.origin : "";
       const cleaned = sanitizeMessages(msgs as any[]);
       
@@ -259,11 +259,11 @@ export default function AIAgent() {
           sessionStorage.removeItem("ai_agent_inquiry_id");
         }
       } else {
-        console.log("Sync successful");
+        // console.log("Sync successful");
       }
     } catch (error: any) {
       if (error.name === 'AbortError') {
-        console.log("Sync aborted (superseded by a new request)");
+        // console.log("Sync aborted (superseded by a new request)");
         return;
       }
       
@@ -328,7 +328,7 @@ export default function AIAgent() {
       alert(errorMessage);
     },
     onFinish: ({ message }) => {
-      console.log("AI Chat Finished:", message);
+      // console.log("AI Chat Finished:", message);
       if (propertyFormJustSubmittedRef.current) {
         const closingMsg = {
           id: 'closing-' + Date.now(),
@@ -347,13 +347,13 @@ export default function AIAgent() {
 
   useEffect(() => {
     const status = (chatInstance as any).status;
-    console.log("DEBUG: chatInstance full keys:", Object.keys(chatInstance));
+    /* console.log("DEBUG: chatInstance full keys:", Object.keys(chatInstance));
     console.log("DEBUG: useChat available methods:", { 
       hasSendMessage: typeof (chatInstance as any).sendMessage === 'function',
       hasReload: typeof (chatInstance as any).reload === 'function',
       hasRegenerate: typeof (chatInstance as any).regenerate === 'function',
       status: status
-    });
+    }); */
   }, [chatInstance]);
   
   const aiLoading = chatInstance.status === 'submitted' || chatInstance.status === 'streaming';
@@ -375,7 +375,7 @@ export default function AIAgent() {
         const isUserMsg = lastMsg?.role === 'user';
 
         if (isAssistantFinished || isUserMsg) {
-          console.log("Auto-syncing transcript due to message change");
+          // console.log("Auto-syncing transcript due to message change");
           syncTranscriptToDb(chatInstance.messages, currentInquiryId);
         }
       }, 2000);
@@ -917,7 +917,7 @@ export default function AIAgent() {
                     disabled={isLoading}
                     onClick={() => {
                       if (!isLoading) {
-                        console.log(`[AIAgent] Button clicked: "${option}"`);
+                        // console.log(`[AIAgent] Button clicked: "${option}"`);
                         
                         // Handle special routing buttons
                          const lowerOpt = option.toLowerCase();
@@ -1515,7 +1515,7 @@ export default function AIAgent() {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      console.log("File selected:", file.name, file.size);
+      // console.log("File selected:", file.name, file.size);
       if (file.size > 5 * 1024 * 1024) {
         alert("File size must be less than 5MB");
         return;
@@ -1538,9 +1538,9 @@ export default function AIAgent() {
   };
 
   const handleQuickAction = async (text: string) => {
-    console.log("Quick action clicked:", text);
+    // console.log("Quick action clicked:", text);
     if (isLoading) {
-      console.log("Quick action blocked: isLoading is true");
+      // console.log("Quick action blocked: isLoading is true");
       return;
     }
 
@@ -2004,7 +2004,7 @@ export default function AIAgent() {
     }
 
     if (text === "No") {
-      console.log("DEBUG: Quick action 'No' - checking sendMessage:", typeof chatInstance.sendMessage);
+      // console.log("DEBUG: Quick action 'No' - checking sendMessage:", typeof chatInstance.sendMessage);
       chatInstance.sendMessage({
         text: "No, thank you. That's all for now."
       }, {
@@ -2017,7 +2017,7 @@ export default function AIAgent() {
     }
 
     if (text === "Yes") {
-      console.log("DEBUG: Quick action 'Yes' - checking sendMessage:", typeof chatInstance.sendMessage);
+      // console.log("DEBUG: Quick action 'Yes' - checking sendMessage:", typeof chatInstance.sendMessage);
       chatInstance.sendMessage({
         text: "Yes, I have more questions."
       }, {
@@ -2029,7 +2029,7 @@ export default function AIAgent() {
       return;
     }
 
-    console.log("DEBUG: Quick action generic - checking sendMessage:", typeof chatInstance.sendMessage);
+    // console.log("DEBUG: Quick action generic - checking sendMessage:", typeof chatInstance.sendMessage);
     
     let hiddenContext = "";
     if (/\b(property|house|lot|listing|condo|apartment|rent|sale|buy|available|looking for|inventory)\b/i.test(text)) {
@@ -2065,7 +2065,7 @@ export default function AIAgent() {
       (notes ? `Notes: ${notes}\n` : "") +
       `[/PROPERTY_DETAILS]`;
     
-    console.log("DEBUG: Property form submit - checking sendMessage:", typeof chatInstance.sendMessage);
+    // console.log("DEBUG: Property form submit - checking sendMessage:", typeof chatInstance.sendMessage);
     
     // Always extract context for property form submission
     const hiddenContext = await extractWebsiteContext(undefined, `${location} ${type}`);
@@ -2092,21 +2092,21 @@ export default function AIAgent() {
 
   const handleChatSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("handleChatSubmit triggered", { 
-      chatInput, 
-      hasImage: !!imageFile, 
-      isLoading, 
-      aiLoading, 
-      status: chatInstance.status 
-    });
+    // console.log("handleChatSubmit triggered", { 
+    //   chatInput, 
+    //   hasImage: !!imageFile, 
+    //   isLoading, 
+    //   aiLoading, 
+    //   status: chatInstance.status 
+    // });
 
     if (isLoading) {
-      console.log("Submit blocked: isLoading is true");
+      // console.log("Submit blocked: isLoading is true");
       return;
     }
 
     if (!chatInput?.trim() && !imageFile) {
-      console.log("Submit blocked: no input and no image");
+      // console.log("Submit blocked: no input and no image");
       return;
     }
 
@@ -2358,7 +2358,7 @@ export default function AIAgent() {
         return;
       }
       if (imageFile) {
-        console.log("Uploading image via API...");
+        // console.log("Uploading image via API...");
         const formDataUpload = new FormData();
         formDataUpload.append("files", imageFile);
         
@@ -2394,13 +2394,13 @@ export default function AIAgent() {
           throw new Error("No image URL returned from upload");
         }
 
-        console.log("Image uploaded successfully:", imageUrl);
+        // console.log("Image uploaded successfully:", imageUrl);
         finalContent = chatInput ? `${chatInput}\n\n![Property Image](${imageUrl})` : `![Property Image](${imageUrl})`;
       }
 
-      console.log("Preparing to send content:", finalContent);
+      // console.log("Preparing to send content:", finalContent);
 
-      console.log("Using sendMessage", { sessionId: currentSessionId || currentInquiryId || "default_session" });
+      // console.log("Using sendMessage", { sessionId: currentSessionId || currentInquiryId || "default_session" });
       const wantsCtx = /\b(website|this page|this site|your site)\b/i.test(textOnly);
       
       // Separate visual message from hidden context
@@ -2413,7 +2413,7 @@ export default function AIAgent() {
         hiddenContext = await extractWebsiteContext(undefined, textOnly);
       }
 
-      console.log("Sending message with context:", { visualMessage, hasContext: !!hiddenContext });
+      // console.log("Sending message with context:", { visualMessage, hasContext: !!hiddenContext });
       
       try {
         if (typeof chatInstance.sendMessage !== 'function') {
@@ -2421,7 +2421,7 @@ export default function AIAgent() {
           throw new Error(`Chat system error: sendMessage method is missing. Type: ${typeof chatInstance.sendMessage}`);
         }
         
-        console.log("Calling chatInstance.sendMessage...");
+        // console.log("Calling chatInstance.sendMessage...");
         await chatInstance.sendMessage({ 
           text: visualMessage
         }, {
@@ -2431,7 +2431,7 @@ export default function AIAgent() {
             userData: formData
           }
         });
-        console.log("sendMessage call finished");
+        // console.log("sendMessage call finished");
       } catch (err: any) {
         console.error("sendMessage error caught in try/catch:", err);
         throw err;
@@ -2461,7 +2461,7 @@ export default function AIAgent() {
       alert(errorDetail);
     } finally {
       setIsUploading(false);
-      console.log("handleChatSubmit finished");
+      // console.log("handleChatSubmit finished");
     }
   };
 
@@ -3322,7 +3322,7 @@ export default function AIAgent() {
                             title={isRecording ? "Stop recording" : "Voice input"}
                             onClick={() => {
                               setIsRecording(!isRecording);
-                              console.log(`[AIAgent] Voice recording: ${!isRecording ? 'ON' : 'OFF'}`);
+                              // console.log(`[AIAgent] Voice recording: ${!isRecording ? 'ON' : 'OFF'}`);
                             }}
                           >
                             <Mic size={14} />

@@ -11,8 +11,6 @@ export default async function InquiriesPage() {
   let fetchError: any = null;
 
   try {
-    console.log("Fetching inquiries via Prisma...");
-    const start = Date.now();
     
     // Use withRetry to handle transient connection issues
     // Add a local timeout for the Prisma operation to prevent RSC hanging during HMR or slow DB
@@ -55,14 +53,11 @@ export default async function InquiriesPage() {
     );
 
     inquiries = await Promise.race([prismaPromise, timeoutPromise]) as any[];
-    console.log(`Prisma fetch successful in ${Date.now() - start}ms`);
   } catch (error: any) {
     console.warn(`Prisma failed or timed out: ${error.message}, attempting Supabase fallback...`);
     
     // Supabase Fallback
     try {
-      console.log("Fetching inquiries via Supabase fallback...");
-      const start = Date.now();
       const { data, error: sbError } = await supabaseAdmin
         .from('Inquiry')
         .select('*, listing:Listing(title, slug, address, city, state)')
@@ -72,7 +67,6 @@ export default async function InquiriesPage() {
       
       if (sbError) throw sbError;
       inquiries = data || [];
-      console.log(`Supabase fetch successful in ${Date.now() - start}ms`);
     } catch (fallbackError) {
       console.error("Both Prisma and Supabase failed to fetch inquiries:", fallbackError);
       fetchError = fallbackError;

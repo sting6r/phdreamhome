@@ -59,12 +59,12 @@ export async function GET(req: Request) {
   );
   
   // Log configuration (masked) to debug "Invalid API key" error
-  console.log("Supabase Auth Config Check:", {
+  /* console.log("Supabase Auth Config Check:", {
     url: safeUrl,
     hasAnonKey: !!anon,
     anonKeyPrefix: anon ? `${anon.slice(0, 10)}...` : "MISSING",
     isFallback: anon?.includes("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhjeXRzbWltYWVobG1ydmhyYmRh")
-  });
+  }); */
 
   const { data, error } = await supabase.auth.exchangeCodeForSession(code);
   
@@ -91,7 +91,6 @@ export async function GET(req: Request) {
           }
         })
       );
-      console.log("Successfully synced OAuth user to Railway DB:", user.id);
     }
   } catch (syncError) {
     console.error("Failed to sync OAuth user to Railway DB after retries:", syncError);

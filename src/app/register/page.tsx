@@ -30,7 +30,7 @@ export default function RegisterPage() {
       return; 
     }
     try {
-      console.log("Attempting to sync user from register page.");
+      // console.log("Attempting to sync user from register page.");
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 30000);
       try {
@@ -43,7 +43,7 @@ export default function RegisterPage() {
       } finally {
         clearTimeout(timeoutId);
       }
-      console.log("Sync user request successful from register page.");
+      // console.log("Sync user request successful from register page.");
     } catch (syncError: any) {
       console.error("Sync user request failed from register page:", syncError);
     }

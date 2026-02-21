@@ -703,10 +703,10 @@ export default function NewBlogPage() {
       setShowLinkConfig(false);
       return;
     }
-    console.log("Raw URL from link config:", rawUrl);
+    // console.log("Raw URL from link config:", rawUrl);
     const hasScheme = /^https?:\/\//i.test(rawUrl);
     const url = hasScheme ? rawUrl : `https://${rawUrl}`;
-    console.log("Processed URL in applyLinkFromConfig:", url);
+    // console.log("Processed URL in applyLinkFromConfig:", url);
     const text = (linkText || rawUrl).trim();
     const inserted = `[${text}](${url})`;
     const next = before + inserted + after;

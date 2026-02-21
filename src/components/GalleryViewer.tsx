@@ -7,7 +7,12 @@ import { getProxyImageUrl } from "@/lib/image-utils";
   function isVideo(url: string) {
     if (!url) return false;
     try { 
-      const u = new URL(url); 
+      // Handle relative URLs (like /api/image/proxy) by providing a base
+      const u = new URL(url, "http://localhost"); 
+      if (u.pathname.includes("/api/image/proxy")) {
+        const p = u.searchParams.get("path");
+        if (p) return /\.(mp4|webm|ogg)(\?.*)?$/i.test(p);
+      }
       return /\.(mp4|webm|ogg)(\?.*)?$/i.test(u.pathname) || u.pathname.includes('/videos/');
     } catch { 
       return /\.(mp4|webm|ogg)(\?.*)?$/i.test(url) || url.includes('/videos/');

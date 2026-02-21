@@ -16,7 +16,7 @@ export async function sendEmail(to: string, subject: string, html: string, cc?: 
   const host = process.env.SMTP_HOST;
   const isDev = !host || host === "smtp.example.com";
   
-  console.log(`Mailer: Sending email to ${to}... (SMTP_HOST: ${host || "none"})`);
+  // console.log(`Mailer: Sending email to ${to}... (SMTP_HOST: ${host || "none"})`);
   const info = await transporter.sendMail({
     from: process.env.SMTP_FROM ?? "no-reply@example.com",
     to,
@@ -26,8 +26,8 @@ export async function sendEmail(to: string, subject: string, html: string, cc?: 
     html,
   });
   if (isDev && (info as any).message) {
-    console.log("Mailer: DEV MODE (streamTransport). Email content:");
-    console.log((info as any).message.toString());
+    // console.log("Mailer: DEV MODE (streamTransport). Email content:");
+    // console.log((info as any).message.toString());
   }
   return info;
 }

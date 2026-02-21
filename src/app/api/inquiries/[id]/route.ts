@@ -10,10 +10,10 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     const body = await req.json();
     const { status, transcript } = body;
 
-    console.log(`PATCH inquiry ${id}:`, { 
-      hasStatus: !!status, 
-      transcriptCount: Array.isArray(transcript) ? transcript.length : (transcript ? 1 : 0) 
-    });
+    // console.log(`PATCH inquiry ${id}:`, { 
+    //   hasStatus: !!status, 
+    //   transcriptCount: Array.isArray(transcript) ? transcript.length : (transcript ? 1 : 0) 
+    // });
 
     // Check if transcript indicates a tour request or latest message
     let tourUpdate = {};

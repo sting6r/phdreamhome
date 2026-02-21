@@ -24,13 +24,6 @@ export default function TranscriptButton({ transcript, clientName, inquiryId }: 
     }
   }
   
-  console.log("TranscriptButton data:", { 
-    rawType: typeof transcript, 
-    isRawArray: Array.isArray(transcript),
-    parsedType: typeof messages,
-    isParsedArray: Array.isArray(messages)
-  });
-  
   // Handle case where it's an object with a messages property
   if (messages && !Array.isArray(messages) && messages.messages) {
     messages = messages.messages;

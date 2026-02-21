@@ -74,7 +74,7 @@ export async function PUT(req: Request) {
       }
     }
     const userId = targetUserId;
-    console.log("Profile API: Found userId:", userId, "targetEmail:", targetEmail, "impersonation:", emailParam && emailParam !== (authUser.email || ""));
+    
     let body: any = {};
     try {
       body = await req.json();
@@ -103,7 +103,7 @@ export async function PUT(req: Request) {
     }
 
     if (body.email && body.email.toLowerCase() !== targetEmail.toLowerCase()) {
-      console.log("Profile API: Email change detected from", targetEmail, "to", body.email);
+      // console.log("Profile API: Email change detected from", targetEmail, "to", body.email);
       let emailExists;
       try {
         emailExists = await Promise.race([
@@ -204,7 +204,7 @@ export async function PUT(req: Request) {
 
 export async function GET(req: Request) {
   try {
-    console.log("[profile-get] Starting request processing...");
+    // console.log("[profile-get] Starting request processing...");
     const supabase = await createServerSideClient();
     let { data: { user: authUser }, error: userError } = await supabase.auth.getUser();
 
@@ -271,7 +271,7 @@ export async function GET(req: Request) {
       if (targetAuth) effectiveAuthUser = targetAuth;
     }
     const userId = targetUserId;
-    console.log("Profile API GET: Found userId:", userId);
+    // console.log("Profile API GET: Found userId:", userId);
     
     let dbUser, totalListings;
     try {
@@ -285,7 +285,7 @@ export async function GET(req: Request) {
       
       dbUser = resUser;
       totalListings = resCount;
-      console.log("[profile-get] Prisma fetch result - User found:", !!dbUser, "Listings count:", totalListings);
+      // console.log("[profile-get] Prisma fetch result - User found:", !!dbUser, "Listings count:", totalListings);
 
       if (!dbUser) {
         try {

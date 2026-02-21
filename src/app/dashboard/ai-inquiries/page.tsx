@@ -10,7 +10,7 @@ export default async function AIInquiriesPage() {
   let fetchError: any = null;
 
   try {
-    console.log("Fetching AI inquiries via Prisma...");
+    // console.log("Fetching AI inquiries via Prisma...");
     const start = Date.now();
     
     // Add a local timeout for the Prisma operation to prevent RSC hanging
@@ -48,13 +48,13 @@ export default async function AIInquiriesPage() {
     );
 
     inquiries = await Promise.race([prismaPromise, timeoutPromise]) as any[];
-    console.log(`Prisma AI fetch successful in ${Date.now() - start}ms`);
+    // console.log(`Prisma AI fetch successful in ${Date.now() - start}ms`);
   } catch (error: any) {
     console.warn(`Prisma AI failed or timed out: ${error.message}, attempting Supabase fallback...`);
     
     // Supabase Fallback
     try {
-      console.log("Fetching AI inquiries via Supabase fallback...");
+      // console.log("Fetching AI inquiries via Supabase fallback...");
       const start = Date.now();
       const { data, error: sbError } = await supabaseAdmin
         .from('Inquiry')
@@ -65,7 +65,7 @@ export default async function AIInquiriesPage() {
     
       if (sbError) throw sbError;
       inquiries = data || [];
-      console.log(`Supabase AI fetch successful in ${Date.now() - start}ms`);
+      // console.log(`Supabase AI fetch successful in ${Date.now() - start}ms`);
     } catch (fallbackError) {
       console.error("Both Prisma and Supabase failed to fetch AI inquiries:", fallbackError);
       fetchError = fallbackError;

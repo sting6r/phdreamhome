@@ -126,9 +126,9 @@ const BLOG_ICON_CATEGORIES = [
 ];
 
 export default function EditBlogPage({ params }: { params: Promise<{ id: string }> }) {
-  console.log("EditBlogPage: Rendering started");
+  // console.log("EditBlogPage: Rendering started");
   const { id } = use(params);
-  console.log("EditBlogPage: Resolved ID =", id);
+  // console.log("EditBlogPage: Resolved ID =", id);
   const router = useRouter();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");

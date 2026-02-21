@@ -143,7 +143,7 @@ async function getPythonAIResponse(message: string, sessionId: string = "default
     }
 
     const apiUrl = `${baseUrl}/chat`;
-    console.log(`[Chat API] Connecting to Python Agent at: ${apiUrl}`);
+    // console.log(`[Chat API] Connecting to Python Agent at: ${apiUrl}`);
 
     // If there's additional context, append it to the message for the Python agent
     // but the Python agent usually handles its own context. However, to ensure
@@ -218,7 +218,7 @@ export async function GET() {
 export async function POST(req: Request) {
   try {
     const { messages, sessionId, userData, additionalContext } = await req.json();
-    console.log("Chat API received messages:", messages?.length, "Session:", sessionId, "User:", userData?.name);
+    // console.log("Chat API received messages:", messages?.length, "Session:", sessionId, "User:", userData?.name);
 
     const lastMessage = messages[messages.length - 1];
     let userMessage = lastMessage.content;
@@ -270,7 +270,7 @@ export async function POST(req: Request) {
         const paths = reply.match(pathRegex);
         
         if (paths) {
-          console.log(`[Chat API] Signing ${paths.length} media paths found in AI response`);
+          // console.log(`[Chat API] Signing ${paths.length} media paths found in AI response`);
           for (const path of paths) {
             const signedUrl = await createSignedUrl(path);
             if (signedUrl) {

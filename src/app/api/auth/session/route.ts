@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    console.log("Auth session parsed body:", body);
+    // console.log("Auth session parsed body:", body);
     
     const { access_token, refresh_token } = body;
     if (!access_token) return NextResponse.json({ ok: false, error: "Missing token" }, { status: 400 });

@@ -74,7 +74,7 @@ export async function POST(req: Request) {
     // If email_change_new failed, it might be because the change wasn't initiated yet.
     // Try to initiate the update, then generate the link again.
     if (linkError && isEmailChange && userId) {
-      console.log("Initial link generation failed, attempting to update user email first...");
+      // console.log("Initial link generation failed, attempting to update user email first...");
       const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(userId, { email: to });
       
       if (updateError) {

@@ -40,7 +40,6 @@ export async function GET(req: Request) {
         }), 3, 1000),
         timeout(15000)
       ]);
-      console.log("[public-listings] Prisma listings fetch result count:", Array.isArray(listings) ? listings.length : "Not an array");
     } catch (dbError) {
       console.error("Prisma failed in public-listings, attempting Supabase fallback:", dbError);
       

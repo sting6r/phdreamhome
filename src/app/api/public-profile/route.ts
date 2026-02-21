@@ -11,14 +11,14 @@ export async function GET(req: Request) {
     let user: any = null;
     let totalListings = 0;
 
-    console.log("[public-profile] Starting request processing...");
+    // console.log("[public-profile] Starting request processing...");
 
     try {
       const timeout = (ms: number) => new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), ms));
       
       // If email query provided, fetch that specific user; otherwise pick a representative user
       try {
-        console.log("[public-profile] Attempting Prisma user fetch...");
+        // console.log("[public-profile] Attempting Prisma user fetch...");
         if (emailParam) {
           user = await Promise.race([
             (async () => {
@@ -47,16 +47,16 @@ export async function GET(req: Request) {
             timeout(15000)
           ]) as any;
         }
-        console.log("[public-profile] Prisma user fetch result:", user ? "Found" : "Null");
+        // console.log("[public-profile] Prisma user fetch result:", user ? "Found" : "Null");
 
         if (user) {
           try {
-            console.log("[public-profile] Attempting Prisma listings count...");
+            // console.log("[public-profile] Attempting Prisma listings count...");
             totalListings = await Promise.race([
               withRetry(() => prisma.listing.count({ where: { userId: user.id } }), 1, 0),
               timeout(5000)
             ]) as number;
-            console.log("[public-profile] Prisma listings count:", totalListings);
+            // console.log("[public-profile] Prisma listings count:", totalListings);
           } catch (countErr) {
             console.warn("Prisma count failed in public-profile:", countErr);
             // Non-critical, just keep totalListings as 0 or try Supabase for count only
