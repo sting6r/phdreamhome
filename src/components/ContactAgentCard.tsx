@@ -256,6 +256,12 @@ export default function ContactAgentCard({
                   <span className="truncate">{agent.phone}</span>
                 </div>
               )}
+              {agent.licenseNo && (
+                <div className="text-[10px] text-slate-500 mt-1 truncate" title={agent.licenseNo}>License: {agent.licenseNo}</div>
+              )}
+              {agent.dhsudAccredNo && (
+                <div className="text-[10px] text-slate-500 truncate" title={agent.dhsudAccredNo}>DHSUD: {agent.dhsudAccredNo}</div>
+              )}
             </div>
           </div>
 

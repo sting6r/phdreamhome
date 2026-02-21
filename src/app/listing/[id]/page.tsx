@@ -136,7 +136,17 @@ export default async function ListingPage({ params, searchParams }: { params: Pr
   
   // Ensure listing.user is an object before spreading or accessing properties
   const userData = (listing.user && typeof listing.user === 'object') ? listing.user : {};
-  const agentImageUrl = userData.image ? getProxyImageUrl(userData.image) : null;
+  
+  // Generate signed URL for agent image if it exists
+  let agentImageUrl = null;
+  if (userData.image) {
+    try {
+      agentImageUrl = await createSignedUrl(userData.image);
+    } catch (e) {
+      console.error("Failed to sign agent image url:", e);
+    }
+  }
+  
   const agent = { ...userData, imageUrl: agentImageUrl };
 
   const typeText = (() => { const sub = listing.type === "Industrial Properties" ? (listing.industrySubtype || "") : listing.type === "Commercial Space" ? (listing.commercialSubtype || "") : ""; return sub ? `${listing.type} — ${sub}` : listing.type; })();
