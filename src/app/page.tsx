@@ -148,6 +148,7 @@ function HomePageContent() {
   const mapObjRef = React.useRef<any>(null);
   const markersRef = React.useRef<any[]>([]);
   const [leafletReady, setLeafletReady] = React.useState(false);
+  const [expandedListings, setExpandedListings] = React.useState<string[]>([]);
   const userHasInteractedRef = React.useRef(false);
   const isProgrammaticMoveRef = React.useRef(false);
   async function loadLeaflet() {
