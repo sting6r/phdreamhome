@@ -232,7 +232,22 @@ export default function EditBlogPage({ params }: { params: Promise<{ id: string 
     );
   }
 
-  function removeImageArea(index: number) {
+  async function removeImageArea(index: number) {
+    const uploads = imageUploads.filter(i => i.index === index);
+    if (uploads.length > 0) {
+      if (!confirm("Are you sure you want to remove this image? This will delete the file permanently.")) return;
+      for (const u of uploads) {
+         try {
+           await fetch('/api/media/delete', {
+             method: 'POST',
+             headers: { 'Content-Type': 'application/json' },
+             body: JSON.stringify({ path: u.path })
+           });
+         } catch (e) {
+           console.error("Failed to delete image:", e);
+         }
+      }
+    }
     setImageAreas(prev => prev.filter(i => i.index !== index));
     setImageUploads(prev => prev.filter(i => i.index !== index));
     if (imageConfigIndex === index) {
@@ -241,7 +256,22 @@ export default function EditBlogPage({ params }: { params: Promise<{ id: string 
     }
   }
 
-  function removeVideoArea(index: number) {
+  async function removeVideoArea(index: number) {
+    const uploads = videoUploads.filter(v => v.index === index);
+    if (uploads.length > 0) {
+      if (!confirm("Are you sure you want to remove this video? This will delete the file permanently.")) return;
+      for (const u of uploads) {
+         try {
+           await fetch('/api/media/delete', {
+             method: 'POST',
+             headers: { 'Content-Type': 'application/json' },
+             body: JSON.stringify({ path: u.path })
+           });
+         } catch (e) {
+           console.error("Failed to delete video:", e);
+         }
+      }
+    }
     setVideoAreas(prev => prev.filter(v => v.index !== index));
     setVideoUploads(prev => prev.filter(v => v.index !== index));
     if (videoConfigIndex === index) {

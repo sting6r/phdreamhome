@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
-import { createServerSideClient } from "@lib/supabase-server";
+import { createServerClient, type CookieOptions } from "@supabase/ssr";
+import { cookies } from "next/headers";
+import { safeUrl, anon } from "@lib/supabase";
 
 export const runtime = "nodejs";
 
@@ -15,13 +17,43 @@ export async function GET(req: Request) {
     return NextResponse.redirect(new URL("/4120626", req.url));
   }
 
-  const supabase = await createServerSideClient();
+  const cookieStore = await cookies();
+  const response = NextResponse.redirect(new URL(nextPath, req.url));
+
+  const supabase = createServerClient(
+    safeUrl,
+    anon,
+    {
+      cookies: {
+        get(name: string) {
+          return cookieStore.get(name)?.value
+        },
+        set(name: string, value: string, options: CookieOptions) {
+          response.cookies.set({
+            name,
+            value,
+            ...options,
+          })
+        },
+        remove(name: string, options: CookieOptions) {
+          response.cookies.set({
+            name,
+            value: '',
+            ...options,
+          })
+        },
+      },
+      cookieOptions: {
+        name: 'sb-phdreamhome-auth-token',
+      },
+    }
+  );
+
   const { data } = await supabase.auth.verifyOtp({ type, token_hash });
 
-  const res = NextResponse.redirect(new URL(nextPath, req.url));
   if (data?.session) {
-    res.cookies.set("sb-access-token", data.session.access_token, { path: "/", httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production" });
-    res.cookies.set("sb-refresh-token", data.session.refresh_token, { path: "/", httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production" });
+    response.cookies.set("sb-access-token", data.session.access_token, { path: "/", httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production" });
+    response.cookies.set("sb-refresh-token", data.session.refresh_token, { path: "/", httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production" });
   }
-  return res;
+  return response;
 }

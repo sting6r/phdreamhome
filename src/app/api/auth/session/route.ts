@@ -37,6 +37,10 @@ export async function DELETE() {
     "Set-Cookie",
     `sb-refresh-token=; HttpOnly; Path=/; SameSite=Lax; Max-Age=0${isProd ? "; Secure" : ""}`
   );
+  headers.append(
+    "Set-Cookie",
+    `sb-phdreamhome-auth-token=; HttpOnly; Path=/; SameSite=Lax; Max-Age=0${isProd ? "; Secure" : ""}`
+  );
   return new NextResponse(JSON.stringify({ ok: true }), { headers });
 }
 

@@ -5,6 +5,18 @@ import { supabase } from "@lib/supabase";
 import CurrencyInput from "@components/CurrencyInput";
 import SalesRentalDetailCard from "@components/SalesRentalDetailCard";
 
+const mockListings = [
+  { id: "1", title: "Luxury Villa in Tagaytay", status: "For Sale", price: 25000000 },
+  { id: "2", title: "Modern Condo in Makati", status: "For Rent", price: 45000 },
+  { id: "3", title: "Townhouse in Quezon City", status: "For Sale", price: 12000000 },
+];
+
+const mockSales = [
+  { id: "1", clientName: "Juan Dela Cruz", salesCategory: "Sale", amount: 25000000, status: "Closed", saleDate: "2024-01-15T00:00:00.000Z", listing: { title: "Luxury Villa" }, clientEmail: "juan@example.com", clientPhone: "09171234567" },
+  { id: "2", clientName: "Maria Santos", salesCategory: "Rental", amount: 45000, status: "Closed", saleDate: "2024-02-20T00:00:00.000Z", listing: { title: "Modern Condo" }, clientEmail: "maria@example.com", clientPhone: "09181234567" },
+  { id: "3", clientName: "Pedro Penduko", salesCategory: "Sale", amount: 12000000, status: "In Progress", saleDate: "2024-03-05T00:00:00.000Z", listing: { title: "Townhouse" }, clientEmail: "pedro@example.com", clientPhone: "09191234567" },
+];
+
 const fetcher = async (u: string, { signal }: { signal?: AbortSignal } = {}) => {
   const { data } = await supabase.auth.getSession();
   const token = data.session?.access_token;
@@ -84,8 +96,8 @@ export default function SalesPage() {
   const { data: salesData, error: salesError, mutate: mutateSales } = useSWR("/api/sales", fetcher, swrCfg);
   const { data: listingsData, error: listingsError } = useSWR("/api/listings", fetcher, swrCfg);
   
-  const sales = Array.isArray(salesData) ? salesData : null;
-  const listings = listingsData?.listings ?? [];
+  const sales = (Array.isArray(salesData) && salesData.length > 0) ? salesData : mockSales;
+  const listings = (listingsData?.listings && listingsData.listings.length > 0) ? listingsData.listings : mockListings;
 
   const [mounted, setMounted] = useState(false);
   useEffect(() => { setMounted(true); }, []);

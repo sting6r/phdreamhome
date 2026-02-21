@@ -5,6 +5,7 @@ import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import MainFooterCards from "../components/MainFooterCards";
 import Image from "next/image";
 import { getProxyImageUrl } from "../lib/image-utils";
+import { supabase } from "@lib/supabase";
 
 const fetcher = async (u: string, signal?: AbortSignal) => {
   const controller = new AbortController();
@@ -22,6 +23,10 @@ const fetcher = async (u: string, signal?: AbortSignal) => {
     
     if (!r.ok) {
       if (r.status === 404) return null;
+      if (r.status === 401 || r.status === 403) {
+        // Unauthorized is expected when not logged in; fall back to public data silently
+        return null;
+      }
       // Only log errors if not aborted
       if (sig.aborted) return null;
       const text = await r.text();
@@ -76,8 +81,11 @@ function HomePageContent() {
     
     const loadData = async () => {
       try {
-        const [listingsData, profileData] = await Promise.all([
+        const { data: sess } = await supabase.auth.getSession();
+        const hasSession = Boolean(sess?.session);
+        const [listingsData, privateProfile, publicProfile] = await Promise.all([
           fetcher("/api/public-listings", controller.signal),
+          hasSession ? fetcher("/api/profile", controller.signal) : Promise.resolve(null),
           fetcher("/api/public-profile", controller.signal)
         ]);
         
@@ -86,8 +94,9 @@ function HomePageContent() {
         if (listingsData) {
           setListings(listingsData.listings ?? []);
         }
-        if (profileData) {
-          setProfile(profileData);
+        const chosenProfile = privateProfile || publicProfile || null;
+        if (chosenProfile) {
+          setProfile(chosenProfile);
         }
         setIsLoading(false);
         dataInitialized.current = true;
@@ -496,6 +505,15 @@ function HomePageContent() {
                     fill 
                     sizes="(min-width: 640px) 11rem, 10rem" 
                     className="object-cover"
+                    onLoadingComplete={(img) => {
+                      try {
+                        if ((img?.naturalWidth ?? 0) <= 1 || (img?.naturalHeight ?? 0) <= 1) {
+                          if (profile?.imageUrl) {
+                            setProfile({ ...(profile as any), imageUrl: null });
+                          }
+                        }
+                      } catch {}
+                    }}
                     onError={() => {
                       if (profile?.imageUrl) {
                         setProfile({ ...(profile as any), imageUrl: null });

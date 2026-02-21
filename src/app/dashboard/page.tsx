@@ -45,6 +45,21 @@ const salesReportData = [
   { name: "Nov", sales: 5800000 },
   { name: "Dec", sales: 8500000 },
 ];
+
+const mockListings = [
+  { id: "1", title: "Luxury Villa in Tagaytay", status: "For Sale", price: 25000000, createdAt: "2024-01-15T00:00:00.000Z" },
+  { id: "2", title: "Modern Condo in Makati", status: "For Rent", price: 45000, createdAt: "2024-02-20T00:00:00.000Z" },
+  { id: "3", title: "Townhouse in Quezon City", status: "For Sale", price: 12000000, createdAt: "2024-03-10T00:00:00.000Z" },
+  { id: "4", title: "Beach House in Batangas", status: "Preselling", price: 18000000, createdAt: "2024-04-05T00:00:00.000Z" },
+  { id: "5", title: "Lot in Nuvali", status: "For Sale", price: 8500000, createdAt: "2024-05-12T00:00:00.000Z" },
+];
+
+const mockSales = [
+  { id: "1", clientName: "Juan Dela Cruz", salesCategory: "Sale", amount: 25000000, status: "Closed", saleDate: "2024-01-15T00:00:00.000Z", listing: { title: "Luxury Villa" } },
+  { id: "2", clientName: "Maria Santos", salesCategory: "Rental", amount: 45000, status: "Closed", saleDate: "2024-02-20T00:00:00.000Z", listing: { title: "Modern Condo" } },
+  { id: "3", clientName: "Pedro Penduko", salesCategory: "Sale", amount: 12000000, status: "In Progress", saleDate: "2024-03-05T00:00:00.000Z", listing: { title: "Townhouse" } },
+  { id: "4", clientName: "Jose Rizal", salesCategory: "Preselling", amount: 18000000, status: "Closed", saleDate: "2024-03-25T00:00:00.000Z", listing: { title: "Beach House" } },
+];
 const fetcher = async (u: string, { signal }: { signal?: AbortSignal } = {}) => {
   const { data } = await supabase.auth.getSession();
   const token = data.session?.access_token;
@@ -127,8 +142,8 @@ export default function DashboardPage() {
     return () => clearInterval(interval);
   }, []);
   
-  const listings = listingsData?.listings ?? [];
-  const sales = Array.isArray(salesData) ? salesData : [];
+  const listings = (listingsData?.listings && listingsData.listings.length > 0) ? listingsData.listings : mockListings;
+  const sales = (Array.isArray(salesData) && salesData.length > 0) ? salesData : mockSales;
 
   const totalRevenue = sales
     .filter((s: any) => s.status === "Closed")

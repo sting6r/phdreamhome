@@ -3,9 +3,11 @@ import { prisma, withRetry } from "@lib/prisma";
 import { createSignedUrl, supabaseAdmin } from "@lib/supabase";
 
 export const runtime = "nodejs";
-
-export async function GET() {
+export async function GET(req: Request) {
   try {
+    const url = new URL(req.url);
+    const emailParam = (url.searchParams.get("email") || "").trim();
+    
     let user: any = null;
     let totalListings = 0;
 
@@ -14,21 +16,37 @@ export async function GET() {
     try {
       const timeout = (ms: number) => new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), ms));
       
-      // Simpler Prisma query: just get the first user with an image if possible, or any user
+      // If email query provided, fetch that specific user; otherwise pick a representative user
       try {
         console.log("[public-profile] Attempting Prisma user fetch...");
-        user = await Promise.race([
-          (async () => {
-            return await withRetry(() => prisma.user.findFirst({ 
-              select: {
-                id: true, name: true, username: true, email: true, address: true, 
-                phone: true, image: true, emailVerified: true, role: true, 
-                licenseNo: true, dhsudAccredNo: true, youtube: true
-              }
-            }), 3, 1000);
-          })(),
-          timeout(15000)
-        ]) as any;
+        if (emailParam) {
+          user = await Promise.race([
+            (async () => {
+              return await withRetry(() => prisma.user.findUnique({ 
+                where: { email: emailParam },
+                select: {
+                  id: true, name: true, username: true, email: true, address: true, 
+                  phone: true, image: true, emailVerified: true, role: true, 
+                  licenseNo: true, dhsudAccredNo: true, youtube: true
+                }
+              }), 3, 1000);
+            })(),
+            timeout(15000)
+          ]) as any;
+        } else {
+          user = await Promise.race([
+            (async () => {
+              return await withRetry(() => prisma.user.findFirst({ 
+                select: {
+                  id: true, name: true, username: true, email: true, address: true, 
+                  phone: true, image: true, emailVerified: true, role: true, 
+                  licenseNo: true, dhsudAccredNo: true, youtube: true
+                }
+              }), 3, 1000);
+            })(),
+            timeout(15000)
+          ]) as any;
+        }
         console.log("[public-profile] Prisma user fetch result:", user ? "Found" : "Null");
 
         if (user) {
@@ -51,15 +69,24 @@ export async function GET() {
     } catch (dbError) {
       console.error("Prisma failed in public-profile, attempting Supabase fallback:", dbError);
       
-      // Try to find a user with listings first
-      // Note: Supabase join filtering is a bit complex, simplest is to fetch user and check
-      // But we can just fetch the first user for now to be safe as the Prisma query does fallback
-      
-      const { data: userData, error } = await supabaseAdmin
-        .from('User')
-        .select('*')
-        .limit(1)
-        .single();
+      let userData, error;
+      if (emailParam) {
+        const res = await supabaseAdmin
+          .from('User')
+          .select('*')
+          .eq('email', emailParam)
+          .maybeSingle();
+        userData = res.data;
+        error = res.error;
+      } else {
+        const res = await supabaseAdmin
+          .from('User')
+          .select('*')
+          .limit(1)
+          .single();
+        userData = res.data;
+        error = res.error;
+      }
         
       if (error) {
         console.error("Supabase fallback failed:", error);

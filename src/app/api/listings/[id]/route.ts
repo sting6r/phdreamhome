@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma, withRetry } from "@lib/prisma";
 import { cookies } from "next/headers";
-import { supabaseAdmin, createSignedUrl } from "@lib/supabase";
+import { supabaseAdmin, createSignedUrl, parseBucketSpec } from "@lib/supabase";
 export const runtime = "nodejs";
 
 const timeout = (ms: number) => new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), ms));
@@ -116,6 +116,25 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
   const userId = data.user?.id;
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   try {
+    const listing = await withRetry(() => prisma.listing.findUnique({
+      where: { id, userId },
+      include: { images: true }
+    }));
+
+    if (!listing) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+    // Delete images from storage
+    if (listing.images && listing.images.length > 0) {
+      for (const img of listing.images) {
+        const { bucketName, objectPath } = parseBucketSpec(img.url);
+        if (bucketName && objectPath) {
+          await supabaseAdmin.storage.from(bucketName).remove([objectPath]);
+        }
+      }
+      // Delete images from DB
+      await withRetry(() => prisma.listingImage.deleteMany({ where: { listingId: id } }));
+    }
+
     await Promise.race([
       withRetry(() => prisma.listing.delete({ where: { id, userId } })),
       timeout(5000)

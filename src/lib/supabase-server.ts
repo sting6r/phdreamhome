@@ -22,5 +22,8 @@ export async function createServerSideClient() {
         }
       },
     },
+    cookieOptions: {
+      name: 'sb-phdreamhome-auth-token',
+    },
   });
 }

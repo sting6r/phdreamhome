@@ -14,14 +14,27 @@ function guessContentType(path: string, fallback = "application/octet-stream") {
   if (ext === "mp4") return "video/mp4";
   if (ext === "webm") return "video/webm";
   if (ext === "ogg") return "video/ogg";
-  return fallback;
+  // Fallback to a safe image content-type to satisfy Next Image optimizer
+  return "image/jpeg";
 }
 
 export async function GET(req: Request) {
   try {
     const url = new URL(req.url);
     const path = url.searchParams.get("path") || "";
-    if (!path) return NextResponse.json({ error: "Missing path" }, { status: 400 });
+    if (!path) {
+      const px = Buffer.from(
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO1Z4a0AAAAASUVORK5CYII=",
+        "base64"
+      );
+      return new NextResponse(px, {
+        headers: {
+          "Content-Type": "image/png",
+          "Cache-Control": "public, max-age=60"
+        },
+        status: 400
+      });
+    }
 
     // Handle absolute URLs (like Google Avatar URLs) directly
     if (path.startsWith('http://') || path.startsWith('https://')) {
@@ -42,32 +55,42 @@ export async function GET(req: Request) {
           if (!contentType || !contentType.startsWith('image/')) {
             console.warn(`Proxy received non-image content-type: ${contentType} for ${path}`);
             // If it's application/octet-stream, we might try to guess, but otherwise it's risky
-            if (contentType !== 'application/octet-stream') {
-              return NextResponse.redirect(path);
-            }
+            // Instead of redirecting (which the Next image optimizer treats as invalid),
+            // fall back to returning the bytes with a safe image content-type.
           }
 
           const buffer = await response.arrayBuffer();
           if (!buffer || buffer.byteLength === 0) {
              console.warn(`Proxy received empty body for ${path}`);
-             return NextResponse.redirect(path);
+             const px = Buffer.from(
+               "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO1Z4a0AAAAASUVORK5CYII=",
+               "base64"
+             );
+             return new NextResponse(px, { headers: { 'Content-Type': 'image/png', 'Cache-Control': 'public, max-age=60' } });
           }
 
           return new Response(buffer, {
             headers: {
-              'Content-Type': contentType || 'image/jpeg',
+              'Content-Type': (contentType && contentType.startsWith('image/')) ? contentType : 'image/jpeg',
               'Cache-Control': 'public, max-age=31536000, stale-while-revalidate=86400',
               'Access-Control-Allow-Origin': '*'
             }
           });
         } else {
           console.warn(`External image fetch failed with status ${response.status}: ${path}`);
-          // For auth errors or common failures, redirect to origin
-          return NextResponse.redirect(path);
+          const px = Buffer.from(
+            "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO1Z4a0AAAAASUVORK5CYII=",
+            "base64"
+          );
+          return new NextResponse(px, { headers: { 'Content-Type': 'image/png', 'Cache-Control': 'public, max-age=60' }, status: response.status });
         }
       } catch (e) {
         console.error(`Proxy fetch error for external URL ${path}:`, e);
-        return NextResponse.redirect(path);
+        const px = Buffer.from(
+          "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO1Z4a0AAAAASUVORK5CYII=",
+          "base64"
+        );
+        return new NextResponse(px, { headers: { 'Content-Type': 'image/png', 'Cache-Control': 'public, max-age=60' } });
       }
     }
 
@@ -146,17 +169,33 @@ export async function GET(req: Request) {
         direct = data.publicUrl || null;
       } catch {}
       if (!direct) direct = await createSignedUrl(path);
-      if (!direct) return NextResponse.json({ error: "Not found" }, { status: 404 });
+      if (!direct) {
+        const px = Buffer.from(
+          "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO1Z4a0AAAAASUVORK5CYII=",
+          "base64"
+        );
+        return new NextResponse(px, { headers: { "Content-Type": "image/png", "Cache-Control": "public, max-age=60" }, status: 404 });
+      }
       const controller = new AbortController();
       const id = setTimeout(() => controller.abort(), 30000); // Standard 10s timeout
       try {
         const r = await fetch(direct, { cache: "no-store", signal: controller.signal });
         clearTimeout(id);
-        if (!r.ok) return NextResponse.json({ error: "Not found" }, { status: r.status });
+        if (!r.ok) {
+          const px = Buffer.from(
+            "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO1Z4a0AAAAASUVORK5CYII=",
+            "base64"
+          );
+          return new NextResponse(px, { headers: { "Content-Type": "image/png", "Cache-Control": "public, max-age=60" }, status: r.status });
+        }
         buf = Buffer.from(await r.arrayBuffer());
         ct = r.headers.get("content-type");
       } catch (e) {
-        return NextResponse.json({ error: "Upstream timeout" }, { status: 504 });
+        const px = Buffer.from(
+          "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO1Z4a0AAAAASUVORK5CYII=",
+          "base64"
+        );
+        return new NextResponse(px, { headers: { "Content-Type": "image/png", "Cache-Control": "public, max-age=60" }, status: 504 });
       }
     }
     const type = ct || guessContentType(objectPath);
@@ -166,6 +205,10 @@ export async function GET(req: Request) {
     return new NextResponse(new Uint8Array(buf), { headers });
   } catch (error: any) {
     console.error("Image proxy error:", error);
-    return NextResponse.json({ error: "Failed to load image" }, { status: 500 });
+    const px = Buffer.from(
+      "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO1Z4a0AAAAASUVORK5CYII=",
+      "base64"
+    );
+    return new NextResponse(px, { headers: { "Content-Type": "image/png", "Cache-Control": "public, max-age=60" }, status: 500 });
   }
 }

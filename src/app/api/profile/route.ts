@@ -35,9 +35,52 @@ export async function PUT(req: Request) {
       console.error("Profile API PUT: Auth error:", userError);
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-    const userId = authUser.id;
-    console.log("Profile API: Found userId:", userId);
-    const body = await req.json();
+    // Determine target user (support admin impersonation by ?email=)
+    const url = new URL(req.url);
+    const emailParam = (url.searchParams.get("email") || "").trim();
+    let targetUserId = authUser.id;
+    let targetEmail = authUser.email || "";
+    if (emailParam && emailParam !== targetEmail) {
+      // Check caller admin role
+      let callerRole: string | null = null;
+      try {
+        const caller = await withRetry(() => prisma.user.findUnique({ where: { id: authUser.id }, select: { role: true } }), 2, 500);
+        callerRole = caller?.role ?? null;
+      } catch {
+        const { data } = await supabaseAdmin.from("User").select("role").eq("id", authUser.id).maybeSingle();
+        callerRole = (data as any)?.role ?? null;
+      }
+      const isAdmin = (callerRole || "").toLowerCase().includes("admin");
+      if (!isAdmin) {
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      }
+      // Resolve target user by email
+      try {
+        const t = await withRetry(() => prisma.user.findUnique({ where: { email: emailParam }, select: { id: true, email: true } }), 2, 500);
+        if (t?.id) {
+          targetUserId = t.id;
+          targetEmail = t.email || emailParam;
+        } else {
+          const { data } = await supabaseAdmin.from("User").select("id,email").eq("email", emailParam).maybeSingle();
+          if (!data?.id) return NextResponse.json({ error: "User not found" }, { status: 404 });
+          targetUserId = data.id;
+          targetEmail = data.email || emailParam;
+        }
+      } catch {
+        const { data } = await supabaseAdmin.from("User").select("id,email").eq("email", emailParam).maybeSingle();
+        if (!data?.id) return NextResponse.json({ error: "User not found" }, { status: 404 });
+        targetUserId = data.id;
+        targetEmail = data.email || emailParam;
+      }
+    }
+    const userId = targetUserId;
+    console.log("Profile API: Found userId:", userId, "targetEmail:", targetEmail, "impersonation:", emailParam && emailParam !== (authUser.email || ""));
+    let body: any = {};
+    try {
+      body = await req.json();
+    } catch {
+      return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
+    }
     if (body.email) body.email = body.email.trim();
 
     const timeout = (ms: number) => new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), ms));
@@ -59,21 +102,29 @@ export async function PUT(req: Request) {
       if (exists) return NextResponse.json({ error: "Username taken" }, { status: 409 });
     }
 
-    if (body.email && body.email !== authUser.email) {
+    if (body.email && body.email.toLowerCase() !== targetEmail.toLowerCase()) {
+      console.log("Profile API: Email change detected from", targetEmail, "to", body.email);
       let emailExists;
       try {
         emailExists = await Promise.race([
         withRetry(() => prisma.user.findFirst({
-          where: { email: body.email, NOT: { id: userId } }
+          where: { 
+            email: { equals: body.email, mode: 'insensitive' }, 
+            NOT: { id: userId } 
+          }
         }), 3, 1000),
         timeout(15000)
       ]);
     } catch (e) {
       console.warn("Prisma email check failed/timed out (15s), falling back to Supabase", e);
         const { data: u } = await supabaseAdmin.from('User').select('id').eq('email', body.email).neq('id', userId).maybeSingle();
-        emailExists = !!u;
+        emailExists = u;
       }
-      if (emailExists) return NextResponse.json({ error: "Email already taken" }, { status: 409 });
+      
+      if (emailExists) {
+        console.warn("Profile API: Email already taken by another user. ID:", (emailExists as any).id, "Email:", body.email);
+        return NextResponse.json({ error: "Email already taken" }, { status: 409 });
+      }
 
       const { error: authError } = await supabaseAdmin.auth.admin.updateUserById(userId, { email: body.email });
       if (authError) {
@@ -87,7 +138,7 @@ export async function PUT(req: Request) {
       }
     }
 
-    const updateData = { 
+    const updateData: Record<string, any> = { 
       name: body.name ?? undefined, 
       email: body.email ?? undefined,
       username: body.username ?? undefined, 
@@ -106,6 +157,17 @@ export async function PUT(req: Request) {
       twitter: body.twitter ?? undefined 
     };
 
+      // If email is not changing (case-insensitive), don't update it to avoid spurious unique constraint errors
+      // if the database has duplicate emails or case sensitivity issues.
+      if (body.email && body.email.toLowerCase() === targetEmail.toLowerCase()) {
+        delete updateData.email;
+      }
+
+      Object.keys(updateData).forEach((k) => updateData[k] === undefined && delete updateData[k]);
+    if (Object.keys(updateData).length === 0) {
+      return NextResponse.json({ ok: true });
+    }
+
     try {
       await Promise.race([
         withRetry(() => prisma.user.update({
@@ -115,19 +177,28 @@ export async function PUT(req: Request) {
         timeout(30000)
       ]);
     } catch (e) {
-      console.warn("Prisma update failed/timed out (10s), falling back to Supabase", e);
-      const { error: upError } = await supabaseAdmin.from('User').update({
+      console.warn("Prisma update failed/timed out (30s), falling back to Supabase", e);
+      const upsertPayload = {
+        id: userId,
         ...updateData,
         updatedAt: new Date().toISOString()
-      }).eq('id', userId);
-      
-      if (upError) throw upError;
+      };
+      const { error: upError } = await supabaseAdmin
+        .from('User')
+        .upsert(upsertPayload, { onConflict: 'id' });
+      if (upError) {
+        const msg = upError.message || "Database update failed";
+        if (/User_email_key/i.test(msg) || /unique constraint.*User_email_key/i.test(msg) || /duplicate key value/i.test(msg)) {
+          return NextResponse.json({ error: "Email already taken" }, { status: 409 });
+        }
+        return NextResponse.json({ error: msg }, { status: 400 });
+      }
     }
 
     return NextResponse.json({ ok: true });
   } catch (error: any) {
     console.error("Error in profile PUT API:", error);
-    return NextResponse.json({ error: "Failed to update profile" }, { status: 500 });
+    return NextResponse.json({ error: error?.message || "Failed to update profile" }, { status: 500 });
   }
 }
 
@@ -161,7 +232,45 @@ export async function GET(req: Request) {
       console.error("Profile API GET: Supabase auth error:", userError);
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-    const userId = authUser.id;
+    // Determine target user (support admin impersonation by ?email=)
+    const url = new URL(req.url);
+    const emailParam = (url.searchParams.get("email") || "").trim();
+    let targetUserId = authUser.id;
+    let effectiveAuthUser = authUser as any;
+    if (emailParam && emailParam !== (authUser.email || "")) {
+      // Check caller admin role
+      let callerRole: string | null = null;
+      try {
+        const caller = await withRetry(() => prisma.user.findUnique({ where: { id: authUser.id }, select: { role: true } }), 2, 500);
+        callerRole = caller?.role ?? null;
+      } catch {
+        const { data } = await supabaseAdmin.from("User").select("role").eq("id", authUser.id).maybeSingle();
+        callerRole = (data as any)?.role ?? null;
+      }
+      const isAdmin = (callerRole || "").toLowerCase().includes("admin");
+      if (!isAdmin) {
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      }
+      // Resolve target user by email
+      try {
+        const t = await withRetry(() => prisma.user.findUnique({ where: { email: emailParam }, select: { id: true } }), 2, 500);
+        if (t?.id) {
+          targetUserId = t.id;
+        } else {
+          const { data } = await supabaseAdmin.from("User").select("id").eq("email", emailParam).maybeSingle();
+          if (!data?.id) return NextResponse.json({ error: "User not found" }, { status: 404 });
+          targetUserId = data.id;
+        }
+      } catch {
+        const { data } = await supabaseAdmin.from("User").select("id").eq("email", emailParam).maybeSingle();
+        if (!data?.id) return NextResponse.json({ error: "User not found" }, { status: 404 });
+        targetUserId = data.id;
+      }
+      // Load target auth user for fallback fields
+      const targetAuth = await supabaseAdmin.auth.admin.getUserById(targetUserId).then(r => r.data?.user).catch(() => null);
+      if (targetAuth) effectiveAuthUser = targetAuth;
+    }
+    const userId = targetUserId;
     console.log("Profile API GET: Found userId:", userId);
     
     let dbUser, totalListings;
@@ -178,18 +287,47 @@ export async function GET(req: Request) {
       totalListings = resCount;
       console.log("[profile-get] Prisma fetch result - User found:", !!dbUser, "Listings count:", totalListings);
 
-      // If Prisma returns null (e.g. not found or sync issue), force fallback to Supabase
       if (!dbUser) {
-        throw new Error("User not found in Prisma, forcing fallback");
+        try {
+          dbUser = await withRetry(() => prisma.user.upsert({
+            where: { id: userId },
+            update: {},
+            create: {
+              id: userId,
+              email: authUser.email || undefined,
+              name: (authUser.user_metadata as any)?.full_name || (authUser.user_metadata as any)?.name || undefined
+            }
+          }), 2, 500);
+        } catch {}
+        if (!dbUser) {
+          throw new Error("User not found in Prisma, forcing fallback");
+        }
       }
     } catch (dbError) {
       console.warn("Prisma failed or returned null, attempting Supabase fallback:", dbError);
       
-      const userRes = await supabaseAdmin
+      let userRes = await supabaseAdmin
         .from('User')
         .select('*')
         .eq('id', userId)
         .maybeSingle();
+        
+      if (!userRes.data) {
+        const insertRes = await supabaseAdmin
+          .from('User')
+          .insert({
+            id: userId,
+            email: (effectiveAuthUser?.email as string) || null,
+            name: ((effectiveAuthUser?.user_metadata as any)?.full_name || (effectiveAuthUser?.user_metadata as any)?.name) || null,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          })
+          .select('*')
+          .maybeSingle();
+        if (!insertRes.error) {
+          userRes = insertRes;
+        }
+      }
         
       const countRes = await supabaseAdmin
         .from('Listing')
@@ -213,9 +351,9 @@ export async function GET(req: Request) {
     
     return NextResponse.json({
       id: dbUser?.id ?? null,
-      name: dbUser?.name ?? "",
+      name: dbUser?.name ?? ((effectiveAuthUser?.user_metadata as any)?.full_name || (effectiveAuthUser?.user_metadata as any)?.name || ""),
       username: dbUser?.username ?? "",
-      email: dbUser?.email ?? (dbUser?.email ?? ""),
+      email: dbUser?.email ?? (effectiveAuthUser?.email ?? ""),
       address: dbUser?.address ?? "",
       phone: dbUser?.phone ?? "",
       image: dbUser?.image ?? "",

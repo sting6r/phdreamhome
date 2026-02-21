@@ -12,6 +12,7 @@ export default function RegisterPage() {
   const [resending, setResending] = useState(false);
   const [resendMsg, setResendMsg] = useState<string | null>(null);
   const [resendStatus, setResendStatus] = useState<"success" | "error" | null>(null);
+  const [devLink, setDevLink] = useState<string | null>(null);
 
   function getFriendlyError(msg: string) {
     if (msg.includes("rate limit exceeded")) return "Too many attempts. Please wait a few minutes before trying again.";
@@ -51,6 +52,7 @@ export default function RegisterPage() {
   async function resend() {
     setResendMsg(null);
     setResendStatus(null);
+    setDevLink(null);
     setResending(true);
     try {
       const email = form.email;
@@ -59,15 +61,30 @@ export default function RegisterPage() {
         setResendStatus("error");
         return; 
       }
-      const { error } = await supabase.auth.resend({ type: "signup", email });
-      if (error) {
-        console.error("Resend error:", error);
-        setResendMsg(getFriendlyError(error.message || "Failed to send verification email"));
+      // Use server-side API to bypass Supabase email delivery issues
+      const res = await fetch("/api/auth/resend-verification", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email })
+      });
+      const j = await res.json();
+      
+      if (!res.ok || j.error) {
+        const errorMsg = j.error || "Failed to send verification email";
+        console.error("Resend error:", errorMsg);
+        setResendMsg(getFriendlyError(errorMsg));
         setResendStatus("error");
       } else {
-        setResendMsg("Verification email sent!");
+        setResendMsg(j.message || "Verification email sent!");
         setResendStatus("success");
+        if (j.verificationLink) {
+          setDevLink(j.verificationLink);
+        }
       }
+    } catch (err: any) {
+      console.error("Resend error:", err);
+      setResendMsg("Failed to send request");
+      setResendStatus("error");
     } finally {
       setResending(false);
     }
@@ -114,6 +131,12 @@ export default function RegisterPage() {
               {resendMsg && (
                 <div className={`text-xs ${resendStatus === "error" ? "text-red-600" : "text-green-600"}`}>
                   {resendMsg}
+                </div>
+              )}
+              {devLink && (
+                <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs text-yellow-800 break-all">
+                  <p className="font-bold mb-1">Development Mode Link:</p>
+                  <a href={devLink} className="underline text-blue-600" target="_blank" rel="noopener noreferrer">Click here to verify</a>
                 </div>
               )}
             </div>

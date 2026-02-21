@@ -300,6 +300,7 @@ export default function NewBlogPage() {
   }
 
   async function deleteExisting(id: string) {
+    if (!confirm('Are you sure you want to delete this blog? This will also remove all associated media.')) return;
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 30000);
     try {

@@ -474,6 +474,7 @@ export default function AIAgent() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
+    let alive = true;
     const providerController = new AbortController();
     const providerTimeoutId = setTimeout(() => providerController.abort(), 30000);
     (async () => {
@@ -498,6 +499,7 @@ export default function AIAgent() {
           return;
         }
 
+        if (!alive) return;
         if (data && (data.provider || data.model)) {
           setProviderInfo({ provider: String(data.provider || ""), model: String(data.model || "") });
         }
@@ -507,7 +509,7 @@ export default function AIAgent() {
         clearTimeout(providerTimeoutId);
       }
     })();
-    return () => providerController.abort();
+    return () => { alive = false; };
   }, []);
 
   useEffect(() => {

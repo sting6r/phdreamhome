@@ -76,6 +76,9 @@ export async function middleware(request: NextRequest) {
             })
           },
         },
+        cookieOptions: {
+          name: 'sb-phdreamhome-auth-token',
+        },
       }
     )
 

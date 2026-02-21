@@ -66,15 +66,20 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       <body className="bg-white text-black safe-area">
         <Script id="trusted-types-policy" strategy="beforeInteractive">
           {`
-            try {
-              if (window.trustedTypes && window.trustedTypes.createPolicy) {
-                window.trustedTypes.createPolicy('default', {
-                  createHTML: string => string,
-                  createScriptURL: string => string,
-                  createScript: string => string,
-                });
+            if (typeof window !== 'undefined' && window.trustedTypes && window.trustedTypes.createPolicy) {
+              // Check if default policy exists to avoid duplicate creation error
+              if (!window.trustedTypes.defaultPolicy) {
+                try {
+                  window.trustedTypes.createPolicy('default', {
+                    createHTML: (string) => string,
+                    createScriptURL: (string) => string,
+                    createScript: (string) => string,
+                  });
+                } catch (e) {
+                  console.warn('Error creating default Trusted Types policy:', e);
+                }
               }
-            } catch (e) {}
+            }
           `}
         </Script>
         <Navbar />

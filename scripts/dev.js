@@ -1,9 +1,10 @@
+
 const { spawn } = require('child_process');
 
 // Use npx.cmd on Windows, npx on other platforms
 const next = spawn('npx', ['next', 'dev', '-p', '3000'], { 
   stdio: 'inherit',
-  shell: true // Re-enable shell for better cross-platform compatibility with npx
+  shell: true 
 });
 
 const cleanup = () => {

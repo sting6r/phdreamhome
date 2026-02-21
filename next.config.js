@@ -1,4 +1,4 @@
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || "https://hcytsmimaehlmrvhrbda.supabase.co";
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || "https://xcovewaplqwmqisplunx.supabase.co";
 let supabaseHost = "";
 try { if (SUPABASE_URL) supabaseHost = new URL(SUPABASE_URL).host; } catch {}
 
@@ -6,6 +6,7 @@ const nextConfig = {
   images: {
     minimumCacheTTL: 60,
     remotePatterns: [
+      { protocol: "https", hostname: "xcovewaplqwmqisplunx.supabase.co", pathname: "/**" },
       { protocol: "https", hostname: "hcytsmimaehlmrvhrbda.supabase.co", pathname: "/**" },
       ...(supabaseHost && supabaseHost !== "hcytsmimaehlmrvhrbda.supabase.co" ? [
         { protocol: "https", hostname: supabaseHost, pathname: "/**" }

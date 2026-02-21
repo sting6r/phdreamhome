@@ -171,12 +171,18 @@ export default function PropertiesPage() {
   }
 
   async function remove(id: string) {
+    const { data } = await supabase.auth.getSession();
+    const token = data.session?.access_token;
+    const headers: Record<string,string> = {};
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 30000);
 
     try {
       await fetch(`/api/listings/${id}`, { 
         method: "DELETE",
+        headers,
         signal: controller.signal
       });
     } catch (e: any) {
@@ -202,6 +208,13 @@ export default function PropertiesPage() {
         <h1 className="text-xl font-semibold">My Properties</h1>
         <Link href="/dashboard/listings/new" className="btn-blue" prefetch={false}>Add Property</Link>
       </div>
+      {mounted && (!data || !Array.isArray(listings) || listings.length === 0) && (
+        <div className="card p-8 flex flex-col items-center justify-center text-center gap-3">
+          <div className="text-lg font-semibold">No properties found</div>
+          <div className="text-sm text-slate-600">Add your first property to manage it here.</div>
+          <Link href="/dashboard/listings/new" className="btn-blue mt-2" prefetch={false}>Add Property</Link>
+        </div>
+      )}
       <div className="card overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm min-w-[800px]">
@@ -260,7 +273,12 @@ export default function PropertiesPage() {
                           <button className="block w-full text-left px-3 py-1 text-sm" onClick={() => setStatus(l.id, "Occupied")}>Set Occupied</button>
                           <button className="block w-full text-left px-3 py-1 text-sm" onClick={() => setStatus(l.id, "For Sale")}>Set For Sale</button>
                           <button className="block w-full text-left px-3 py-1 text-sm" onClick={() => setStatus(l.id, "Sold")}>Set Sold</button>
-                          <button className="block w-full text-left px-3 py-1 text-sm text-red-600" onClick={() => { remove(l.id); setOpenId(null); }}>Delete</button>
+                          <button className="block w-full text-left px-3 py-1 text-sm text-red-600" onClick={() => { 
+                            if (confirm('Are you sure you want to delete this property? This will also remove all associated images.')) {
+                              remove(l.id); 
+                              setOpenId(null); 
+                            }
+                          }}>Delete</button>
                         </div>
                       )}
                     </div>

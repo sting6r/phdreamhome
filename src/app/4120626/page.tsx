@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { createClientSideClient } from "@lib/supabase";
+import { createClientSideClient, createClientWithOverrides, safeUrl, anon, FALLBACK_SUPABASE_URL, FALLBACK_SUPABASE_ANON } from "@lib/supabase";
 
 import { Suspense } from "react";
 
@@ -69,49 +69,32 @@ function LoginPageContent() {
     e.preventDefault();
     setLoading(true);
     setErr(null);
-    const { data, error } = await supabase.auth.signInWithPassword({ email: identifier, password });
-    setLoading(false);
-    if (error || !data.session) { 
-      setErr(error?.message || "Invalid credentials"); 
-      return; 
+    // Prefer server-side password login (more reliable across firewalls/CSP)
+    try {
+      const r = await fetch("/api/auth/password-login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: identifier, password })
+      });
+      const t = await r.text();
+      let j: any;
+      try { j = JSON.parse(t); } catch { j = { ok: false, error: "Invalid server response" }; }
+      if (!r.ok || !j?.ok) {
+        const msg = (j?.error || "Invalid credentials");
+        setErr(msg);
+        setLoading(false);
+        return;
+      }
+    } catch (error: any) {
+      const msg = String(error?.message || "").toLowerCase().includes("fetch")
+        ? "Cannot reach authentication server. Please check your connection and try again."
+        : "Sign-in failed";
+      setErr(msg);
+      setLoading(false);
+      return;
     }
     
-    // Sync user with Railway DB
-    const syncController = new AbortController();
-    const syncTimeoutId = setTimeout(() => syncController.abort(), 30000);
-    try {
-      await fetch("/api/auth/sync-user", { 
-        method: "POST", 
-        headers: { "Content-Type": "application/json" }, 
-        body: JSON.stringify({ 
-          userId: data.session.user.id, 
-          email: data.session.user.email 
-        }),
-        signal: syncController.signal
-      });
-    } catch (syncError) {
-      console.error("Failed to sync user on login:", syncError);
-    } finally {
-      clearTimeout(syncTimeoutId);
-    }
-
-    const sessionController = new AbortController();
-    const sessionTimeoutId = setTimeout(() => sessionController.abort(), 30000);
-    try {
-      await fetch("/api/auth/session", { 
-        method: "POST", 
-        headers: { "Content-Type": "application/json" }, 
-        body: JSON.stringify({ 
-          access_token: data.session.access_token,
-          refresh_token: data.session.refresh_token
-        }),
-        signal: sessionController.signal
-      });
-    } catch (sessionError) {
-      console.error("Failed to set session on login:", sessionError);
-    } finally {
-      clearTimeout(sessionTimeoutId);
-    }
+    // Cookies are set by the server endpoint; proceed to dashboard
     router.replace(callbackUrl);
   }
   return (

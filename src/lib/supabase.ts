@@ -40,11 +40,15 @@ if (!finalUrl && process.env.NODE_ENV === "production") {
   }
 }
 
-export const safeUrl = finalUrl || "https://hcytsmimaehlmrvhrbda.supabase.co";
+export const FALLBACK_SUPABASE_URL = "https://xcovewaplqwmqisplunx.supabase.co";
+export const safeUrl = finalUrl || FALLBACK_SUPABASE_URL;
+
+export const FALLBACK_SUPABASE_ANON =
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhjb3Zld2FwbHF3bXFpc3BsdW54Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE1MTY0MjQsImV4cCI6MjA4NzA5MjQyNH0.l4_PpQdkgICKADlJF2PmKh9BNwdBwXAeVyWrfBUJ0Jc";
 
 export const anon = clean(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) ?? 
   clean(process.env.SUPABASE_ANON_KEY) ?? 
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhjeXRzbWltYWVobG1ydmhyYmRhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjAyNjQ2NjAsImV4cCI6MjA3NTg0MDY2MH0.T8IJpPvv8n5j9kcRSsC9EnpxrEuAW3E1TNJUdn250Kc";
+  FALLBACK_SUPABASE_ANON;
 
 const service = clean(process.env.SUPABASE_SERVICE_ROLE_KEY) ?? 
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhjeXRzbWltYWVobG1ydmhyYmRhIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MDI2NDY2MCwiZXhwIjoyMDc1ODQwNjYwfQ.EwxGACi4ptZtmABK5WH4hTK5l4GaXK9Mm-9fxCP45ik";
@@ -52,6 +56,7 @@ export const bucket = clean(process.env.SUPABASE_BUCKET) ?? "images";
 export const bucketVideos = clean(process.env.SUPABASE_BUCKET_VIDEOS) ?? "videos";
 export const bucketBlogImages = clean(process.env.SUPABASE_BUCKET_BLOG_IMAGES) ?? "blog image";
 export const bucketBlogVideos = clean(process.env.SUPABASE_BUCKET_BLOG_VIDEOS) ?? "blog video";
+export const bucketProfile = clean(process.env.SUPABASE_BUCKET_PROFILE) ?? "profile";
 
 // Legacy client for compatibility - try to avoid using this for auth in Next.js
 // Persistence disabled to prevent conflicts with the SSR client
@@ -72,12 +77,33 @@ export const supabaseAdmin = typeof window === "undefined"
 let browserClient: ReturnType<typeof createBrowserClient> | undefined;
 
 export function createClientSideClient() {
-  if (typeof window === "undefined") return createBrowserClient(safeUrl, anon);
+  if (typeof window === "undefined") return createBrowserClient(safeUrl, anon, { cookieOptions: { name: 'sb-phdreamhome-auth-token' } });
   if (!browserClient) {
-    browserClient = createBrowserClient(safeUrl, anon);
+    browserClient = createBrowserClient(safeUrl, anon, {
+      cookieOptions: {
+        name: 'sb-phdreamhome-auth-token',
+      }
+    });
   }
   return browserClient;
 }
+
+// Create a client with runtime URL/key overrides (used for recovery fallbacks)
+export function createClientWithOverrides(url?: string, key?: string) {
+  const u = url || safeUrl;
+  const k = key || anon;
+  return createBrowserClient(u, k, {
+    cookieOptions: {
+      name: 'sb-phdreamhome-auth-token',
+    }
+  });
+}
+
+export const legacyUrl = clean(process.env.LEGACY_SUPABASE_URL) ?? "https://hcytsmimaehlmrvhrbda.supabase.co";
+export const legacyAnon = clean(process.env.LEGACY_SUPABASE_ANON_KEY) ?? 
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhjeXRzbWltYWVobG1ydmhyYmRhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjAyNjQ2NjAsImV4cCI6MjA3NTg0MDY2MH0.T8IJpPvv8n5j9kcRSsC9EnpxrEuAW3E1TNJUdn250Kc";
+export const legacyService = clean(process.env.LEGACY_SUPABASE_SERVICE_ROLE_KEY) ?? 
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhjeXRzbWltYWVobG1ydmhyYmRhIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MDI2NDY2MCwiZXhwIjoyMDc1ODQwNjYwfQ.EwxGACi4ptZtmABK5WH4hTK5l4GaXK9Mm-9fxCP45ik";
 
 // Export a single instance for easier use
 export const supabase = typeof window !== "undefined" ? createClientSideClient() : supabasePublic;

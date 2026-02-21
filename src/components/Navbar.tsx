@@ -305,6 +305,7 @@ export default function Navbar() {
                           setOpen(false); 
                           setLoggedIn(false);
                           setAvatar(null);
+                          await fetch("/api/auth/session", { method: "DELETE" });
                           await supabase.auth.signOut();
                           window.location.href = "/";
                         }}

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { randomBytes } from "crypto";
-import { supabaseAdmin, bucket, bucketVideos, bucketBlogImages, bucketBlogVideos, createSignedUrl, parseBucketSpec } from "@lib/supabase";
+import { supabaseAdmin, bucket, bucketVideos, bucketBlogImages, bucketBlogVideos, bucketProfile } from "@lib/supabase";
 import { getProxyImageUrl } from "@lib/image-utils";
 
 export const runtime = "nodejs";
@@ -25,8 +25,24 @@ export async function POST(req: Request) {
     const targetBucket =
       scope === "blog"
         ? (isVideo ? bucketBlogVideos : bucketBlogImages)
-        : (isVideo ? bucketVideos : bucket);
-    const { data, error } = await supabaseAdmin.storage.from(targetBucket).upload(objectPath, buf, { contentType: type, upsert: true });
+        : scope === "profile"
+          ? bucketProfile
+          : (isVideo ? bucketVideos : bucket);
+
+    // Create the profile bucket if it doesn't exist (idempotent)
+    if (scope === "profile") {
+      try {
+        await supabaseAdmin.storage.createBucket(bucketProfile, {
+          public: false,
+          fileSizeLimit: "5242880",
+          allowedMimeTypes: ["image/*"]
+        });
+      } catch (e: any) {
+        // Ignore if already exists or if policy forbids; upload will fail if not available
+      }
+    }
+
+    const { error } = await supabaseAdmin.storage.from(targetBucket).upload(objectPath, buf, { contentType: type, upsert: true });
     if (error) {
       console.error("Upload error:", error);
       return NextResponse.json({ error: error.message }, { status: 500 });
