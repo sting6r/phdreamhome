@@ -61,7 +61,7 @@ export async function GET(req: Request) {
 
           const buffer = await response.arrayBuffer();
           if (!buffer || buffer.byteLength === 0) {
-             console.warn(`Proxy received empty body for ${path}`);
+             console.warn(`Proxy received empty body for ${path}. Status: ${response.status}, Content-Type: ${contentType}`);
              const px = Buffer.from(
                "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO1Z4a0AAAAASUVORK5CYII=",
                "base64"
@@ -90,7 +90,7 @@ export async function GET(req: Request) {
           "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO1Z4a0AAAAASUVORK5CYII=",
           "base64"
         );
-        return new NextResponse(px, { headers: { 'Content-Type': 'image/png', 'Cache-Control': 'public, max-age=60' } });
+        return new NextResponse(px, { headers: { 'Content-Type': 'image/png', 'Cache-Control': 'public, max-age=60' }, status: 504 });
       }
     }
 
@@ -117,7 +117,9 @@ export async function GET(req: Request) {
           buf = Buffer.from(await data.arrayBuffer());
           ct = data.type || null;
         }
-      } catch {}
+      } catch (e) {
+        console.error(`getPublicUrl error for ${path}:`, e);
+      }
     }
 
     if (!buf) {
@@ -167,7 +169,9 @@ export async function GET(req: Request) {
       try {
         const { data } = supabaseAdmin.storage.from(bucketName).getPublicUrl(objectPath);
         direct = data.publicUrl || null;
-      } catch {}
+      } catch (e) {
+        console.error(`getPublicUrl error for ${path}:`, e);
+      }
       if (!direct) direct = await createSignedUrl(path);
       if (!direct) {
         const px = Buffer.from(
