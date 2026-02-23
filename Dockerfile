@@ -1,8 +1,8 @@
 # Force redeploy to refresh settings
 FROM node:20-slim
 
-# Install OpenSSL for Prisma
-RUN apt-get update -y && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
+# Install OpenSSL for Prisma AND Python for AI Agent
+RUN apt-get update -y && apt-get install -y openssl python3 python3-pip && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
@@ -13,6 +13,10 @@ RUN npm ci --ignore-scripts
 
 # Copy the rest of the application
 COPY . .
+
+# Install Python dependencies for AI Agent
+# Use --break-system-packages because we are in a container environment
+RUN pip3 install --no-cache-dir -r ai-agent/requirements.txt --break-system-packages
 
 # Now generate Prisma Client and Build
 RUN npx prisma generate

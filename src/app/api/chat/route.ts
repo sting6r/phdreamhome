@@ -180,6 +180,8 @@ async function getPythonAIResponse(message: string, sessionId: string = "default
     const isConnectionError = 
       error.message.includes("fetch failed") || 
       error.message.includes("ECONNREFUSED") || 
+      error.message.includes("ECONNRESET") ||
+      (error.cause && (error.cause.code === 'ECONNRESET' || error.cause.code === 'ECONNREFUSED')) ||
       error.name === 'TimeoutError';
 
     if (isConnectionError) {

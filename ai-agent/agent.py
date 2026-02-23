@@ -25,12 +25,20 @@ if "6543" in DB_URL:
     DB_URL = DB_URL.replace(":6543", ":5432").split("?")[0]
 
 # 2. Initialize Pool and Model
-pool = ConnectionPool(DB_URL, min_size=1, max_size=10)
+try:
+    pool = ConnectionPool(DB_URL, min_size=1, max_size=10)
+except Exception as e:
+    print(f"CRITICAL: Failed to connect to database: {e}")
+    pool = None
+
 default_model = ChatGroq(model="llama-3.3-70b-versatile", temperature=0.2)
 vision_model = ChatGroq(model="llama-3.2-11b-vision-preview", temperature=0.2)
 
 # Initialize the table at startup
 def init_db():
+    if not pool:
+        print("Database pool is not initialized.")
+        return
     try:
         with pool.connection() as conn:
             PostgresChatMessageHistory.create_tables(conn, "chat_history")
@@ -43,6 +51,8 @@ init_db()
 # Tool: Fetch media for a specific listing
 def get_listing_media(listing_id: str):
     """Fetches all images and videos for a specific listing from the database."""
+    if not pool:
+        return []
     try:
         with pool.connection() as conn:
             with conn.cursor() as cur:
@@ -262,6 +272,9 @@ def get_ai_response(message: str, session_id: str = "default_session", user_data
             dynamic_system_prompt = SYSTEM_PROMPT + user_info + context_info
         
         # Get a connection from the pool
+        if not pool:
+            return "I apologize, but I'm currently unable to access the database. Please try again later."
+            
         with pool.connection() as conn:
             # Initialize Postgres history for persistence
             history = PostgresChatMessageHistory(
