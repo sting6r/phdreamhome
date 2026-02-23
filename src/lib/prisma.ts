@@ -19,28 +19,23 @@ export const prisma =
                 }
 
                 // Add pgbouncer=true if using Supabase Transaction Pooler (port 6543)
-                if (url.port === "6543") {
-                  // Ensure pgbouncer is set to true
-                  if (!url.searchParams.has("pgbouncer")) {
-                    url.searchParams.set("pgbouncer", "true");
-                  }
-                  // Disable prepared statements for transaction pooler
-                  // This is CRITICAL for Supabase Transaction Pooler on port 6543
-                  // Otherwise, you get "prepared statement does not exist" or connection errors
+                if (url.port === "6543" && !url.searchParams.has("pgbouncer")) {
+                  url.searchParams.set("pgbouncer", "true");
                 }
                 
                 // Set reasonable connection pool limits and timeouts
                 if (!url.searchParams.has("connection_limit")) {
-                  // Lower connection limit for serverless environment to avoid exhausting pool
-                  url.searchParams.set("connection_limit", "10");
+                  url.searchParams.set("connection_limit", "15");
+                } else if (url.searchParams.get("connection_limit") === "1") {
+                  url.searchParams.set("connection_limit", "5");
                 }
                 
                 if (!url.searchParams.has("pool_timeout")) {
-                  url.searchParams.set("pool_timeout", "20");
+                  url.searchParams.set("pool_timeout", "30");
                 }
 
                 if (!url.searchParams.has("connect_timeout")) {
-                  url.searchParams.set("connect_timeout", "10"); // Give it a bit more time than 5s
+                  url.searchParams.set("connect_timeout", "5"); // Fail fast (5s) to allow fallbacks
                 }
                 
                 return url.toString();

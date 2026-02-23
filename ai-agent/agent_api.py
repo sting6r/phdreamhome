@@ -120,13 +120,14 @@ def chat_endpoint(request: ChatRequest):
         raise HTTPException(status_code=500, detail=str(e)) 
 
 if __name__ == "__main__": 
-    # Get port from environment variable
-    # Prefer PYTHON_PORT for internal service to avoid conflict with main app's PORT
-    port_str = os.environ.get("PYTHON_PORT", "8000")
+    # Get port from environment variable for deployment (e.g., Railway)
+    # Use a more robust way to get the port
+    port_str = os.environ.get("PORT", "8000")
     try:
         port = int(port_str)
     except ValueError:
-        print(f"Warning: Invalid PYTHON_PORT '{port_str}', falling back to 8000")
+        # If PORT is not a valid integer (e.g. "$PORT"), fallback to 8000
+        print(f"Warning: Invalid PORT '{port_str}', falling back to 8000")
         port = 8000
         
     # Run the server
