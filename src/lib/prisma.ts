@@ -35,7 +35,7 @@ export const prisma =
                 }
 
                 if (!url.searchParams.has("connect_timeout")) {
-                  url.searchParams.set("connect_timeout", "30");
+                  url.searchParams.set("connect_timeout", "5"); // Fail fast (5s) to allow fallbacks
                 }
                 
                 return url.toString();

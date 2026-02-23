@@ -898,6 +898,9 @@ export default function NewBlogPage() {
       const timeoutId = setTimeout(() => controller.abort(), 30000);
       const form = new FormData();
       form.append("files", file);
+      if (title) {
+        form.append("blogTitle", title);
+      }
       const res = await fetch("/api/upload?scope=blog", {
         method: "POST",
         body: form,
@@ -941,6 +944,9 @@ export default function NewBlogPage() {
       const timeoutId = setTimeout(() => controller.abort(), 30000);
       const form = new FormData();
       form.append("files", file);
+      if (title) {
+        form.append("blogTitle", title);
+      }
       const res = await fetch("/api/upload?scope=blog", {
         method: "POST",
         body: form,
@@ -1004,6 +1010,9 @@ export default function NewBlogPage() {
       const timeoutId = setTimeout(() => controller.abort(), 30000);
       const form = new FormData();
       form.append("files", file);
+      if (title) {
+        form.append("blogTitle", title);
+      }
       const res = await fetch("/api/upload?scope=blog", {
         method: "POST",
         body: form,

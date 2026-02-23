@@ -94,28 +94,68 @@ export async function POST(req: Request) {
   try {
     const base = data.title.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").replace(/-{2,}/g, "-");
     const uniq = `${base || "listing"}-${Date.now().toString(36)}`;
-    const created = await Promise.race([
-      withRetry(() => prisma.listing.create({
-        data: {
-          userId,
-          title: data.title,
-          slug: uniq,
-          description: data.description,
-          seoTitle: (seoTitle || undefined),
-          seoDescription: (seoDescription || undefined),
-          seoKeywords,
-          price: Math.round(data.price),
-          address: data.address,
-          city: data.city,
-          state: data.state,
-          country: data.country,
-          bedrooms: Math.round(data.bedrooms),
-          bathrooms: Math.round(data.bathrooms),
-          floorArea: data.floorArea ? Math.round(data.floorArea) : null,
-          lotArea: data.lotArea ? Math.round(data.lotArea) : null,
-          parking: data.parking ? Math.round(data.parking) : 0,
-          indoorFeatures: data.indoorFeatures ?? [],
-          outdoorFeatures: data.outdoorFeatures ?? [],
+    let created;
+    try {
+      created = await Promise.race([
+        withRetry(() => prisma.listing.create({
+          data: {
+            userId,
+            title: data.title,
+            slug: uniq,
+            description: data.description,
+            seoTitle: (seoTitle || undefined),
+            seoDescription: (seoDescription || undefined),
+            seoKeywords,
+            price: Math.round(data.price),
+            address: data.address,
+            city: data.city,
+            state: data.state,
+            country: data.country,
+            bedrooms: Math.round(data.bedrooms),
+            bathrooms: Math.round(data.bathrooms),
+            floorArea: data.floorArea ? Math.round(data.floorArea) : null,
+            lotArea: data.lotArea ? Math.round(data.lotArea) : null,
+            parking: data.parking ? Math.round(data.parking) : 0,
+            indoorFeatures: data.indoorFeatures ?? [],
+            outdoorFeatures: data.outdoorFeatures ?? [],
+            landmarks: data.landmarks ?? [],
+            owner: data.owner ?? null,
+            developer: data.developer ?? null,
+            status: data.status ?? "For Rent",
+            type: data.type ?? "House",
+            industrySubtype: data.industrySubtype ?? null,
+            commercialSubtype: data.commercialSubtype ?? null,
+            published: data.published ?? false,
+            featured: data.featured ?? false,
+            featuredPreselling: data.featuredPreselling ?? false,
+            ...(data.images.length ? { images: { create: data.images.map((url, i) => ({ url, sortOrder: i })) } } : {})
+          }
+        })),
+        timeout(5000)
+      ]);
+    } catch (dbError) {
+      console.error("Prisma create failed, attempting Supabase fallback:", dbError);
+      
+      const insertData = {
+        userId,
+        title: data.title,
+        slug: uniq,
+        description: data.description,
+        seoTitle: (seoTitle || undefined),
+        seoDescription: (seoDescription || undefined),
+        seoKeywords,
+        price: Math.round(data.price),
+        address: data.address,
+        city: data.city,
+        state: data.state,
+        country: data.country,
+        bedrooms: Math.round(data.bedrooms),
+        bathrooms: Math.round(data.bathrooms),
+        floorArea: data.floorArea ? Math.round(data.floorArea) : null,
+        lotArea: data.lotArea ? Math.round(data.lotArea) : null,
+        parking: data.parking ? Math.round(data.parking) : 0,
+        indoorFeatures: data.indoorFeatures ?? [],
+        outdoorFeatures: data.outdoorFeatures ?? [],
         landmarks: data.landmarks ?? [],
         owner: data.owner ?? null,
         developer: data.developer ?? null,
@@ -125,12 +165,32 @@ export async function POST(req: Request) {
         commercialSubtype: data.commercialSubtype ?? null,
         published: data.published ?? false,
         featured: data.featured ?? false,
-        featuredPreselling: data.featuredPreselling ?? false,
-        ...(data.images.length ? { images: { create: data.images.map((url, i) => ({ url, sortOrder: i })) } } : {})
-        }
-      })),
-      timeout(15000)
-    ]);
+        featuredPreselling: data.featuredPreselling ?? false
+      };
+
+      const { data: fbData, error: fbError } = await supabaseAdmin
+        .from('Listing')
+        .insert(insertData)
+        .select()
+        .single();
+      
+      if (fbError || !fbData) {
+        console.error("Supabase fallback create failed:", fbError);
+        throw dbError; // Throw original error if fallback fails
+      }
+      created = fbData;
+
+      // Handle images for fallback
+      if (data.images && data.images.length > 0) {
+        const imageInserts = data.images.map((url: string, i: number) => ({
+          listingId: created.id,
+          url,
+          sortOrder: i
+        }));
+        const { error: imgError } = await supabaseAdmin.from('ListingImage').insert(imageInserts);
+        if (imgError) console.warn("Supabase fallback image insert failed:", imgError);
+      }
+    }
     return NextResponse.json({ listing: created });
   } catch (err: any) {
     console.error("Listing creation error:", err);

@@ -92,10 +92,10 @@ export async function PUT(req: Request) {
         withRetry(() => prisma.user.findFirst({
           where: { username: body.username, NOT: { id: userId } }
         }), 3, 1000),
-        timeout(15000)
+        timeout(5000)
       ]);
     } catch (e) {
-      console.warn("Prisma username check failed/timed out (15s), falling back to Supabase", e);
+      console.warn("Prisma username check failed/timed out (5s), falling back to Supabase", e);
         const { data: u } = await supabaseAdmin.from('User').select('id').eq('username', body.username).neq('id', userId).maybeSingle();
         exists = !!u;
       }

@@ -6,6 +6,116 @@ import { supabase } from "@lib/supabase";
 import { getProxyImageUrl } from "@lib/image-utils";
 import CurrencyInput from "@components/CurrencyInput";
 
+const BLOG_ICON_CATEGORIES = [
+  {
+    name: "Prop",
+    icons: ["🏠", "🏡", "🏘️", "🏙️", "🏢", "🏗️", "📐", "🛋️", "🛏️", "🛁", "🚿", "🚪", "🔑", "🗝️"]
+  },
+  {
+    name: "Loc",
+    icons: ["📍", "🗺️", "📞", "📧", "📱", "🌐", "📡", "📮"]
+  },
+  {
+    name: "Biz",
+    icons: ["💼", "💰", "💸", "💳", "📈", "📊", "📝", "📋", "🤝", "👔", "👨‍💼", "👩‍💼", "🏦"]
+  },
+  {
+    name: "Tags",
+    icons: ["✨", "💎", "⭐", "🌟", "🔥", "💥", "💯", "✅", "⚠️", "⚡", "💡"]
+  },
+  {
+    name: "Plan",
+    icons: ["📅", "📆", "🗓️", "⏰", "⏱️", "⏳"]
+  },
+  {
+    name: "Life",
+    icons: ["🌳", "🌴", "🌱", "🌿", "🍀", "🏊", "⛱️", "🏖️", "🚗", "🚲", "🛡️", "🔒", "🏋️", "🧘"]
+  },
+  {
+    name: "Fest",
+    icons: ["🎉", "🎊", "🎈", "🎁", "🔔", "📣", "📢", "🎯", "🏆", "🥇", "🥈", "🥉"]
+  },
+  {
+    name: "Pub",
+    icons: ["🏫", "🏪", "🏬", "🏨", "🏥", "🏛️", "⛪", "🕌"]
+  }
+];
+
+function renderInlineFormatting(text: string) {
+  if (typeof text !== "string") return text;
+  if (text.trim() === "---") {
+    return <hr className="my-6 border-t-2 border-slate-300" />;
+  }
+  const isList = /^[-•]\s+/.test(text);
+  const cleanText = isList ? text.replace(/^[-•]\s+/, "") : text;
+
+  const nodes: (string | React.ReactNode)[] = [];
+  let key = 0;
+
+  function pushFormattedSegment(segment: string) {
+    const pattern = /\*\*\*(.+?)\*\*\*|\*\*(.+?)\*\*|_(.+?)_|\*(.+?)\*/g;
+    let lastIndex = 0;
+    let match: RegExpExecArray | null;
+    while ((match = pattern.exec(segment)) !== null) {
+      if (match.index > lastIndex) {
+        nodes.push(segment.slice(lastIndex, match.index));
+      }
+      if (match[1]) {
+        nodes.push(
+          <strong key={key++}>
+            <em>{match[1]}</em>
+          </strong>
+        );
+      } else if (match[2]) {
+        nodes.push(<strong key={key++}>{match[2]}</strong>);
+      } else if (match[3] || match[4]) {
+        nodes.push(<em key={key++}>{match[3] || match[4]}</em>);
+      }
+      lastIndex = pattern.lastIndex;
+    }
+    if (lastIndex < segment.length) {
+      nodes.push(segment.slice(lastIndex));
+    }
+  }
+
+  const linkPattern = /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g;
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+  while ((match = linkPattern.exec(cleanText)) !== null) {
+    if (match.index > lastIndex) {
+      pushFormattedSegment(cleanText.slice(lastIndex, match.index));
+    }
+    const linkText = match[1];
+    const href = match[2];
+    nodes.push(
+      <a
+        key={key++}
+        href={href}
+        className="text-blue-600"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        {linkText}
+      </a>
+    );
+    lastIndex = linkPattern.lastIndex;
+  }
+  if (lastIndex < cleanText.length) {
+    pushFormattedSegment(cleanText.slice(lastIndex));
+  }
+
+  if (isList) {
+    return (
+      <div className="flex items-start gap-1.5 ml-1">
+        <span className="mt-1 w-1 h-1 rounded-full bg-orange-600 shrink-0" />
+        <div className="flex-1">{nodes}</div>
+      </div>
+    );
+  }
+
+  return nodes;
+}
+
 import { Suspense } from "react";
 
 function EditListingPageContent({ params }: { params: Promise<{ id: string }> }) {
@@ -15,6 +125,45 @@ function EditListingPageContent({ params }: { params: Promise<{ id: string }> })
   const [imageIds, setImageIds] = useState<(string|null)[]>([]);
   const [selectMode, setSelectMode] = useState(false);
   const [selected, setSelected] = useState<number[]>([]);
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+
+  function handleDragStart(e: React.DragEvent, index: number) {
+    if (selectMode) {
+      e.preventDefault();
+      return;
+    }
+    setDraggedIndex(index);
+    e.dataTransfer.effectAllowed = "move";
+  }
+
+  function handleDragOver(e: React.DragEvent) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+  }
+
+  function handleDrop(e: React.DragEvent, targetIndex: number) {
+    e.preventDefault();
+    if (draggedIndex === null || draggedIndex === targetIndex) return;
+
+    const newImages = [...images];
+    const newPreviews = [...previews];
+    const newImageIds = [...imageIds];
+    
+    const [movedImage] = newImages.splice(draggedIndex, 1);
+    const [movedPreview] = newPreviews.splice(draggedIndex, 1);
+    const [movedImageId] = newImageIds.splice(draggedIndex, 1);
+    
+    newImages.splice(targetIndex, 0, movedImage);
+    newPreviews.splice(targetIndex, 0, movedPreview);
+    newImageIds.splice(targetIndex, 0, movedImageId);
+    
+    setImages(newImages);
+    setPreviews(newPreviews);
+    setImageIds(newImageIds);
+    
+    setDraggedIndex(null);
+  }
+
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [confirmMessage, setConfirmMessage] = useState("");
   const [confirmLoading, setConfirmLoading] = useState(false);
@@ -37,7 +186,25 @@ function EditListingPageContent({ params }: { params: Promise<{ id: string }> })
   const [saveProgress, setSaveProgress] = useState(0);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [featuredIndex, setFeaturedIndex] = useState<number | null>(null);
+
+  function moveToStart(index: number) {
+    if (index === 0) return;
+    const newImages = [...images];
+    const newPreviews = [...previews];
+    const newImageIds = [...imageIds];
+    
+    const [movedImage] = newImages.splice(index, 1);
+    const [movedPreview] = newPreviews.splice(index, 1);
+    const [movedImageId] = newImageIds.splice(index, 1);
+    
+    newImages.unshift(movedImage);
+    newPreviews.unshift(movedPreview);
+    newImageIds.unshift(movedImageId);
+    
+    setImages(newImages);
+    setPreviews(newPreviews);
+    setImageIds(newImageIds);
+  }
   const [seoTitle, setSeoTitle] = useState("");
   const [seoDescription, setSeoDescription] = useState("");
   const [seoKeyword, setSeoKeyword] = useState("");
@@ -50,8 +217,26 @@ function EditListingPageContent({ params }: { params: Promise<{ id: string }> })
   const [form, setForm] = useState({
     title: "", description: "", price: 0, address: "", city: "", state: "", country: "",
     bedrooms: 0, bathrooms: 0, floorArea: 0, lotArea: 0, parking: 0, owner: "", developer: "", status: "For Rent", type: "Condominium", published: true, industrySubtype: "", commercialSubtype: "",
-    indoorFeatures: [] as string[], outdoorFeatures: [] as string[], landmarks: [] as string[]
+    indoorFeatures: [] as string[], outdoorFeatures: [] as string[], landmarks: [] as string[],
+    indoorFeatureTexts: [] as string[], outdoorFeatureTexts: [] as string[]
   });
+
+  const formRef = useRef<HTMLFormElement | null>(null);
+
+  const [showIconMenu, setShowIconMenu] = useState(false);
+  const [activeIconCategory, setActiveIconCategory] = useState("Prop");
+  const [showLinkConfig, setShowLinkConfig] = useState(false);
+  const [linkUrl, setLinkUrl] = useState("");
+  const [linkText, setLinkText] = useState("");
+  const [linkSelStart, setLinkSelStart] = useState(0);
+  const [linkSelEnd, setLinkSelEnd] = useState(0);
+  const [toolsLocked, setToolsLocked] = useState(false);
+  const [toolsBox, setToolsBox] = useState<{ left: number; width: number } | null>(null);
+
+  const descRef = useRef<HTMLTextAreaElement | null>(null);
+  const seoDescRef = useRef<HTMLTextAreaElement | null>(null);
+  const iconMenuRef = useRef<HTMLDivElement | null>(null);
+  const toolsLockedRef = useRef(false);
   useEffect(() => {
     (async () => {
       const { data } = await supabase.auth.getSession();
@@ -78,12 +263,24 @@ function EditListingPageContent({ params }: { params: Promise<{ id: string }> })
 
         const found = d.listing;
         if (found) {
+          const indoorAll = found.indoorFeatures || [];
+          const outdoorAll = found.outdoorFeatures || [];
+          const indoorChecked = indoorAll.filter((f: string) => INDOOR_OPTIONS.includes(f));
+          const outdoorChecked = outdoorAll.filter((f: string) => OUTDOOR_OPTIONS.includes(f));
+          const indoorTexts = indoorAll.filter((f: string) => !INDOOR_OPTIONS.includes(f));
+          const outdoorTexts = outdoorAll.filter((f: string) => !OUTDOOR_OPTIONS.includes(f));
+
+          // Pad with empty strings if less than 10, or trim if more
+          const iTexts = Array.from({ length: 10 }, (_, i) => indoorTexts[i] || "");
+          const oTexts = Array.from({ length: 10 }, (_, i) => outdoorTexts[i] || "");
+
           setForm({
             title: found.title, description: found.description, price: found.price, address: found.address,
             city: found.city, state: found.state, country: found.country, bedrooms: found.bedrooms,
             bathrooms: found.bathrooms, floorArea: found.floorArea ?? 0, lotArea: found.lotArea ?? 0, parking: found.parking ?? 0, owner: found.owner || "", developer: found.developer || "",
             status: found.status, type: found.type, published: found.published, industrySubtype: found.industrySubtype || "", commercialSubtype: found.commercialSubtype || "",
-            indoorFeatures: found.indoorFeatures || [], outdoorFeatures: found.outdoorFeatures || [], landmarks: found.landmarks || []
+            indoorFeatures: indoorChecked, outdoorFeatures: outdoorChecked, landmarks: found.landmarks || [],
+            indoorFeatureTexts: iTexts, outdoorFeatureTexts: oTexts
           });
           setSeoTitle(found.seoTitle || "");
           setSeoDescription(found.seoDescription || "");
@@ -91,7 +288,6 @@ function EditListingPageContent({ params }: { params: Promise<{ id: string }> })
           setImages(found.images.map((i:any)=>i.path ?? i.url));
           setPreviews(found.images.map((i:any)=>i.url));
           setImageIds(found.images.map((i:any)=>i.id ?? null));
-          if ((found.images || []).length > 0) setFeaturedIndex(0);
         }
       } catch (err: any) {
         if (err.name === 'AbortError' || err.message?.includes('aborted')) return;
@@ -103,13 +299,17 @@ function EditListingPageContent({ params }: { params: Promise<{ id: string }> })
   }, [id]);
 
   useEffect(() => {
-    const adjustHeight = (el: HTMLTextAreaElement) => {
+    const adjustHeight = (el: HTMLTextAreaElement | null) => {
+      if (!el) return;
       el.style.height = "auto";
       el.style.height = `${el.scrollHeight}px`;
     };
-    const textareas = document.querySelectorAll("textarea");
-    textareas.forEach(el => adjustHeight(el as HTMLTextAreaElement));
-  }, [form.description, seoDescription]);
+    adjustHeight(descRef.current);
+    adjustHeight(seoDescRef.current);
+    
+    const textareas = formRef.current?.querySelectorAll("textarea");
+    textareas?.forEach(el => adjustHeight(el as HTMLTextAreaElement));
+  }, [form.description, seoDescription, form.indoorFeatureTexts, form.outdoorFeatureTexts]);
   async function upload(e: React.ChangeEvent<HTMLInputElement>) {
     const files = e.target.files;
     if (!files || !files.length) return;
@@ -156,11 +356,17 @@ function EditListingPageContent({ params }: { params: Promise<{ id: string }> })
     setError(null);
     setSaveMessage(null);
     let ordered = [...images];
-    if (featuredIndex !== null && featuredIndex >= 0 && featuredIndex < ordered.length) {
-      const [f] = ordered.splice(featuredIndex, 1);
-      ordered = [f, ...ordered];
-    }
-    const payload = { ...form, images: ordered, seoTitle, seoDescription, seoKeyword };
+    const indoorTexts = form.indoorFeatureTexts.map(s => (s || "").trim()).filter(Boolean);
+    const outdoorTexts = form.outdoorFeatureTexts.map(s => (s || "").trim()).filter(Boolean);
+    const payload = { 
+        ...form, 
+        indoorFeatures: Array.from(new Set([...form.indoorFeatures, ...indoorTexts])),
+        outdoorFeatures: Array.from(new Set([...form.outdoorFeatures, ...outdoorTexts])),
+        images: ordered, seoTitle, seoDescription, seoKeyword 
+    };
+    delete (payload as any).indoorFeatureTexts;
+    delete (payload as any).outdoorFeatureTexts;
+
     setSaving(true);
     setSaveProgress(10);
     const timer = setInterval(() => setSaveProgress(p => Math.min(95, p + 5)), 200);
@@ -233,10 +439,6 @@ function EditListingPageContent({ params }: { params: Promise<{ id: string }> })
       clearTimeout(timeoutId);
     }
     
-    if (featuredIndex !== null) {
-      if (i === featuredIndex) setFeaturedIndex(null);
-      else if (i < featuredIndex) setFeaturedIndex(featuredIndex - 1);
-    }
     setImages(prev => prev.filter((_, idx) => idx !== i));
     setPreviews(prev => prev.filter((_, idx) => idx !== i));
     setImageIds(prev => prev.filter((_, idx) => idx !== i));
@@ -253,10 +455,164 @@ function EditListingPageContent({ params }: { params: Promise<{ id: string }> })
       setSelected([]);
     });
   }
+  useEffect(() => {
+    const handleScroll = () => {
+      const anchor = document.getElementById("tools-container-anchor");
+      const container = document.getElementById("tools-container");
+      if (!anchor || !container) return;
+
+      const rect = anchor.getBoundingClientRect();
+      const shouldLock = rect.top <= 0;
+
+      if (shouldLock !== toolsLockedRef.current) {
+        setToolsLocked(shouldLock);
+        toolsLockedRef.current = shouldLock;
+        if (shouldLock) {
+          setToolsBox({ left: rect.left, width: rect.width });
+        } else {
+          setToolsBox(null);
+        }
+      } else if (shouldLock) {
+        // Update left/width on scroll if needed (horizontal scroll)
+        setToolsBox({ left: rect.left, width: rect.width });
+      }
+    };
+
+    const handleResize = () => {
+      const anchor = document.getElementById("tools-container-anchor");
+      if (anchor && toolsLockedRef.current) {
+        const rect = anchor.getBoundingClientRect();
+        setToolsBox({ left: rect.left, width: rect.width });
+      }
+    };
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    window.addEventListener("resize", handleResize);
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+      window.removeEventListener("resize", handleResize);
+    };
+  }, []);
+
+  // Close icon menu when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (iconMenuRef.current && !iconMenuRef.current.contains(event.target as Node)) {
+        setShowIconMenu(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  function applyTool(type: "bold" | "italic" | "list" | "separator") {
+    const textarea = descRef.current;
+    if (!textarea) return;
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const text = form.description;
+    const before = text.substring(0, start);
+    const selected = text.substring(start, end);
+    const after = text.substring(end);
+
+    let newText = "";
+    let newCursorPos = 0;
+
+    if (type === "bold") {
+      newText = before + `**${selected || "bold text"}**` + after;
+      newCursorPos = start + 2 + (selected.length || 9) + 2;
+    } else if (type === "italic") {
+      newText = before + `_${selected || "italic text"}_` + after;
+      newCursorPos = start + 1 + (selected.length || 11) + 1;
+    } else if (type === "list") {
+      const prefix = "\n- ";
+      newText = before + prefix + (selected || "List item") + after;
+      newCursorPos = start + prefix.length + (selected.length || 9);
+    } else if (type === "separator") {
+      const sep = "\n\n---\n\n";
+      newText = before + sep + after;
+      newCursorPos = start + sep.length;
+    }
+
+    setForm({ ...form, description: newText });
+    
+    setTimeout(() => {
+      textarea.focus();
+      textarea.setSelectionRange(newCursorPos, newCursorPos);
+    }, 0);
+  }
+
+  function insertIcon(icon: string) {
+    const textarea = descRef.current;
+    if (!textarea) return;
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const text = form.description;
+    const before = text.substring(0, start);
+    const after = text.substring(end);
+
+    const newText = before + icon + " " + after;
+    setForm({ ...form, description: newText });
+    setShowIconMenu(false);
+
+    const newCursorPos = start + icon.length + 1;
+    setTimeout(() => {
+      textarea.focus();
+      textarea.setSelectionRange(newCursorPos, newCursorPos);
+    }, 0);
+  }
+
+  function openLinkConfig() {
+    const textarea = descRef.current;
+    if (!textarea) return;
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const selected = form.description.substring(start, end);
+    
+    setLinkText(selected);
+    setLinkUrl("");
+    setLinkSelStart(start);
+    setLinkSelEnd(end);
+    setShowLinkConfig(true);
+  }
+
+  function applyLink() {
+    if (!linkUrl) {
+      setShowLinkConfig(false);
+      return;
+    }
+    const textarea = descRef.current;
+    if (!textarea) return;
+
+    const text = form.description;
+    const before = text.substring(0, linkSelStart);
+    const after = text.substring(linkSelEnd);
+    
+    const label = linkText || "link";
+    const newText = before + `[${label}](${linkUrl})` + after;
+    
+    setForm({ ...form, description: newText });
+    setShowLinkConfig(false);
+    
+    setTimeout(() => {
+      textarea.focus();
+      // place cursor after the closing parenthesis
+      const newPos = linkSelStart + 1 + label.length + 2 + linkUrl.length + 1;
+      textarea.setSelectionRange(newPos, newPos);
+    }, 0);
+  }
+
   return (
     <div className="max-w-2xl card mx-auto">
       <h1 className="text-xl font-semibold mb-4">Edit Listing</h1>
-      <form onSubmit={save} className="space-y-3">
+      {error && (
+        <div className="mb-4 p-3 bg-red-50 text-red-600 border border-red-200 rounded-md">
+          {error}
+        </div>
+      )}
+      <form ref={formRef} onSubmit={save} className="space-y-3">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div><label className="label">Title</label><input className="input" value={form.title} onChange={e=>setForm({...form, title: e.target.value})} /></div>
           <div><label className="label">Price</label><CurrencyInput className="input" value={form.price} onChange={val=>{
@@ -299,7 +655,180 @@ function EditListingPageContent({ params }: { params: Promise<{ id: string }> })
             )}
           </div>
           <div><label className="label">Property Developer</label><input className="input" value={form.developer} onChange={e=>setForm({...form, developer: e.target.value})} /></div>
-          <div className="sm:col-span-2"><label className="label">Description</label><textarea className="input resize-none overflow-hidden" value={form.description} onChange={e=>setForm({...form, description: e.target.value})} /></div>
+          <div className="sm:col-span-2">
+            <div id="tools-container-anchor" className="w-full relative mb-1">
+              <div
+                id="tools-container"
+                className={`w-full bg-[#EFDCEC] transition-all z-20 ${
+                  toolsLocked
+                    ? "fixed top-0 left-0 right-0 shadow-md border-b"
+                    : "relative border rounded-md shadow-sm"
+                }`}
+                style={
+                  toolsLocked && toolsBox
+                    ? {
+                        left: toolsBox.left,
+                        width: toolsBox.width,
+                        top: 0,
+                      }
+                    : {}
+                }
+              >
+                <div className="flex flex-wrap sm:flex-nowrap items-center justify-between px-4 py-2 w-full sm:overflow-x-auto no-scrollbar">
+                  <div className="text-xs font-semibold text-slate-700 mr-4">Listing Tool Bar</div>
+                  <div className="flex flex-wrap items-center gap-1">
+                    <button
+                      type="button"
+                      className="px-3 py-1 rounded-md text-xs hover:bg-white/40 transition-colors"
+                      onClick={() => applyTool("bold")}
+                    >
+                      B
+                    </button>
+                    <button
+                      type="button"
+                      className="px-3 py-1 rounded-md text-xs hover:bg-white/40 transition-colors"
+                      onClick={() => applyTool("italic")}
+                    >
+                      /
+                    </button>
+                    <button
+                      type="button"
+                      className="px-3 py-1 rounded-md text-xs hover:bg-white/40 transition-colors flex items-center justify-center"
+                      aria-label="Insert separator"
+                      onClick={() => applyTool("separator")}
+                    >
+                      <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                        <line x1="4" y1="12" x2="20" y2="12" />
+                      </svg>
+                    </button>
+                    
+                    {/* Icon Menu Button */}
+                    <div className="relative">
+                      <button
+                        type="button"
+                        className="px-3 py-1 rounded-md text-xs hover:bg-white/40 transition-colors flex items-center gap-1"
+                        onClick={() => setShowIconMenu(!showIconMenu)}
+                        aria-label="Text icon menu"
+                      >
+                        <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <circle cx="12" cy="12" r="10" />
+                          <path d="M8 14s1.5 2 4 2 4-2 4-2" />
+                          <line x1="9" y1="9" x2="9.01" y2="9" />
+                          <line x1="15" y1="9" x2="15.01" y2="9" />
+                        </svg>
+                      </button>
+                    </div>
+
+                    <button
+                      type="button"
+                      className="px-3 py-1 rounded-md text-xs hover:bg-white/40 transition-colors"
+                      onClick={() => applyTool("list")}
+                    >
+                      List
+                    </button>
+                    <button
+                      type="button"
+                      className="px-3 py-1 rounded-md text-xs flex items-center gap-1 hover:bg-white/40 transition-colors"
+                      aria-label="Insert link"
+                      onClick={openLinkConfig}
+                    >
+                      <svg viewBox="0 0 24 24" className="w-3 h-3" aria-hidden="true">
+                          <path d="M9.5 14.5L8 16a3 3 0 104.24 4.24l2-2A3 3 0 0013 12.5M14.5 9.5L16 8a3 3 0 10-4.24-4.24l-2 2A3 3 0 0011 11.5" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Icon Menu Dropdown - Outside inner scroll container */}
+                {showIconMenu && (
+                  <div
+                    ref={iconMenuRef}
+                    className="absolute top-full left-4 mt-1 bg-white border rounded-md shadow-lg z-50 min-w-[280px] flex flex-col"
+                  >
+                     <div className="flex border-b overflow-x-auto no-scrollbar bg-slate-50 rounded-t-md p-1 gap-1">
+                      {BLOG_ICON_CATEGORIES.map(cat => (
+                        <button
+                          key={cat.name}
+                          type="button"
+                          className={`px-2 py-1 text-[10px] font-medium rounded transition-colors whitespace-nowrap ${
+                            activeIconCategory === cat.name
+                              ? "bg-white text-blue-600 shadow-sm"
+                              : "text-slate-500 hover:bg-slate-100"
+                          }`}
+                          onClick={() => setActiveIconCategory(cat.name)}
+                        >
+                          {cat.name}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="p-2 grid grid-cols-7 gap-1 max-h-[220px] overflow-y-auto custom-scrollbar">
+                      {BLOG_ICON_CATEGORIES.find(c => c.name === activeIconCategory)?.icons.map(icon => (
+                        <button
+                          key={icon}
+                          type="button"
+                          className="w-8 h-8 flex items-center justify-center hover:bg-slate-100 rounded text-lg transition-colors"
+                          onClick={() => insertIcon(icon)}
+                        >
+                          {icon}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Link Config Modal */}
+              {showLinkConfig && (
+                  <div className="absolute top-10 left-0 z-50 bg-white border rounded-md shadow-lg p-3 w-72">
+                    <div className="mb-2 text-xs font-semibold">Insert Link</div>
+                    <div className="space-y-2">
+                        <div>
+                            <label className="text-[10px] text-slate-500">Text</label>
+                            <input
+                                className="w-full text-xs border rounded px-2 py-1"
+                                value={linkText}
+                                onChange={e => setLinkText(e.target.value)}
+                            />
+                        </div>
+                        <div>
+                            <label className="text-[10px] text-slate-500">URL</label>
+                            <input
+                                className="w-full text-xs border rounded px-2 py-1"
+                                placeholder="https://..."
+                                value={linkUrl}
+                                onChange={e => setLinkUrl(e.target.value)}
+                                autoFocus
+                            />
+                        </div>
+                        <div className="flex justify-end gap-2 mt-2">
+                            <button
+                                type="button"
+                                className="px-2 py-1 text-xs text-slate-500 hover:bg-slate-100 rounded"
+                                onClick={() => setShowLinkConfig(false)}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="button"
+                                className="px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700"
+                                onClick={applyLink}
+                            >
+                                Apply
+                            </button>
+                        </div>
+                    </div>
+                  </div>
+              )}
+              </div>
+            <label className="label">Description</label>
+            <textarea
+              ref={descRef}
+              suppressHydrationWarning
+              className="input resize-none overflow-hidden"
+              value={form.description}
+              onChange={e=>setForm({...form, description: e.target.value})}
+            />
+          </div>
           <div className="sm:col-span-2">
             <div className="card p-3 space-y-3">
               <div className="text-sm font-semibold">SEO</div>
@@ -314,7 +843,7 @@ function EditListingPageContent({ params }: { params: Promise<{ id: string }> })
                 </div>
                 <div className="sm:col-span-2">
                   <label className="label">SEO Description</label>
-                  <textarea className="input resize-none overflow-hidden" placeholder="Recommended 140–160 chars" value={seoDescription} onChange={e=>setSeoDescription(e.target.value)} />
+                  <textarea ref={seoDescRef} suppressHydrationWarning className="input resize-none overflow-hidden" placeholder="Recommended 140–160 chars" value={seoDescription} onChange={e=>setSeoDescription(e.target.value)} />
                 </div>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs text-slate-700">
@@ -418,40 +947,86 @@ function EditListingPageContent({ params }: { params: Promise<{ id: string }> })
           <div className="sm:col-span-2 text-sm font-medium">Features and Amenities</div>
           <div className="sm:col-span-2">
             <label className="label">Indoor Features</label>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-              {INDOOR_OPTIONS.map(o=> (
-                <label key={o} className="flex items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={form.indoorFeatures.includes(o)}
-                    onChange={()=>{
-                      const selected = form.indoorFeatures.includes(o);
-                      const next = selected ? form.indoorFeatures.filter(x=>x!==o) : [...form.indoorFeatures, o];
-                      setForm({...form, indoorFeatures: next});
-                    }}
-                  />
-                  <span>{o}</span>
-                </label>
-              ))}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {INDOOR_OPTIONS.map(o=> (
+                    <label key={o} className="flex items-center gap-2 text-sm">
+                      <input
+                        type="checkbox"
+                        checked={form.indoorFeatures.includes(o)}
+                        onChange={()=>{
+                          const selected = form.indoorFeatures.includes(o);
+                          const next = selected ? form.indoorFeatures.filter(x=>x!==o) : [...form.indoorFeatures, o];
+                          setForm({...form, indoorFeatures: next});
+                        }}
+                      />
+                      <span>{o}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <div className="text-xs font-medium text-slate-700 mb-1">Paragraph Features</div>
+                <div className="grid grid-cols-1 gap-2">
+                  {Array.from({ length: 10 }).map((_, i) => (
+                    <textarea
+                      key={i}
+                      className="input resize-none overflow-hidden"
+                      placeholder={`Feature Paragraph ${i+1}`}
+                      value={form.indoorFeatureTexts[i] || ""}
+                      onChange={(e)=>{
+                        const arr = [...form.indoorFeatureTexts];
+                        arr[i] = e.target.value;
+                        setForm({ ...form, indoorFeatureTexts: arr });
+                      }}
+                      suppressHydrationWarning
+                    />
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
           <div className="sm:col-span-2">
             <label className="label">Outdoor Features</label>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-              {OUTDOOR_OPTIONS.map(o=> (
-                <label key={o} className="flex items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={form.outdoorFeatures.includes(o)}
-                    onChange={()=>{
-                      const selected = form.outdoorFeatures.includes(o);
-                      const next = selected ? form.outdoorFeatures.filter(x=>x!==o) : [...form.outdoorFeatures, o];
-                      setForm({...form, outdoorFeatures: next});
-                    }}
-                  />
-                  <span>{o}</span>
-                </label>
-              ))}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {OUTDOOR_OPTIONS.map(o=> (
+                    <label key={o} className="flex items-center gap-2 text-sm">
+                      <input
+                        type="checkbox"
+                        checked={form.outdoorFeatures.includes(o)}
+                        onChange={()=>{
+                          const selected = form.outdoorFeatures.includes(o);
+                          const next = selected ? form.outdoorFeatures.filter(x=>x!==o) : [...form.outdoorFeatures, o];
+                          setForm({...form, outdoorFeatures: next});
+                        }}
+                      />
+                      <span>{o}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <div className="text-xs font-medium text-slate-700 mb-1">Paragraph Features</div>
+                <div className="grid grid-cols-1 gap-2">
+                  {Array.from({ length: 10 }).map((_, i) => (
+                    <textarea
+                      key={i}
+                      className="input resize-none overflow-hidden"
+                      placeholder={`Feature Paragraph ${i+1}`}
+                      value={form.outdoorFeatureTexts[i] || ""}
+                      onChange={(e)=>{
+                        const arr = [...form.outdoorFeatureTexts];
+                        arr[i] = e.target.value;
+                        setForm({ ...form, outdoorFeatureTexts: arr });
+                      }}
+                      suppressHydrationWarning
+                    />
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
           <div>
@@ -506,13 +1081,20 @@ function EditListingPageContent({ params }: { params: Promise<{ id: string }> })
               const isVid = /\.(mp4|webm|ogg)$/i.test(obj);
               const key = imageIds[i] || `preview-${i}-${path}`;
               return (
-                <div key={key} className={`relative ${selectMode ? "ring-2" : ""} ${selected.includes(i) ? "ring-blue-500" : "ring-transparent"}`}>
+                <div 
+                  key={key} 
+                  className={`relative ${selectMode ? "ring-2 cursor-pointer" : "cursor-move"} ${selected.includes(i) ? "ring-blue-500" : "ring-transparent"} ${draggedIndex === i ? "opacity-50" : ""}`}
+                  draggable={!selectMode}
+                  onDragStart={(e) => handleDragStart(e, i)}
+                  onDragOver={handleDragOver}
+                  onDrop={(e) => handleDrop(e, i)}
+                >
                   {isVid ? (
                     <video src={getProxyImageUrl(u)} muted autoPlay loop playsInline controlsList="nodownload" className="w-28 h-20 object-cover rounded" onClick={() => { if (selectMode) toggleSelected(i); }} />
                   ) : (
                     <Image src={getProxyImageUrl(u)} alt="preview" width={112} height={80} unoptimized className="object-cover rounded" onClick={() => { if (selectMode) toggleSelected(i); }} />
                   )}
-                <button type="button" className={`absolute left-1 top-1 text-[10px] px-1.5 py-0.5 rounded ${featuredIndex===i?"bg-sky-500 text-white":"bg-white text-black border"}`} onClick={()=> setFeaturedIndex(i)}>{featuredIndex===i?"Feature":"Set as Feature"}</button>
+                <button type="button" className={`absolute left-1 top-1 text-[10px] px-1.5 py-0.5 rounded ${i===0?"bg-sky-500 text-white":"bg-white text-black border"}`} onClick={()=> moveToStart(i)}>{i===0?"Feature":"Set as Feature"}</button>
                 {!selectMode && (
                   <button type="button" onClick={()=> openConfirm("Delete this media?", () => removeAt(i))} className="absolute -top-2 -right-2 rounded-full bg-red-600 text-white w-6 h-6 flex items-center justify-center shadow">×</button>
                 )}

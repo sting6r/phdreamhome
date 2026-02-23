@@ -325,6 +325,9 @@ export default function EditBlogPage({ params }: { params: Promise<{ id: string 
     try {
       const form = new FormData();
       form.append("files", file);
+      if (title) {
+        form.append("blogTitle", title);
+      }
       const res = await fetch("/api/upload?scope=blog", {
         method: "POST",
         body: form,
@@ -381,6 +384,9 @@ export default function EditBlogPage({ params }: { params: Promise<{ id: string 
     try {
       const form = new FormData();
       form.append("files", file);
+      if (title) {
+        form.append("blogTitle", title);
+      }
       const res = await fetch("/api/upload?scope=blog", {
         method: "POST",
         body: form,
@@ -436,6 +442,9 @@ export default function EditBlogPage({ params }: { params: Promise<{ id: string 
     try {
       const form = new FormData();
       form.append("files", file);
+      if (title) {
+        form.append("blogTitle", title);
+      }
       const res = await fetch("/api/upload?scope=blog", {
         method: "POST",
         body: form,

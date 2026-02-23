@@ -5,11 +5,155 @@ import { supabase } from "@lib/supabase";
 import { getProxyImageUrl } from "@lib/image-utils";
 import CurrencyInput from "@components/CurrencyInput";
 
+const BLOG_ICON_CATEGORIES = [
+  {
+    name: "Prop",
+    icons: ["🏠", "🏡", "🏘️", "🏙️", "🏢", "🏗️", "📐", "🛋️", "🛏️", "🛁", "🚿", "🚪", "🔑", "🗝️"]
+  },
+  {
+    name: "Loc",
+    icons: ["📍", "🗺️", "📞", "📧", "📱", "🌐", "📡", "📮"]
+  },
+  {
+    name: "Biz",
+    icons: ["💼", "💰", "💸", "💳", "📈", "📊", "📝", "📋", "🤝", "👔", "👨‍💼", "👩‍💼", "🏦"]
+  },
+  {
+    name: "Tags",
+    icons: ["✨", "💎", "⭐", "🌟", "🔥", "💥", "💯", "✅", "⚠️", "⚡", "💡"]
+  },
+  {
+    name: "Plan",
+    icons: ["📅", "📆", "🗓️", "⏰", "⏱️", "⏳"]
+  },
+  {
+    name: "Life",
+    icons: ["🌳", "🌴", "🌱", "🌿", "🍀", "🏊", "⛱️", "🏖️", "🚗", "🚲", "🛡️", "🔒", "🏋️", "🧘"]
+  },
+  {
+    name: "Fest",
+    icons: ["🎉", "🎊", "🎈", "🎁", "🔔", "📣", "📢", "🎯", "🏆", "🥇", "🥈", "🥉"]
+  },
+  {
+    name: "Pub",
+    icons: ["🏫", "🏪", "🏬", "🏨", "🏥", "🏛️", "⛪", "🕌"]
+  }
+];
+
+function renderInlineFormatting(text: string) {
+  if (typeof text !== "string") return text;
+  if (text.trim() === "---") {
+    return <hr className="my-6 border-t-2 border-slate-300" />;
+  }
+  const isList = /^[-•]\s+/.test(text);
+  const cleanText = isList ? text.replace(/^[-•]\s+/, "") : text;
+
+  const nodes: (string | React.ReactNode)[] = [];
+  let key = 0;
+
+  function pushFormattedSegment(segment: string) {
+    const pattern = /\*\*\*(.+?)\*\*\*|\*\*(.+?)\*\*|_(.+?)_|\*(.+?)\*/g;
+    let lastIndex = 0;
+    let match: RegExpExecArray | null;
+    while ((match = pattern.exec(segment)) !== null) {
+      if (match.index > lastIndex) {
+        nodes.push(segment.slice(lastIndex, match.index));
+      }
+      if (match[1]) {
+        nodes.push(
+          <strong key={key++}>
+            <em>{match[1]}</em>
+          </strong>
+        );
+      } else if (match[2]) {
+        nodes.push(<strong key={key++}>{match[2]}</strong>);
+      } else if (match[3] || match[4]) {
+        nodes.push(<em key={key++}>{match[3] || match[4]}</em>);
+      }
+      lastIndex = pattern.lastIndex;
+    }
+    if (lastIndex < segment.length) {
+      nodes.push(segment.slice(lastIndex));
+    }
+  }
+
+  const linkPattern = /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g;
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+  while ((match = linkPattern.exec(cleanText)) !== null) {
+    if (match.index > lastIndex) {
+      pushFormattedSegment(cleanText.slice(lastIndex, match.index));
+    }
+    const linkText = match[1];
+    const href = match[2];
+    nodes.push(
+      <a
+        key={key++}
+        href={href}
+        className="text-blue-600"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        {linkText}
+      </a>
+    );
+    lastIndex = linkPattern.lastIndex;
+  }
+  if (lastIndex < cleanText.length) {
+    pushFormattedSegment(cleanText.slice(lastIndex));
+  }
+
+  if (isList) {
+    return (
+      <div className="flex items-start gap-1.5 ml-1">
+        <span className="mt-1 w-1 h-1 rounded-full bg-orange-600 shrink-0" />
+        <div className="flex-1">{nodes}</div>
+      </div>
+    );
+  }
+
+  return nodes;
+}
+
 export default function NewListingPage() {
+  const [showIconMenu, setShowIconMenu] = useState(false);
+  const [activeIconCategory, setActiveIconCategory] = useState(BLOG_ICON_CATEGORIES[0].name);
+  const [showLinkConfig, setShowLinkConfig] = useState(false);
+  const [linkUrl, setLinkUrl] = useState("");
+  const [linkText, setLinkText] = useState("");
+  const [linkSelStart, setLinkSelStart] = useState<number | null>(null);
+  const [linkSelEnd, setLinkSelEnd] = useState<number | null>(null);
+  const formRef = useRef<HTMLFormElement | null>(null);
+  const descRef = useRef<HTMLTextAreaElement | null>(null);
+  const seoDescRef = useRef<HTMLTextAreaElement | null>(null);
+  const iconMenuRef = useRef<HTMLDivElement | null>(null);
+  const configRef = useRef<HTMLDivElement | null>(null);
+  
+  // Tools sticky state
+  const [toolsLocked, setToolsLocked] = useState(false);
+  const [toolsBox, setToolsBox] = useState<{ left: number; width: number } | null>(null);
+  const toolsLockedRef = useRef(false);
+  const cardRef = useRef<HTMLDivElement | null>(null);
+
   const [images, setImages] = useState<string[]>([]);
   const [previews, setPreviews] = useState<string[]>([]);
-  const [featuredIndex, setFeaturedIndex] = useState<number | null>(null);
+  // featuredIndex removed
   const [error, setError] = useState<string | null>(null);
+
+  function moveToStart(index: number) {
+    if (index === 0) return;
+    const newImages = [...images];
+    const newPreviews = [...previews];
+    
+    const [movedImage] = newImages.splice(index, 1);
+    const [movedPreview] = newPreviews.splice(index, 1);
+    
+    newImages.unshift(movedImage);
+    newPreviews.unshift(movedPreview);
+    
+    setImages(newImages);
+    setPreviews(newPreviews);
+  }
   const fileRef = useRef<HTMLInputElement | null>(null);
   const videoRef = useRef<HTMLInputElement | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -19,6 +163,42 @@ export default function NewListingPage() {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [selectMode, setSelectMode] = useState(false);
   const [selected, setSelected] = useState<number[]>([]);
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+
+  function handleDragStart(e: React.DragEvent, index: number) {
+    if (selectMode) {
+      e.preventDefault();
+      return;
+    }
+    setDraggedIndex(index);
+    e.dataTransfer.effectAllowed = "move";
+    // Transparent drag image or default
+  }
+
+  function handleDragOver(e: React.DragEvent) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+  }
+
+  function handleDrop(e: React.DragEvent, targetIndex: number) {
+    e.preventDefault();
+    if (draggedIndex === null || draggedIndex === targetIndex) return;
+
+    const newImages = [...images];
+    const newPreviews = [...previews];
+    
+    const [movedImage] = newImages.splice(draggedIndex, 1);
+    const [movedPreview] = newPreviews.splice(draggedIndex, 1);
+    
+    newImages.splice(targetIndex, 0, movedImage);
+    newPreviews.splice(targetIndex, 0, movedPreview);
+    
+    setImages(newImages);
+    setPreviews(newPreviews);
+    
+    setDraggedIndex(null);
+  }
+
   const INDOOR_OPTIONS = [
     "Alarm System","Balcony","Basement","Drivers Room","Ensuite","Bar","Terrace","Maids Room","Library","Air-Conditioning","Attic","CCTV","Broadband Internet","Cable","Built-in Wardrobes","Central Air","Ducted Cooling","Entertainment Room","Fire Alarm","Fireplace","Floorboards","Gym","Jacuzzi","Lounge","Pay TV Access","Powder Room","Sauna","Smoke Detector","Hot Shower","WIFI","Pets Allowed","Storage Room","Study Room"
   ];
@@ -34,6 +214,159 @@ export default function NewListingPage() {
   const [seoTitle, setSeoTitle] = useState("");
   const [seoDescription, setSeoDescription] = useState("");
   const [seoKeyword, setSeoKeyword] = useState("");
+    useEffect(() => {
+    function measureToolsBox() {
+      const container = document.getElementById("tools-container-anchor");
+      if (container) {
+        const rect = container.getBoundingClientRect();
+        setToolsBox({ left: rect.left, width: rect.width });
+      }
+    }
+
+    function handleScroll() {
+      const anchor = document.getElementById("tools-container-anchor");
+      
+      if (anchor) {
+        const rect = anchor.getBoundingClientRect();
+        if (rect.top <= 60) { // Approx header height or just top
+          if (!toolsLockedRef.current) {
+            toolsLockedRef.current = true;
+            setToolsLocked(true);
+            measureToolsBox();
+          }
+        } else {
+          if (toolsLockedRef.current) {
+            toolsLockedRef.current = false;
+            setToolsLocked(false);
+          }
+        }
+      }
+    }
+
+    function handleResize() {
+      measureToolsBox();
+    }
+
+    window.addEventListener("scroll", handleScroll, { passive: true } as any);
+    window.addEventListener("resize", handleResize, { passive: true } as any);
+    measureToolsBox();
+
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+      window.removeEventListener("resize", handleResize);
+    };
+  }, []);
+
+  function applyTool(tool: "bold" | "italic" | "list" | "separator") {
+    const el = descRef.current;
+    if (!el) return;
+    const start = el.selectionStart ?? 0;
+    const end = el.selectionEnd ?? 0;
+    const value = form.description || "";
+    const selected = start !== end ? value.slice(start, end) : "";
+    
+    let next = value;
+    let newCursorPos = end;
+
+    if (tool === "bold") {
+        const target = selected || "text";
+        next = value.slice(0, start) + `**${target}**` + value.slice(end);
+        newCursorPos = start + 2 + target.length + 2;
+    } else if (tool === "italic") {
+        const target = selected || "text";
+        next = value.slice(0, start) + `***${target}***` + value.slice(end);
+        newCursorPos = start + 3 + target.length + 3;
+    } else if (tool === "list") {
+        if (start === end) {
+            const lineStart = value.lastIndexOf("\n", start - 1) + 1;
+            const alreadyList = value.slice(lineStart, lineStart + 2) === "• ";
+            if (!alreadyList) {
+                next = value.slice(0, lineStart) + "• " + value.slice(lineStart);
+                newCursorPos = start + 2;
+            }
+        } else {
+             const segmentStart = value.lastIndexOf("\n", start - 1) + 1;
+             const segmentEndIndex = value.indexOf("\n", end);
+             const segmentEnd = segmentEndIndex === -1 ? value.length : segmentEndIndex;
+             const segment = value.slice(segmentStart, segmentEnd);
+             const lines = segment.split("\n");
+             const transformed = lines.map(l => (l.startsWith("• ") ? l : `• ${l}`)).join("\n");
+             next = value.slice(0, segmentStart) + transformed + value.slice(segmentEnd);
+             newCursorPos = segmentStart + transformed.length;
+        }
+    } else if (tool === "separator") {
+        const lineStart = value.lastIndexOf("\n", start - 1) + 1;
+        const alreadySep = value.slice(lineStart, lineStart + 4) === "---\n";
+        if (!alreadySep) {
+            next = value.slice(0, lineStart) + "---\n" + value.slice(lineStart);
+            newCursorPos = lineStart + 4;
+        }
+    }
+
+    if (next !== value) {
+        setForm(prev => ({ ...prev, description: next }));
+        setTimeout(() => {
+            if (descRef.current) {
+                descRef.current.focus();
+                descRef.current.setSelectionRange(newCursorPos, newCursorPos);
+            }
+        }, 0);
+    }
+  }
+
+  function insertIcon(icon: string) {
+    const el = descRef.current;
+    if (!el) return;
+    const start = el.selectionStart ?? 0;
+    const end = el.selectionEnd ?? 0;
+    const value = form.description || "";
+    const next = value.slice(0, start) + icon + value.slice(end);
+    setForm(prev => ({ ...prev, description: next }));
+    setShowIconMenu(false);
+    setTimeout(() => {
+        if (descRef.current) {
+            descRef.current.focus();
+            descRef.current.setSelectionRange(start + icon.length, start + icon.length);
+        }
+    }, 0);
+  }
+
+  function openLinkConfig() {
+    const el = descRef.current;
+    if (!el) return;
+    const start = el.selectionStart ?? 0;
+    const end = el.selectionEnd ?? 0;
+    const value = form.description || "";
+    const selected = value.slice(start, end);
+    setLinkText(selected);
+    setLinkUrl("");
+    setLinkSelStart(start);
+    setLinkSelEnd(end);
+    setShowLinkConfig(true);
+  }
+
+  function applyLink() {
+      if (!linkUrl) {
+          setShowLinkConfig(false);
+          return;
+      }
+      const value = form.description || "";
+      const start = linkSelStart ?? 0;
+      const end = linkSelEnd ?? 0;
+      const textToUse = linkText || "link";
+      const link = `[${textToUse}](${linkUrl})`;
+      const next = value.slice(0, start) + link + value.slice(end);
+      
+      setForm(prev => ({ ...prev, description: next }));
+      setShowLinkConfig(false);
+      setTimeout(() => {
+          if (descRef.current) {
+              descRef.current.focus();
+              descRef.current.setSelectionRange(start + link.length, start + link.length);
+          }
+      }, 0);
+  }
+
   async function upload(e: React.ChangeEvent<HTMLInputElement>) {
     if (!form.title) {
       alert("Please enter a property title before uploading images.");
@@ -69,7 +402,6 @@ export default function NewListingPage() {
               });
               setPreviews(prev => {
                 const next = [...prev, ...(data.signedUrls as string[])];
-                if (next.length && featuredIndex === null) setFeaturedIndex(0);
                 return next;
               });
               resolve();
@@ -95,11 +427,6 @@ export default function NewListingPage() {
     setSaveProgress(10);
     const timer = setInterval(() => setSaveProgress(p => Math.min(95, p + 5)), 200);
     try {
-      let ordered = [...images];
-      if (featuredIndex !== null && featuredIndex >= 0 && featuredIndex < ordered.length) {
-        const [feat] = ordered.splice(featuredIndex, 1);
-        ordered = [feat, ...ordered];
-      }
       const indoorTexts = Array.isArray((form as any).indoorFeatureTexts) ? ((form as any).indoorFeatureTexts as string[]).map(s => (s || "").trim()).filter(Boolean) : [];
       const outdoorTexts = Array.isArray((form as any).outdoorFeatureTexts) ? ((form as any).outdoorFeatureTexts as string[]).map(s => (s || "").trim()).filter(Boolean) : [];
       const payload = { ...form, indoorFeatures: Array.from(new Set([...(form.indoorFeatures || []), ...indoorTexts])), outdoorFeatures: Array.from(new Set([...(form.outdoorFeatures || []), ...outdoorTexts])), images: ordered };
@@ -167,8 +494,8 @@ export default function NewListingPage() {
       el.style.height = "auto";
       el.style.height = `${el.scrollHeight}px`;
     };
-    const textareas = document.querySelectorAll("textarea");
-    textareas.forEach(el => adjustHeight(el as HTMLTextAreaElement));
+    const textareas = formRef.current?.querySelectorAll("textarea");
+    textareas?.forEach(el => adjustHeight(el as HTMLTextAreaElement));
   }, [form.description, seoDescription, form.indoorFeatureTexts, form.outdoorFeatureTexts]);
 
   async function removeAt(i: number) {
@@ -196,11 +523,6 @@ export default function NewListingPage() {
     setImages(prev => prev.filter((_, idx) => idx !== i));
     setPreviews(prev => prev.filter((_, idx) => idx !== i));
     setSelected(prev => prev.filter(idx => idx !== i).map(idx => idx > i ? idx - 1 : idx));
-    setFeaturedIndex(prev => {
-      if (prev === null) return prev;
-      if (prev === i) return images.length - 1 > 0 ? 0 : null;
-      return prev > i ? prev - 1 : prev;
-    });
   }
   function toggleSelected(i: number) { setSelected(prev => prev.includes(i) ? prev.filter(x=>x!==i) : [...prev, i]); }
   function clearSelection() { setSelected([]); }
@@ -214,7 +536,7 @@ export default function NewListingPage() {
   return (
     <div className="max-w-2xl card mx-auto">
       <h1 className="text-xl font-semibold mb-4">New Listing</h1>
-      <form onSubmit={save} className="space-y-3">
+      <form ref={formRef} onSubmit={save} className="space-y-3">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div><label className="label">Title</label><input className="input" placeholder="e.g., Cozy 3BR Family Home" value={form.title} onChange={e=>setForm({...form, title: e.target.value})} /></div>
           <div>
@@ -265,7 +587,171 @@ export default function NewListingPage() {
             )}
           </div>
           <div><label className="label">Property Developer</label><input className="input" placeholder="e.g., Ayala Land" value={form.developer} onChange={e=>setForm({...form, developer: e.target.value})} /></div>
-          <div className="sm:col-span-2"><label className="label">Description</label><textarea className="input resize-none overflow-hidden" placeholder="e.g., Bright living room, modern kitchen, near schools and parks" value={form.description} onChange={e=>setForm({...form, description: e.target.value})} /></div>
+          <div className="sm:col-span-2">
+            <div id="tools-container-anchor" className="w-full relative mb-1">
+              <div
+                id="tools-container"
+                className={`w-full bg-[#EFDCEC] transition-all z-20 ${
+                  toolsLocked
+                    ? "fixed top-0 left-0 right-0 shadow-md border-b"
+                    : "relative border rounded-md shadow-sm"
+                }`}
+                style={
+                  toolsLocked && toolsBox
+                    ? {
+                        left: toolsBox.left,
+                        width: toolsBox.width,
+                        top: 0,
+                      }
+                    : {}
+                }
+              >
+                <div className="flex flex-wrap sm:flex-nowrap items-center justify-between px-4 py-2 w-full sm:overflow-x-auto no-scrollbar">
+                  <div className="text-xs font-semibold text-slate-700 mr-4">Listing Tool Bar</div>
+                  <div className="flex flex-wrap items-center gap-1">
+                    <button
+                      type="button"
+                      className="px-3 py-1 rounded-md text-xs hover:bg-white/40 transition-colors"
+                      onClick={() => applyTool("bold")}
+                    >
+                      B
+                    </button>
+                    <button
+                      type="button"
+                      className="px-3 py-1 rounded-md text-xs hover:bg-white/40 transition-colors"
+                      onClick={() => applyTool("italic")}
+                    >
+                      /
+                    </button>
+                    <button
+                      type="button"
+                      className="px-3 py-1 rounded-md text-xs hover:bg-white/40 transition-colors flex items-center justify-center"
+                      aria-label="Insert separator"
+                      onClick={() => applyTool("separator")}
+                    >
+                      <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                        <line x1="4" y1="12" x2="20" y2="12" />
+                      </svg>
+                    </button>
+                    
+                    {/* Icon Menu Button */}
+                    <div className="relative">
+                      <button
+                        type="button"
+                        className="px-3 py-1 rounded-md text-xs hover:bg-white/40 transition-colors flex items-center gap-1"
+                        onClick={() => setShowIconMenu(!showIconMenu)}
+                        aria-label="Text icon menu"
+                      >
+                        <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <circle cx="12" cy="12" r="10" />
+                          <path d="M8 14s1.5 2 4 2 4-2 4-2" />
+                          <line x1="9" y1="9" x2="9.01" y2="9" />
+                          <line x1="15" y1="9" x2="15.01" y2="9" />
+                        </svg>
+                      </button>
+                    </div>
+
+                    <button
+                      type="button"
+                      className="px-3 py-1 rounded-md text-xs hover:bg-white/40 transition-colors"
+                      onClick={() => applyTool("list")}
+                    >
+                      List
+                    </button>
+                    <button
+                      type="button"
+                      className="px-3 py-1 rounded-md text-xs flex items-center gap-1 hover:bg-white/40 transition-colors"
+                      aria-label="Insert link"
+                      onClick={openLinkConfig}
+                    >
+                      <svg viewBox="0 0 24 24" className="w-3 h-3" aria-hidden="true">
+                          <path d="M9.5 14.5L8 16a3 3 0 104.24 4.24l2-2A3 3 0 0013 12.5M14.5 9.5L16 8a3 3 0 10-4.24-4.24l-2 2A3 3 0 0011 11.5" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Icon Menu Dropdown - Outside inner scroll container */}
+                {showIconMenu && (
+                  <div
+                    ref={iconMenuRef}
+                    className="absolute top-full left-4 mt-1 bg-white border rounded-md shadow-lg z-50 min-w-[280px] flex flex-col"
+                  >
+                     <div className="flex border-b overflow-x-auto no-scrollbar bg-slate-50 rounded-t-md p-1 gap-1">
+                      {BLOG_ICON_CATEGORIES.map(cat => (
+                        <button
+                          key={cat.name}
+                          type="button"
+                          className={`px-2 py-1 text-[10px] font-medium rounded transition-colors whitespace-nowrap ${
+                            activeIconCategory === cat.name
+                              ? "bg-white text-blue-600 shadow-sm"
+                              : "text-slate-500 hover:bg-slate-100"
+                          }`}
+                          onClick={() => setActiveIconCategory(cat.name)}
+                        >
+                          {cat.name}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="p-2 grid grid-cols-7 gap-1 max-h-[220px] overflow-y-auto custom-scrollbar">
+                      {BLOG_ICON_CATEGORIES.find(c => c.name === activeIconCategory)?.icons.map(icon => (
+                        <button
+                          key={icon}
+                          type="button"
+                          className="w-8 h-8 flex items-center justify-center hover:bg-slate-100 rounded text-lg transition-colors"
+                          onClick={() => insertIcon(icon)}
+                        >
+                          {icon}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+              {/* Link Config Modal */}
+              {showLinkConfig && (
+                  <div className="absolute top-10 left-0 z-50 bg-white border rounded-md shadow-lg p-3 w-72">
+                    <div className="mb-2 text-xs font-semibold">Insert Link</div>
+                    <div className="space-y-2">
+                        <div>
+                            <label className="text-[10px] text-slate-500">Text</label>
+                            <input className="w-full text-xs border rounded px-2 py-1" value={linkText} onChange={e => setLinkText(e.target.value)} />
+                        </div>
+                        <div>
+                            <label className="text-[10px] text-slate-500">URL</label>
+                            <input className="w-full text-xs border rounded px-2 py-1" placeholder="https://..." value={linkUrl} onChange={e => setLinkUrl(e.target.value)} autoFocus />
+                        </div>
+                        <div className="flex justify-end gap-2 mt-2">
+                            <button
+                                type="button"
+                                className="px-2 py-1 text-xs text-slate-500 hover:bg-slate-100 rounded"
+                                onClick={() => setShowLinkConfig(false)}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="button"
+                                className="px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700"
+                                onClick={applyLink}
+                            >
+                                Apply
+                            </button>
+                        </div>
+                    </div>
+                  </div>
+              )}
+              </div>
+            </div>
+            <label className="label">Description</label>
+            <textarea
+              ref={descRef}
+              suppressHydrationWarning
+              className="input resize-none overflow-hidden"
+              placeholder="e.g., Bright living room, modern kitchen, near schools and parks"
+              value={form.description}
+              onChange={e=>setForm({...form, description: e.target.value})}
+            />
+          </div>
           <div className="sm:col-span-2">
             <div className="card p-3 space-y-3">
               <div className="text-sm font-semibold">SEO</div>
@@ -280,7 +766,7 @@ export default function NewListingPage() {
                 </div>
                 <div className="sm:col-span-2">
                   <label className="label">SEO Description</label>
-                  <textarea className="input resize-none overflow-hidden" placeholder="Recommended 140–160 chars" value={seoDescription} onChange={e=>setSeoDescription(e.target.value)} />
+                  <textarea ref={seoDescRef} suppressHydrationWarning className="input resize-none overflow-hidden" placeholder="Recommended 140–160 chars" value={seoDescription} onChange={e=>setSeoDescription(e.target.value)} />
                 </div>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs text-slate-700">
@@ -543,13 +1029,20 @@ export default function NewListingPage() {
                 const isVid = /\.(mp4|webm|ogg)$/i.test(obj);
                 const key = `preview-${i}-${path}`;
                 return (
-                  <div key={key} className={`relative ${selectMode ? "ring-2" : ""} ${selected.includes(i) ? "ring-blue-500" : "ring-transparent"}`}>
+                  <div 
+                    key={key} 
+                    className={`relative ${selectMode ? "ring-2 cursor-pointer" : "cursor-move"} ${selected.includes(i) ? "ring-blue-500" : "ring-transparent"} ${draggedIndex === i ? "opacity-50" : ""}`}
+                    draggable={!selectMode}
+                    onDragStart={(e) => handleDragStart(e, i)}
+                    onDragOver={handleDragOver}
+                    onDrop={(e) => handleDrop(e, i)}
+                  >
                     {isVid ? (
                       <video src={getProxyImageUrl(u)} muted autoPlay loop playsInline controlsList="nodownload" className="w-28 h-20 object-cover rounded border border-gray-200" onClick={() => { if (selectMode) toggleSelected(i); }} />
                     ) : (
                       <Image src={getProxyImageUrl(u)} alt="preview" width={112} height={80} unoptimized className="object-cover rounded border border-gray-200" onClick={() => { if (selectMode) toggleSelected(i); }} />
                     )}
-                    <button type="button" className={`absolute left-1 top-1 text-[10px] px-1.5 py-0.5 rounded ${featuredIndex===i?"bg-sky-500 text-white":"bg-white text-black border"}`} onClick={()=>setFeaturedIndex(i)}>{featuredIndex===i?"Feature":"Set as Feature"}</button>
+                    <button type="button" className={`absolute left-1 top-1 text-[10px] px-1.5 py-0.5 rounded ${i===0?"bg-sky-500 text-white":"bg-white text-black border"}`} onClick={()=>moveToStart(i)}>{i===0?"Feature":"Set as Feature"}</button>
                     {!selectMode && (
                       <button type="button" onClick={()=> removeAt(i)} className="absolute -top-2 -right-2 rounded-full bg-red-600 text-white w-6 h-6 flex items-center justify-center shadow">×</button>
                     )}

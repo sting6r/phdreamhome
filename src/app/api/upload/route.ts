@@ -13,6 +13,7 @@ export async function POST(req: Request) {
   const form = await req.formData();
   const files = form.getAll("files") as File[];
   const propertyName = (form.get("propertyName") as string || "").trim();
+  const blogTitle = (form.get("blogTitle") as string || "").trim();
 
   if (!files.length) return NextResponse.json({ error: "No files" }, { status: 400 });
   const paths: string[] = [];
@@ -31,6 +32,11 @@ export async function POST(req: Request) {
       if (folder) {
         objectPath = `${folder}/${name}.${ext}`;
       }
+    } else if (scope === "blog" && blogTitle) {
+      const folder = blogTitle.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+      if (folder) {
+        objectPath = `${folder}/${name}.${ext}`;
+      }
     }
 
     const isVideo = (type || "").startsWith("video/");
@@ -42,7 +48,7 @@ export async function POST(req: Request) {
           : (isVideo ? bucketVideos : bucket);
 
     // Create the profile or videos bucket if it doesn't exist (idempotent)
-    if (scope === "profile" || (isVideo && !scope)) {
+    if (scope === "profile" || (isVideo && !scope) || scope === "blog") {
       try {
         await supabaseAdmin.storage.createBucket(targetBucket, {
           public: false,

@@ -67,39 +67,137 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     ]);
     return NextResponse.json({ ok: true });
   } catch (err: any) {
-    return NextResponse.json({ error: "Database error", details: String(err?.message ?? err) }, { status: 500 });
+    console.error("Prisma update failed, attempting Supabase fallback:", err);
+    // Supabase Fallback for Update
+    // Note: This is complex because of the relation update (images).
+    // We'll do a best-effort update of the main listing fields.
+    // Handling images transactionally via REST is hard, so we might skip image updates or do them sequentially.
+    
+    try {
+      const updateData: any = {
+        title: body.title,
+        description: body.description,
+        seoTitle: body.seoTitle,
+        seoDescription: body.seoDescription,
+        seoKeywords: seoKeywords,
+        price: body.price,
+        address: body.address,
+        city: body.city,
+        state: body.state,
+        country: body.country,
+        bedrooms: body.bedrooms,
+        bathrooms: body.bathrooms,
+        floorArea: body.floorArea,
+        lotArea: body.lotArea,
+        parking: body.parking,
+        indoorFeatures: body.indoorFeatures,
+        outdoorFeatures: body.outdoorFeatures,
+        landmarks: body.landmarks,
+        owner: body.owner,
+        developer: body.developer,
+        status: body.status,
+        type: body.type,
+        industrySubtype: body.industrySubtype,
+        commercialSubtype: body.commercialSubtype,
+        published: body.published,
+        featured: body.featured,
+        featuredPreselling: body.featuredPreselling
+      };
+
+      // Remove undefined/nulls if needed, but Supabase handles them usually.
+      // Clean up updateData
+      Object.keys(updateData).forEach(k => updateData[k] === undefined && delete updateData[k]);
+
+      const { error: mainError } = await supabaseAdmin
+        .from('Listing')
+        .update(updateData)
+        .eq('id', id)
+        .eq('userId', userId);
+
+      if (mainError) throw mainError;
+
+      // Handle images if provided
+      if (Array.isArray(body.images)) {
+        // Delete existing images
+        await supabaseAdmin.from('ListingImage').delete().eq('listingId', id);
+        
+        // Insert new images
+        if (body.images.length > 0) {
+          const imageInserts = body.images.map((url: string, i: number) => ({
+            listingId: id,
+            url,
+            sortOrder: i
+          }));
+          const { error: imgError } = await supabaseAdmin.from('ListingImage').insert(imageInserts);
+          if (imgError) console.warn("Supabase fallback image update failed:", imgError);
+        }
+      }
+
+      return NextResponse.json({ ok: true });
+
+    } catch (fbError: any) {
+      console.error("Supabase fallback failed:", fbError);
+      return NextResponse.json({ error: "Database error", details: String(err?.message ?? err) }, { status: 500 });
+    }
   }
 }
 
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
-  const cookieStore = await cookies();
-  let token = cookieStore.get("sb-access-token")?.value;
-  if (!token) {
-    const h = req.headers.get("authorization") || "";
-    const m = h.match(/^Bearer\s+(.+)$/i);
-    token = m?.[1];
+  try {
+    const { id } = await params;
+    const cookieStore = await cookies();
+    let token = cookieStore.get("sb-access-token")?.value;
+    if (!token) {
+      const h = req.headers.get("authorization") || "";
+      const m = h.match(/^Bearer\s+(.+)$/i);
+      token = m?.[1];
+    }
+    if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const { data } = await supabaseAdmin.auth.getUser(token);
+    const userId = data.user?.id;
+    if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    
+    let listing;
+    try {
+      listing = await Promise.race([
+        withRetry(() => prisma.listing.findUnique({
+          where: { id },
+          include: { images: { orderBy: { sortOrder: "asc" } } }
+        })),
+        timeout(5000)
+      ]) as any;
+    } catch (dbError) {
+      console.error("Prisma findUnique failed, attempting Supabase fallback:", dbError);
+      // Supabase Fallback
+      const { data, error } = await supabaseAdmin
+        .from('Listing')
+        .select('*, images:ListingImage(*)')
+        .eq('id', id)
+        .single();
+      
+      if (error || !data) {
+        console.error("Supabase fallback failed or not found:", error);
+        throw dbError; // Throw original error if fallback fails
+      }
+      
+      listing = data;
+      // Fix images sort
+      if (listing.images && Array.isArray(listing.images)) {
+        listing.images.sort((a: any, b: any) => (a.sortOrder || 0) - (b.sortOrder || 0));
+      }
+    }
+    
+    if (!listing || listing.userId !== userId) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    const images = await Promise.all(listing.images.map(async (img: any) => ({
+      id: img.id,
+      path: img.url,
+      url: (await createSignedUrl(img.url)) ?? ""
+    })));
+    return NextResponse.json({ listing: { ...listing, images } });
+  } catch (err: any) {
+    console.error("GET Listing Error:", err);
+    return NextResponse.json({ error: "Server error", details: String(err?.message ?? err) }, { status: 500 });
   }
-  if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const { data } = await supabaseAdmin.auth.getUser(token);
-  const userId = data.user?.id;
-  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  
-  const listing = await Promise.race([
-    withRetry(() => prisma.listing.findUnique({
-      where: { id },
-      include: { images: { orderBy: { sortOrder: "asc" } } }
-    })),
-    timeout(5000)
-  ]) as any;
-  
-  if (!listing || listing.userId !== userId) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  const images = await Promise.all(listing.images.map(async (img: any) => ({
-    id: img.id,
-    path: img.url,
-    url: (await createSignedUrl(img.url)) ?? ""
-  })));
-  return NextResponse.json({ listing: { ...listing, images } });
 }
 
 export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {

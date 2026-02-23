@@ -29,10 +29,10 @@ export async function POST(req: Request) {
             create: { id: userId, email: emailCreate, name: name ?? undefined, username: username ?? undefined, phone: phone ?? undefined }
           });
         }, 3, 1000),
-        timeout(15000)
+        timeout(5000)
       ]);
     } catch (dbError) {
-      console.warn("Prisma sync-user failed/timed out (15s), attempting Supabase fallback:", dbError);
+      console.warn("Prisma sync-user failed/timed out (5s), attempting Supabase fallback:", dbError);
       
       // Fallback to Supabase Admin
       const { data: existingUser } = await supabaseAdmin.from('User').select('id').eq('id', userId).single();
