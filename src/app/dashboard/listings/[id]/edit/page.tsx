@@ -41,6 +41,13 @@ const BLOG_ICON_CATEGORIES = [
   }
 ];
 
+const INDOOR_OPTIONS = [
+  "Alarm System","Balcony","Basement","Drivers Room","Ensuite","Bar","Terrace","Maids Room","Library","Air-Conditioning","Attic","CCTV","Broadband Internet","Cable","Built-in Wardrobes","Central Air","Ducted Cooling","Entertainment Room","Fire Alarm","Fireplace","Floorboards","Gym","Jacuzzi","Lounge","Pay TV Access","Powder Room","Sauna","Smoke Detector","Hot Shower","WIFI","Pets Allowed","Storage Room","Study Room"
+];
+const OUTDOOR_OPTIONS = [
+  "Badminton Court","Carport","Courtyard","Fully Fenced","Garage","Helipad","Jogging Path","Open Car Spaces","Secure Parking","Parks","Shower Rooms","Sport Facility","Swimming Pool","Club House","Tennis Court","Function Area","24-Hour Security","Balcony","Playground","Basketball Court","Garden","Gazebo","Jacuzzi","Landscape Garden","Multi Purpose Lawn","Parking Lot","Remote Garden","Volley Ball Court","Open Space","Commercial Stores"
+];
+
 function renderInlineFormatting(text: string) {
   if (typeof text !== "string") return text;
   if (text.trim() === "---") {
@@ -208,12 +215,7 @@ function EditListingPageContent({ params }: { params: Promise<{ id: string }> })
   const [seoTitle, setSeoTitle] = useState("");
   const [seoDescription, setSeoDescription] = useState("");
   const [seoKeyword, setSeoKeyword] = useState("");
-  const INDOOR_OPTIONS = [
-    "Alarm System","Balcony","Basement","Drivers Room","Ensuite","Bar","Terrace","Maids Room","Library","Air-Conditioning","Attic","CCTV","Broadband Internet","Cable","Built-in Wardrobes","Central Air","Ducted Cooling","Entertainment Room","Fire Alarm","Fireplace","Floorboards","Gym","Jacuzzi","Lounge","Pay TV Access","Powder Room","Sauna","Smoke Detector","Hot Shower","WIFI","Pets Allowed","Storage Room","Study Room"
-  ];
-  const OUTDOOR_OPTIONS = [
-    "Badminton Court","Carport","Courtyard","Fully Fenced","Garage","Helipad","Jogging Path","Open Car Spaces","Secure Parking","Parks","Shower Rooms","Sport Facility","Swimming Pool","Club House","Tennis Court","Function Area","24-Hour Security","Balcony","Playground","Basketball Court","Garden","Gazebo","Jacuzzi","Landscape Garden","Multi Purpose Lawn","Parking Lot","Remote Garden","Volley Ball Court","Open Space","Commercial Stores"
-  ];
+  
   const [form, setForm] = useState({
     title: "", description: "", price: 0, address: "", city: "", state: "", country: "",
     bedrooms: 0, bathrooms: 0, floorArea: 0, lotArea: 0, parking: 0, owner: "", developer: "", status: "For Rent", type: "Condominium", published: true, industrySubtype: "", commercialSubtype: "",

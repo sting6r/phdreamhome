@@ -94,7 +94,7 @@ export async function POST(req: Request) {
   try {
     const base = data.title.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").replace(/-{2,}/g, "-");
     const uniq = `${base || "listing"}-${Date.now().toString(36)}`;
-    let created;
+    let created: any;
     try {
       created = await Promise.race([
         withRetry(() => prisma.listing.create({
