@@ -130,6 +130,20 @@ export function parseBucketSpec(p: string) {
   return { bucketName: bucket, objectPath: p };
 }
 
+export function createPublicUrl(path: string) {
+  if (!path) return null;
+  if ((path.startsWith("http://") || path.startsWith("https://")) && !path.includes("/storage/v1/object/")) return path;
+
+  const { bucketName, objectPath } = parseBucketSpec(path);
+  try {
+    const { data } = supabasePublic.storage.from(bucketName).getPublicUrl(objectPath);
+    return data.publicUrl || null;
+  } catch (error) {
+    console.error("Error getting public URL:", error);
+    return null;
+  }
+}
+
 export async function createSignedUrl(path: string, expires = Number(process.env.SUPABASE_SIGNED_URL_EXPIRES || 604800)) {
   if (!path) return null;
   if ((path.startsWith("http://") || path.startsWith("https://")) && !path.includes("/storage/v1/object/")) return path;

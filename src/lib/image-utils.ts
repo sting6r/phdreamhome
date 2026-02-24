@@ -1,7 +1,8 @@
-import { safeUrl } from "./supabase";
+import { safeUrl, bucketProfile } from "./supabase";
 
 /**
  * Returns a proxy URL for images that might fail in Next.js Image Optimization
+ * (like signed Supabase URLs or external URLs with complex parameters)
  * (like signed Supabase URLs or external URLs with complex parameters)
  */
 export function getProxyImageUrl(url: string | null | undefined): string {
@@ -23,6 +24,13 @@ export function getProxyImageUrl(url: string | null | undefined): string {
     // Use the configured Supabase URL
     const baseUrl = safeUrl.replace(/\/+$/, "");
     return `${baseUrl}/storage/v1/object/public/images/${path}`;
+  }
+
+  // Handle profile bucket paths directly
+  if (url.startsWith(`${bucketProfile}:`)) {
+    const path = url.slice(bucketProfile.length + 1).replace(/^\/+/, "");
+    const baseUrl = safeUrl.replace(/\/+$/, "");
+    return `${baseUrl}/storage/v1/object/public/${bucketProfile}/${path}`;
   }
   
   // If it's a Supabase URL or absolute external URL, use our proxy

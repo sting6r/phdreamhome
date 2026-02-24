@@ -10,8 +10,10 @@ from dotenv import load_dotenv
 
 # Import the logic from the previous script 
 from agent import get_ai_response
+from pathlib import Path
 
-load_dotenv()
+env_path = Path(__file__).parent.parent / '.env'
+load_dotenv(dotenv_path=env_path)
 
 app = FastAPI(title="Real Estate AI API") 
 

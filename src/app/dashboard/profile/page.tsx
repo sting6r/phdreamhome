@@ -169,7 +169,11 @@ export default function ProfilePage() {
     const blob: Blob | null = await new Promise(res => c.toBlob(b => res(b), "image/png", 0.92));
     if (!blob) return;
     const file = new File([blob], `avatar-${Date.now()}.png`, { type: "image/png" });
-    const fd = new FormData(); fd.append("files", file);
+    const fd = new FormData(); 
+    fd.append("files", file);
+    if (form.name) {
+      fd.append("profileName", form.name);
+    }
     
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 30000);

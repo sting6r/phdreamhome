@@ -236,6 +236,7 @@ export default function ContactAgentCard({
                   src={getProxyImageUrl(agent.imageUrl)} 
                   alt={agent.name || "Agent"} 
                   fill 
+                  unoptimized
                   className="object-cover" 
                   onError={() => {
                     console.error("ContactAgentCard: Agent image failed to load:", agent.imageUrl);

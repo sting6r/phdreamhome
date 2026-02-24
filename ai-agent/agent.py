@@ -13,8 +13,11 @@ from typing import TypedDict, Annotated, List, Sequence
 from langchain_core.messages import BaseMessage
 from dotenv import load_dotenv
 
+from pathlib import Path
+
 # 1. Configuration
-load_dotenv()
+env_path = Path(__file__).parent.parent / '.env'
+load_dotenv(dotenv_path=env_path)
 
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 if GROQ_API_KEY:

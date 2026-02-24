@@ -81,11 +81,8 @@ function HomePageContent() {
     
     const loadData = async () => {
       try {
-        const { data: sess } = await supabase.auth.getSession();
-        const hasSession = Boolean(sess?.session);
-        const [listingsData, privateProfile, publicProfile] = await Promise.all([
+        const [listingsData, publicProfile] = await Promise.all([
           fetcher("/api/public-listings", controller.signal),
-          hasSession ? fetcher("/api/profile", controller.signal) : Promise.resolve(null),
           fetcher("/api/public-profile", controller.signal)
         ]);
         
@@ -94,9 +91,8 @@ function HomePageContent() {
         if (listingsData) {
           setListings(listingsData.listings ?? []);
         }
-        const chosenProfile = privateProfile || publicProfile || null;
-        if (chosenProfile) {
-          setProfile(chosenProfile);
+        if (publicProfile) {
+          setProfile(publicProfile);
         }
         setIsLoading(false);
         dataInitialized.current = true;
@@ -460,15 +456,28 @@ function HomePageContent() {
     <div className="space-y-10">
       <div className="container pt-4">
         <div className="relative h-[25vh] sm:h-[60vh] rounded-md overflow-hidden">
-          <div
-            className="absolute inset-0 bg-center bg-no-repeat bg-contain sm:bg-cover"
-            style={{ backgroundImage: baseHero ? `url(${getProxyImageUrl(baseHero)})` : undefined }}
-          />
+          <div className="absolute inset-0">
+            {baseHero && (
+              <Image
+                src={getProxyImageUrl(baseHero)}
+                alt="Hero Background"
+                fill
+                priority
+                className="object-contain sm:object-cover"
+                sizes="100vw"
+              />
+            )}
+          </div>
           {fadeHero && (
-            <div
-              className={`absolute inset-0 bg-center bg-no-repeat bg-contain sm:bg-cover transition-opacity duration-700 ${isFading ? "opacity-100" : "opacity-0"}`}
-              style={{ backgroundImage: `url(${getProxyImageUrl(fadeHero)})` }}
-            />
+            <div className={`absolute inset-0 transition-opacity duration-700 ${isFading ? "opacity-100" : "opacity-0"}`}>
+              <Image
+                src={getProxyImageUrl(fadeHero)}
+                alt="Hero Background Fade"
+                fill
+                className="object-contain sm:object-cover"
+                sizes="100vw"
+              />
+            </div>
           )}
           <div className="absolute inset-0 bg-black/20" />
           {featuredHeroItems.length ? (
@@ -506,19 +515,24 @@ function HomePageContent() {
                     src={profile && profile.imageUrl ? getProxyImageUrl(profile.imageUrl) : "/karen.png"} 
                     alt={(profile?.name || "Agent")} 
                     fill 
+                    priority
+                    unoptimized
                     sizes="(min-width: 640px) 11rem, 10rem" 
                     className="object-cover"
                     onLoadingComplete={(img) => {
                       try {
                         if ((img?.naturalWidth ?? 0) <= 1 || (img?.naturalHeight ?? 0) <= 1) {
-                          if (profile?.imageUrl) {
-                            setProfile({ ...(profile as any), imageUrl: null });
+                          // Only fallback if we have a custom image URL that failed to render properly
+                          if (profile?.imageUrl && !profile.imageUrl.includes("/karen.png")) {
+                            console.warn("Profile image loaded but has invalid dimensions:", profile.imageUrl);
+                            // Don't immediately clear it, just warn
                           }
                         }
                       } catch {}
                     }}
                     onError={() => {
                       if (profile?.imageUrl) {
+                        console.warn("Profile image failed to load:", profile.imageUrl);
                         setProfile({ ...(profile as any), imageUrl: null });
                       }
                     }}

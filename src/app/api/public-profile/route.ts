@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma, withRetry } from "@lib/prisma";
-import { createSignedUrl, supabaseAdmin } from "@lib/supabase";
+import { createPublicUrl, createSignedUrl, supabaseAdmin } from "@lib/supabase";
 
 export const runtime = "nodejs";
 export async function GET(req: Request) {
@@ -34,11 +34,28 @@ export async function GET(req: Request) {
             timeout(15000)
           ]) as any;
         } else {
+          // Default to specific agent if no email provided
+          const pinnedEmail = "deladonesadlawan@gmail.com";
+          
           user = await Promise.race([
             (async () => {
+              // Try to fetch the pinned agent first
+              let foundUser = await withRetry(() => prisma.user.findUnique({ 
+                where: { email: pinnedEmail },
+                select: {
+                  id: true, name: true, username: true, email: true, address: true, 
+                  phone: true, image: true, emailVerified: true, role: true, 
+                  licenseNo: true, dhsudAccredNo: true, youtube: true
+                }
+              }), 3, 1000);
+
+              if (foundUser && foundUser.image) {
+                return foundUser;
+              }
+
               // Prioritize users with both email and image (likely the main agent profile)
               // If none, fallback to any user
-              let foundUser = await withRetry(() => prisma.user.findFirst({ 
+              foundUser = await withRetry(() => prisma.user.findFirst({ 
                 where: {
                   AND: [
                     { email: { not: null } },
@@ -102,13 +119,30 @@ export async function GET(req: Request) {
         userData = res.data;
         error = res.error;
       } else {
-        const res = await supabaseAdmin
+        // Try to find a user with image and email first (mimicking Prisma logic)
+        const { data: users } = await supabaseAdmin
           .from('User')
           .select('*')
-          .limit(1)
-          .single();
-        userData = res.data;
-        error = res.error;
+          .neq('email', null)
+          .neq('email', '')
+          .neq('image', null)
+          .neq('image', '')
+          .order('createdAt', { ascending: false })
+          .limit(1);
+
+        if (users && users.length > 0) {
+          userData = users[0];
+        } else {
+          // Fallback to any user
+          const res = await supabaseAdmin
+            .from('User')
+            .select('*')
+            .order('createdAt', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          userData = res.data;
+          error = res.error;
+        }
       }
         
       if (error) {
@@ -129,7 +163,7 @@ export async function GET(req: Request) {
 
     if (!user) return NextResponse.json({ profile: null });
     
-    const signed = user.image ? await createSignedUrl(user.image) : null;
+    const signed = user.image ? createPublicUrl(user.image) : null;
 
     return NextResponse.json({
       id: user.id,

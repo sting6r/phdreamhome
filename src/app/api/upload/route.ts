@@ -14,13 +14,14 @@ export async function POST(req: Request) {
   const files = form.getAll("files") as File[];
   const propertyName = (form.get("propertyName") as string || "").trim();
   const blogTitle = (form.get("blogTitle") as string || "").trim();
+  const profileName = (form.get("profileName") as string || "").trim();
 
   if (!files.length) return NextResponse.json({ error: "No files" }, { status: 400 });
   const paths: string[] = [];
   const signedUrls: (string | null)[] = [];
   for (const file of files) {
     const buf = Buffer.from(await file.arrayBuffer());
-    const type = (file as any).type || "application/octet-stream";
+    const type = (file.type || "application/octet-stream");
     const name = `${Date.now()}_${randomBytes(6).toString("hex")}`;
     const ext = file.name.includes(".") ? file.name.split(".").pop() : "bin";
     
@@ -34,6 +35,11 @@ export async function POST(req: Request) {
       }
     } else if (scope === "blog" && blogTitle) {
       const folder = blogTitle.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+      if (folder) {
+        objectPath = `${folder}/${name}.${ext}`;
+      }
+    } else if (scope === "profile" && profileName) {
+      const folder = profileName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
       if (folder) {
         objectPath = `${folder}/${name}.${ext}`;
       }
@@ -51,7 +57,7 @@ export async function POST(req: Request) {
     if (scope === "profile" || (isVideo && !scope) || scope === "blog") {
       try {
         await supabaseAdmin.storage.createBucket(targetBucket, {
-          public: false,
+          public: scope === "profile" ? true : false,
           fileSizeLimit: isVideo ? "52428800" : "5242880", // 50MB for video, 5MB for image
           allowedMimeTypes: isVideo ? ["video/*"] : ["image/*"]
         });
