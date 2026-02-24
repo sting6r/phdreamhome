@@ -33,7 +33,7 @@ export function getProxyImageUrl(url: string | null | undefined): string {
     return `${baseUrl}/storage/v1/object/public/${bucketProfile}/${path}`;
   }
   
-  // If it's a Supabase URL or absolute external URL, use our proxy
-  // This bypasses Next.js image optimization timeout/failure issues
-  return `/api/image/proxy?path=${encodeURIComponent(url)}`;
+  // If it's a Supabase URL or absolute external URL, return it directly
+  // We are using unoptimized={true} in Image components now, so we don't need the proxy
+  return url;
 }

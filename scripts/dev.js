@@ -29,9 +29,9 @@ python.on('error', (err) => {
 });
 
 // Start Next.js
-console.log(`${colors.blue}Starting Next.js on port 3000...${colors.reset}`);
+console.log(`${colors.blue}Starting Next.js on port 3001...${colors.reset}`);
 const nextBin = path.join(__dirname, '..', 'node_modules', 'next', 'dist', 'bin', 'next');
-const nextArgs = ['dev', '-p', '3000'];
+const nextArgs = ['dev', '-p', '3001'];
 
 const next = spawn(process.execPath, [nextBin, ...nextArgs], { 
   stdio: 'inherit'

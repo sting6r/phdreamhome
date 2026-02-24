@@ -2647,13 +2647,12 @@ export default function AIAgent() {
             >
               <div className="absolute inset-0 bg-gradient-to-tr from-purple-600/20 to-transparent" />
               <Image 
-                src={agentImageSrc} 
+                src="/cat.png"
                 alt="AI Assistant" 
                 width={56} 
                 height={56} 
                 draggable={false}
                 className="h-full w-full object-cover transition-transform group-hover:scale-110 select-none pointer-events-none" 
-                unoptimized
               />
               <div className="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500 border border-white">
                 <div className="h-1.5 w-1.5 rounded-full bg-white animate-pulse" />

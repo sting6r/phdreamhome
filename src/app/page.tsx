@@ -511,32 +511,31 @@ function HomePageContent() {
             <div className="relative p-3 sm:p-4 text-black">
               <div className="flex flex-col sm:flex-row items-center sm:items-center justify-center gap-3 sm:gap-6">
                 <div className="w-32 h-32 sm:w-44 sm:h-44 rounded-full overflow-hidden bg-transparent relative flex-shrink-0 sm:ml-4">
-                  <Image 
-                    src={profile && profile.imageUrl ? getProxyImageUrl(profile.imageUrl) : "/karen.png"} 
-                    alt={(profile?.name || "Agent")} 
-                    fill 
-                    priority
-                    unoptimized
-                    sizes="(min-width: 640px) 11rem, 10rem" 
-                    className="object-cover"
-                    onLoadingComplete={(img) => {
-                      try {
-                        if ((img?.naturalWidth ?? 0) <= 1 || (img?.naturalHeight ?? 0) <= 1) {
-                          // Only fallback if we have a custom image URL that failed to render properly
-                          if (profile?.imageUrl && !profile.imageUrl.includes("/karen.png")) {
+                  {profile && profile.imageUrl ? (
+                    <Image 
+                      src={getProxyImageUrl(profile.imageUrl)} 
+                      alt={(profile?.name || "Agent")} 
+                      fill 
+                      priority
+                      unoptimized
+                      sizes="(min-width: 640px) 11rem, 10rem" 
+                      className="object-cover"
+                      onLoadingComplete={(img) => {
+                        try {
+                          if ((img?.naturalWidth ?? 0) <= 1 || (img?.naturalHeight ?? 0) <= 1) {
                             console.warn("Profile image loaded but has invalid dimensions:", profile.imageUrl);
-                            // Don't immediately clear it, just warn
                           }
-                        }
-                      } catch {}
-                    }}
-                    onError={() => {
-                      if (profile?.imageUrl) {
+                        } catch {}
+                      }}
+                      onError={() => {
                         console.warn("Profile image failed to load:", profile.imageUrl);
-                        setProfile({ ...(profile as any), imageUrl: null });
-                      }
-                    }}
-                  />
+                      }}
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-slate-200 flex items-center justify-center">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-12 h-12 text-slate-400"><circle cx="12" cy="7" r="4"/><path d="M5 21a7 7 0 0 1 14 0"/></svg>
+                    </div>
+                  )}
                 </div>
                 <div className="space-y-1 text-center sm:text-left">
                   <div className="flex flex-col sm:flex-row items-center gap-2">
@@ -589,6 +588,7 @@ function HomePageContent() {
                     src={getProxyImageUrl(presellingImages[safePresellIndex])} 
                     alt="Preselling Property" 
                     fill 
+                    unoptimized
                     className="object-cover" 
                     onError={() => {
                       console.error("Home: Preselling image failed to load:", presellingImages[safePresellIndex]);
