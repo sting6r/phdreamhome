@@ -429,7 +429,14 @@ export default function NewListingPage() {
     try {
       const indoorTexts = Array.isArray((form as any).indoorFeatureTexts) ? ((form as any).indoorFeatureTexts as string[]).map(s => (s || "").trim()).filter(Boolean) : [];
       const outdoorTexts = Array.isArray((form as any).outdoorFeatureTexts) ? ((form as any).outdoorFeatureTexts as string[]).map(s => (s || "").trim()).filter(Boolean) : [];
-      const payload = { ...form, indoorFeatures: Array.from(new Set([...(form.indoorFeatures || []), ...indoorTexts])), outdoorFeatures: Array.from(new Set([...(form.outdoorFeatures || []), ...outdoorTexts])), images: ordered };
+      const validLandmarks = (form.landmarks || []).filter(l => l && l.trim().length > 0);
+      const payload = { 
+        ...form, 
+        indoorFeatures: Array.from(new Set([...(form.indoorFeatures || []), ...indoorTexts])), 
+        outdoorFeatures: Array.from(new Set([...(form.outdoorFeatures || []), ...outdoorTexts])), 
+        landmarks: validLandmarks,
+        images: images 
+      };
       (payload as any).seoTitle = seoTitle;
       (payload as any).seoDescription = seoDescription;
       (payload as any).seoKeyword = seoKeyword;

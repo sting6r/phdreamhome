@@ -358,10 +358,12 @@ function EditListingPageContent({ params }: { params: Promise<{ id: string }> })
     let ordered = [...images];
     const indoorTexts = form.indoorFeatureTexts.map(s => (s || "").trim()).filter(Boolean);
     const outdoorTexts = form.outdoorFeatureTexts.map(s => (s || "").trim()).filter(Boolean);
+    const validLandmarks = (form.landmarks || []).filter(l => l && l.trim().length > 0);
     const payload = { 
         ...form, 
         indoorFeatures: Array.from(new Set([...form.indoorFeatures, ...indoorTexts])),
         outdoorFeatures: Array.from(new Set([...form.outdoorFeatures, ...outdoorTexts])),
+        landmarks: validLandmarks,
         images: ordered, seoTitle, seoDescription, seoKeyword 
     };
     delete (payload as any).indoorFeatureTexts;
