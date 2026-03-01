@@ -682,6 +682,7 @@ function EditListingPageContent({ params }: { params: Promise<{ id: string }> })
                     <button
                       type="button"
                       className="px-3 py-1 rounded-md text-xs hover:bg-white/40 transition-colors"
+                      onMouseDown={(e) => e.preventDefault()}
                       onClick={() => applyTool("bold")}
                     >
                       B
@@ -689,6 +690,7 @@ function EditListingPageContent({ params }: { params: Promise<{ id: string }> })
                     <button
                       type="button"
                       className="px-3 py-1 rounded-md text-xs hover:bg-white/40 transition-colors"
+                      onMouseDown={(e) => e.preventDefault()}
                       onClick={() => applyTool("italic")}
                     >
                       /
@@ -697,6 +699,7 @@ function EditListingPageContent({ params }: { params: Promise<{ id: string }> })
                       type="button"
                       className="px-3 py-1 rounded-md text-xs hover:bg-white/40 transition-colors flex items-center justify-center"
                       aria-label="Insert separator"
+                      onMouseDown={(e) => e.preventDefault()}
                       onClick={() => applyTool("separator")}
                     >
                       <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
@@ -709,6 +712,7 @@ function EditListingPageContent({ params }: { params: Promise<{ id: string }> })
                       <button
                         type="button"
                         className="px-3 py-1 rounded-md text-xs hover:bg-white/40 transition-colors flex items-center gap-1"
+                        onMouseDown={(e) => e.preventDefault()}
                         onClick={() => setShowIconMenu(!showIconMenu)}
                         aria-label="Text icon menu"
                       >
@@ -724,6 +728,7 @@ function EditListingPageContent({ params }: { params: Promise<{ id: string }> })
                     <button
                       type="button"
                       className="px-3 py-1 rounded-md text-xs hover:bg-white/40 transition-colors"
+                      onMouseDown={(e) => e.preventDefault()}
                       onClick={() => applyTool("list")}
                     >
                       List
@@ -732,6 +737,7 @@ function EditListingPageContent({ params }: { params: Promise<{ id: string }> })
                       type="button"
                       className="px-3 py-1 rounded-md text-xs flex items-center gap-1 hover:bg-white/40 transition-colors"
                       aria-label="Insert link"
+                      onMouseDown={(e) => e.preventDefault()}
                       onClick={openLinkConfig}
                     >
                       <svg viewBox="0 0 24 24" className="w-3 h-3" aria-hidden="true">

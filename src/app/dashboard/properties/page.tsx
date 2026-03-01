@@ -62,9 +62,11 @@ const fetcher = async (u: string, { signal }: { signal?: AbortSignal } = {}) => 
 export default function PropertiesPage() {
   const swrCfg = { onError: (err: any) => { const msg = String(err?.message || ""); if (err?.name === "AbortError" || /abort/.test(msg)) return; } };
   const { data, mutate } = useSWR("/api/listings", fetcher, swrCfg);
-  const listings = data?.listings ?? [];
   const [mounted, setMounted] = useState(false);
   useEffect(() => { setMounted(true); }, []);
+  
+  // Ensure listings match server-side (empty) until mounted to prevent hydration mismatch from SWR cache
+  const listings = mounted ? (data?.listings ?? []) : [];
   const [openId, setOpenId] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
 

@@ -30,7 +30,7 @@ if "6543" in DB_URL:
 # 2. Initialize Pool and Model
 pool = ConnectionPool(DB_URL, min_size=1, max_size=10)
 default_model = ChatGroq(model="llama-3.3-70b-versatile", temperature=0.2)
-vision_model = ChatGroq(model="llama-3.2-11b-vision-preview", temperature=0.2)
+vision_model = ChatGroq(model="llama-3.3-70b-versatile", temperature=0.2)
 
 # Initialize the table at startup
 def init_db():
