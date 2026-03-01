@@ -14,6 +14,7 @@ const nextConfig = {
       { protocol: "https", hostname: "lh3.googleusercontent.com", pathname: "/**" }
     ]
   },
+  output: 'standalone',
   serverExternalPackages: ["@supabase/supabase-js"],
   experimental: {
     serverActions: {
