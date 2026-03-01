@@ -18,6 +18,9 @@ RUN npm run build
 
 # Stage 3: Production image
 FROM node:20-alpine AS runner
+# Install runtime dependencies for Prisma
+RUN apk add --no-cache openssl libc6-compat
+
 WORKDIR /app
 ENV NODE_ENV=production
 
