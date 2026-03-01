@@ -15,6 +15,11 @@ const nextConfig = {
     ]
   },
   serverExternalPackages: ["@supabase/supabase-js"],
+  experimental: {
+    serverActions: {
+      bodySizeLimit: '50mb',
+    },
+  },
   async headers() {
     return [
       {
