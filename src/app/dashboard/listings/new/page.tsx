@@ -598,9 +598,9 @@ export default function NewListingPage() {
             <div id="tools-container-anchor" className="w-full relative mb-1">
               <div
                 id="tools-container"
-                className={`w-full bg-[#EFDCEC] transition-all z-20 ${
+                className={`w-full bg-[#EFDCEC] transition-all z-40 ${
                   toolsLocked
-                    ? "fixed top-0 left-0 right-0 shadow-md border-b"
+                    ? "fixed top-[60px] left-0 right-0 shadow-md border-b"
                     : "relative border rounded-md shadow-sm"
                 }`}
                 style={
@@ -608,7 +608,7 @@ export default function NewListingPage() {
                     ? {
                         left: toolsBox.left,
                         width: toolsBox.width,
-                        top: 0,
+                        top: 60,
                       }
                     : {}
                 }
