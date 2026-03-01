@@ -596,7 +596,6 @@ export default function NewListingPage() {
           </div>
           <div><label className="label">Property Developer</label><input className="input" placeholder="e.g., Ayala Land" value={form.developer} onChange={e=>setForm({...form, developer: e.target.value})} /></div>
           <div className="sm:col-span-2">
-            <label className="label">Description</label>
             <div id="tools-container-anchor" className="w-full relative mb-1">
               <div
                 id="tools-container"
@@ -757,6 +756,7 @@ export default function NewListingPage() {
               )}
               </div>
             </div>
+            <label className="label">Description</label>
             <textarea
               ref={descRef}
               suppressHydrationWarning
