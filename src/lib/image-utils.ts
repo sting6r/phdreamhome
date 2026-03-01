@@ -1,4 +1,4 @@
-import { safeUrl, bucketProfile, bucketBlogImages, bucketBlogVideos, bucketVideos } from "./supabase";
+import { safeUrl, bucketProfile, bucketBlogImages } from "./supabase";
 
 /**
  * Returns a proxy URL for images that might fail in Next.js Image Optimization
@@ -16,41 +16,27 @@ export function getProxyImageUrl(url: string | null | undefined): string {
     return url;
   }
   
-  const baseUrl = safeUrl.replace(/\/+$/, "");
-
   // Handle 'images' bucket paths directly since it is a public bucket
   // This bypasses the proxy which might fail due to authentication/key issues
   if (url.startsWith("images:")) {
     const path = url.slice(7).replace(/^\/+/, ""); // remove 'images:' and leading slashes
+    // Use the configured Supabase URL
+    const baseUrl = safeUrl.replace(/\/+$/, "");
     return `${baseUrl}/storage/v1/object/public/images/${path}`;
   }
 
   // Handle profile bucket paths directly
   if (url.startsWith(`${bucketProfile}:`)) {
     const path = url.slice(bucketProfile.length + 1).replace(/^\/+/, "");
-    const encodedBucket = encodeURIComponent(bucketProfile);
-    return `${baseUrl}/storage/v1/object/public/${encodedBucket}/${path}`;
+    const baseUrl = safeUrl.replace(/\/+$/, "");
+    return `${baseUrl}/storage/v1/object/public/${encodeURIComponent(bucketProfile)}/${path}`;
   }
 
-  // Handle blog images bucket
+  // Handle blog images bucket paths directly
   if (url.startsWith(`${bucketBlogImages}:`)) {
     const path = url.slice(bucketBlogImages.length + 1).replace(/^\/+/, "");
-    const encodedBucket = encodeURIComponent(bucketBlogImages);
-    return `${baseUrl}/storage/v1/object/public/${encodedBucket}/${path}`;
-  }
-
-  // Handle blog videos bucket
-  if (url.startsWith(`${bucketBlogVideos}:`)) {
-    const path = url.slice(bucketBlogVideos.length + 1).replace(/^\/+/, "");
-    const encodedBucket = encodeURIComponent(bucketBlogVideos);
-    return `${baseUrl}/storage/v1/object/public/${encodedBucket}/${path}`;
-  }
-
-  // Handle videos bucket
-  if (url.startsWith(`${bucketVideos}:`)) {
-    const path = url.slice(bucketVideos.length + 1).replace(/^\/+/, "");
-    const encodedBucket = encodeURIComponent(bucketVideos);
-    return `${baseUrl}/storage/v1/object/public/${encodedBucket}/${path}`;
+    const baseUrl = safeUrl.replace(/\/+$/, "");
+    return `${baseUrl}/storage/v1/object/public/${encodeURIComponent(bucketBlogImages)}/${path}`;
   }
   
   // If it's a Supabase URL or absolute external URL, return it directly
