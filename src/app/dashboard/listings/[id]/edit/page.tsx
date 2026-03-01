@@ -464,7 +464,7 @@ function EditListingPageContent({ params }: { params: Promise<{ id: string }> })
       if (!anchor || !container) return;
 
       const rect = anchor.getBoundingClientRect();
-      const shouldLock = rect.top <= 0;
+      const shouldLock = rect.top <= 60;
 
       if (shouldLock !== toolsLockedRef.current) {
         setToolsLocked(shouldLock);
@@ -490,6 +490,7 @@ function EditListingPageContent({ params }: { params: Promise<{ id: string }> })
 
     window.addEventListener("scroll", handleScroll, { passive: true });
     window.addEventListener("resize", handleResize);
+    handleScroll();
     return () => {
       window.removeEventListener("scroll", handleScroll);
       window.removeEventListener("resize", handleResize);

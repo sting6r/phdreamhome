@@ -250,6 +250,7 @@ export default function NewListingPage() {
     window.addEventListener("scroll", handleScroll, { passive: true } as any);
     window.addEventListener("resize", handleResize, { passive: true } as any);
     measureToolsBox();
+    handleScroll();
 
     return () => {
       window.removeEventListener("scroll", handleScroll);
