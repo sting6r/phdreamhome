@@ -13,6 +13,7 @@ type MediaItem = {
   title?: string;
   subtitle?: string;
   description?: string;
+  sortOrder?: number;
 };
 
 function renderInlineFormatting(text: string) {
@@ -977,8 +978,9 @@ export default function EditBlogPage({ params }: { params: Promise<{ id: string 
           published: typeof m.published === "boolean" ? m.published : true,
           title: typeof m.title === "string" ? m.title : "",
           subtitle: typeof m.subtitle === "string" ? m.subtitle : "",
-          description: typeof m.description === "string" ? m.description : ""
-        }));
+          description: typeof m.description === "string" ? m.description : "",
+          sortOrder: typeof m.sortOrder === "number" ? m.sortOrder : 0
+        })).sort((a: MediaItem, b: MediaItem) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
 
         const usedMediaIndices = new Set<number>();
         const newImageAreas: { index: number; position: "above" | "below" }[] = [];
@@ -986,42 +988,23 @@ export default function EditBlogPage({ params }: { params: Promise<{ id: string 
         const newImageUploads: { index: number; position: "above" | "below"; path: string; url: string | null }[] = [];
         const newVideoUploads: { index: number; position: "above" | "below"; path: string; url: string | null }[] = [];
 
-        // Try to reconstruct from metadata first
+        // Try to reconstruct from text tags first (more robust against block changes)
         let reconstructed = false;
-        const metadataImages = mediaItems.filter(m => m.type === "image" && m.title && m.subtitle && !isNaN(Number(m.title)));
-        const metadataVideos = mediaItems.filter(m => m.type === "video" && m.title && m.subtitle && !isNaN(Number(m.title)));
+        
+        parts.forEach((part: string, idx: number) => {
+          const lines = part.split("\n");
+          let textStarted = false;
 
-        if (metadataImages.length > 0 || metadataVideos.length > 0) {
-          mediaItems.forEach((m, i) => {
-            const idx = Number(m.title);
-            const pos = m.subtitle as "above" | "below";
-            if (!isNaN(idx) && (pos === "above" || pos === "below")) {
-              usedMediaIndices.add(i);
-              if (m.type === "image") {
-                newImageAreas.push({ index: idx, position: pos });
-                newImageUploads.push({ index: idx, position: pos, path: m.path, url: m.url });
-              } else {
-                newVideoAreas.push({ index: idx, position: pos });
-                newVideoUploads.push({ index: idx, position: pos, path: m.path, url: m.url });
-              }
-            }
-          });
-          if (usedMediaIndices.size > 0) reconstructed = true;
-        }
-
-        // Fallback to parsing description if metadata reconstruction didn't work
-        if (!reconstructed) {
-          parts.forEach((part: string, idx: number) => {
-            const lines = part.split("\n");
-            let textStarted = false;
-
-            for (const line of lines) {
-              const trimmed = line.trim();
-              if (trimmed.startsWith("[image:") || trimmed.startsWith("[video:")) {
-                const match = trimmed.match(/\[(image|video):(\d+)\]/);
-                if (match) {
-                  const type = match[1];
-                  const mIdx = parseInt(match[2], 10);
+          for (const line of lines) {
+            const trimmed = line.trim();
+            if (trimmed.startsWith("[image:") || trimmed.startsWith("[video:")) {
+              const match = trimmed.match(/\[(image|video):(\d+)\]/);
+              if (match) {
+                const type = match[1];
+                const mIdx = parseInt(match[2], 10);
+                // Ensure index is valid
+                if (mIdx >= 0 && mIdx < mediaItems.length) {
+                  reconstructed = true;
                   usedMediaIndices.add(mIdx);
                   const item = mediaItems[mIdx];
                   if (item) {
@@ -1035,11 +1018,34 @@ export default function EditBlogPage({ params }: { params: Promise<{ id: string 
                     }
                   }
                 }
-              } else if (trimmed && !trimmed.startsWith("#") && !trimmed.startsWith("---")) {
-                textStarted = true;
               }
+            } else if (trimmed && !trimmed.startsWith("#") && !trimmed.startsWith("---")) {
+              textStarted = true;
             }
-          });
+          }
+        });
+
+        // Fallback to metadata if no tags found (legacy content)
+        if (!reconstructed) {
+          const metadataImages = mediaItems.filter(m => m.type === "image" && m.title && m.subtitle && !isNaN(Number(m.title)));
+          const metadataVideos = mediaItems.filter(m => m.type === "video" && m.title && m.subtitle && !isNaN(Number(m.title)));
+
+          if (metadataImages.length > 0 || metadataVideos.length > 0) {
+            mediaItems.forEach((m, i) => {
+              const idx = Number(m.title);
+              const pos = m.subtitle as "above" | "below";
+              if (!isNaN(idx) && (pos === "above" || pos === "below")) {
+                usedMediaIndices.add(i);
+                if (m.type === "image") {
+                  newImageAreas.push({ index: idx, position: pos });
+                  newImageUploads.push({ index: idx, position: pos, path: m.path, url: m.url });
+                } else {
+                  newVideoAreas.push({ index: idx, position: pos });
+                  newVideoUploads.push({ index: idx, position: pos, path: m.path, url: m.url });
+                }
+              }
+            });
+          }
         }
 
         parts.forEach((part: string, idx: number) => {
