@@ -1,0 +1,5 @@
+[33mcommit f2ca530061b63853bae309f6d0ba4b8f6b3287d5[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/phdreamhome[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m, [m[1;32mphdreamhome[m[33m)[m
+Author: sting6r <sting6r@users.noreply.github.com>
+Date:   Mon Mar 2 03:26:42 2026 +0800
+
+    fix_docker_prisma

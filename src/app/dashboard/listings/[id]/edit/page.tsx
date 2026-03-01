@@ -659,6 +659,7 @@ function EditListingPageContent({ params }: { params: Promise<{ id: string }> })
           </div>
           <div><label className="label">Property Developer</label><input className="input" value={form.developer} onChange={e=>setForm({...form, developer: e.target.value})} /></div>
           <div className="sm:col-span-2">
+            <label className="label">Description</label>
             <div id="tools-container-anchor" className="w-full relative mb-1">
               <div
                 id="tools-container"
@@ -829,7 +830,6 @@ function EditListingPageContent({ params }: { params: Promise<{ id: string }> })
                   </div>
               )}
               </div>
-            <label className="label">Description</label>
             <textarea
               ref={descRef}
               suppressHydrationWarning
