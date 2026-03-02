@@ -39,9 +39,24 @@ export function getProxyImageUrl(url: string | null | undefined): string {
     return `${baseUrl}/storage/v1/object/public/${encodeURIComponent(bucketBlogImages)}/${path}`;
   }
 
+  // Handle legacy blog images bucket paths (for existing content before rename)
+  if (url.startsWith("blog image:")) {
+    const path = url.slice(11).replace(/^\/+/, "");
+    const baseUrl = safeUrl.replace(/\/+$/, "");
+    // Map to the new bucket name
+    return `${baseUrl}/storage/v1/object/public/${encodeURIComponent(bucketBlogImages)}/${path}`;
+  }
+
   // Handle blog videos bucket paths directly
   if (url.startsWith(`${bucketBlogVideos}:`)) {
     const path = url.slice(bucketBlogVideos.length + 1).replace(/^\/+/, "");
+    const baseUrl = safeUrl.replace(/\/+$/, "");
+    return `${baseUrl}/storage/v1/object/public/${encodeURIComponent(bucketBlogVideos)}/${path}`;
+  }
+
+  // Handle legacy blog videos bucket paths
+  if (url.startsWith("blog video:")) {
+    const path = url.slice(11).replace(/^\/+/, "");
     const baseUrl = safeUrl.replace(/\/+$/, "");
     return `${baseUrl}/storage/v1/object/public/${encodeURIComponent(bucketBlogVideos)}/${path}`;
   }

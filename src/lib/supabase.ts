@@ -54,7 +54,7 @@ const service = clean(process.env.SUPABASE_SERVICE_ROLE_KEY) ??
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhjeXRzbWltYWVobG1ydmhyYmRhIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MDI2NDY2MCwiZXhwIjoyMDc1ODQwNjYwfQ.EwxGACi4ptZtmABK5WH4hTK5l4GaXK9Mm-9fxCP45ik";
 export const bucket = clean(process.env.SUPABASE_BUCKET) ?? "images";
 export const bucketVideos = clean(process.env.SUPABASE_BUCKET_VIDEOS) ?? "videos";
-export const bucketBlogImages = clean(process.env.SUPABASE_BUCKET_BLOG_IMAGES) ?? "blog image";
+export const bucketBlogImages = clean(process.env.SUPABASE_BUCKET_BLOG_IMAGES) ?? "blogimage";
 export const bucketBlogVideos = clean(process.env.SUPABASE_BUCKET_BLOG_VIDEOS) ?? "blogvideo";
 export const bucketProfile = clean(process.env.SUPABASE_BUCKET_PROFILE) ?? "profile";
 
