@@ -55,7 +55,7 @@ const service = clean(process.env.SUPABASE_SERVICE_ROLE_KEY) ??
 export const bucket = clean(process.env.SUPABASE_BUCKET) ?? "images";
 export const bucketVideos = clean(process.env.SUPABASE_BUCKET_VIDEOS) ?? "videos";
 export const bucketBlogImages = clean(process.env.SUPABASE_BUCKET_BLOG_IMAGES) ?? "blog image";
-export const bucketBlogVideos = clean(process.env.SUPABASE_BUCKET_BLOG_VIDEOS) ?? "blog video";
+export const bucketBlogVideos = clean(process.env.SUPABASE_BUCKET_BLOG_VIDEOS) ?? "blogvideo";
 export const bucketProfile = clean(process.env.SUPABASE_BUCKET_PROFILE) ?? "profile";
 
 // Legacy client for compatibility - try to avoid using this for auth in Next.js

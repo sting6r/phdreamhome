@@ -1,4 +1,4 @@
-import { safeUrl, bucketProfile, bucketBlogImages } from "./supabase";
+import { safeUrl, bucketProfile, bucketBlogImages, bucketBlogVideos } from "./supabase";
 
 /**
  * Returns a proxy URL for images that might fail in Next.js Image Optimization
@@ -37,6 +37,13 @@ export function getProxyImageUrl(url: string | null | undefined): string {
     const path = url.slice(bucketBlogImages.length + 1).replace(/^\/+/, "");
     const baseUrl = safeUrl.replace(/\/+$/, "");
     return `${baseUrl}/storage/v1/object/public/${encodeURIComponent(bucketBlogImages)}/${path}`;
+  }
+
+  // Handle blog videos bucket paths directly
+  if (url.startsWith(`${bucketBlogVideos}:`)) {
+    const path = url.slice(bucketBlogVideos.length + 1).replace(/^\/+/, "");
+    const baseUrl = safeUrl.replace(/\/+$/, "");
+    return `${baseUrl}/storage/v1/object/public/${encodeURIComponent(bucketBlogVideos)}/${path}`;
   }
   
   // If it's a Supabase URL or absolute external URL, return it directly
