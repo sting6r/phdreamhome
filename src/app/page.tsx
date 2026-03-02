@@ -336,7 +336,24 @@ function HomePageContent() {
         mapObjRef.current.on("zoomstart", () => { if (!isProgrammaticMoveRef.current) userHasInteractedRef.current = true; });
       }
       const missing = filteredListings.filter((l: any) => !geocodes[String(l.id || "")] );
+      
+      // Batch update for listings with DB coordinates
+      const dbCoords: Record<string, { lat: number; lon: number }> = {};
+      const needGeocoding: any[] = [];
+
       for (const l of missing) {
+        if (typeof l.latitude === 'number' && typeof l.longitude === 'number') {
+          dbCoords[String(l.id || "")] = { lat: l.latitude, lon: l.longitude };
+        } else {
+          needGeocoding.push(l);
+        }
+      }
+
+      if (Object.keys(dbCoords).length > 0) {
+        setGeocodes((prev) => ({ ...prev, ...dbCoords }));
+      }
+
+      for (const l of needGeocoding) {
         if (!alive) break;
         const g = await geocodeOne(l);
         if (g && alive) setGeocodes((prev) => ({ ...prev, [String(l.id || "")]: g }));

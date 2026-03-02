@@ -111,6 +111,8 @@ model Listing {
   parking            Int            @default(0)
   slug               String         @unique
   featuredPreselling Boolean        @default(false)
+  latitude           Float?
+  longitude          Float?
   commercialSubtype  String?
   industrySubtype    String?
   seoDescription     String?
