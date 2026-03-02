@@ -257,7 +257,7 @@ export default async function ListingPage({ params, searchParams }: { params: Pr
   });
   const mounted = true; // Server component, assume mounted for formatting
   const pricePhpText = mounted ? `Php ${Number(listing.price).toLocaleString("en-PH", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}` : "";
-  const locationText = [listing.address, listing.city, listing.state, listing.country].filter(Boolean).join("  ");
+  const locationText = [listing.address, listing.city, listing.state, listing.country].filter(Boolean).join(", ");
   const floorAreaText = Number(listing.floorArea) > 0 ? `${Number(listing.floorArea)} Sq.M.` : "N/A";
   const mapQuery = locationText || "Philippines";
   const mapUrl = `https://www.google.com/maps?q=${encodeURIComponent(mapQuery)}&hl=en&z=15&output=embed`;
