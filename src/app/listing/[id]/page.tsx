@@ -10,6 +10,7 @@ import SimilarCarousel from "@components/SimilarCarousel";
 import ContactAgentCard from "@components/ContactAgentCard";
 import PropertyCalculator from "@components/PropertyCalculator";
 import QuickLinksSelector from "@components/QuickLinksSelector";
+import FormattedText from "@components/FormattedText";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params;
@@ -367,7 +368,7 @@ export default async function ListingPage({ params, searchParams }: { params: Pr
             </div>
             <div className="mt-4">
               <div className="bg-[#223B55] text-white text-center font-semibold px-3 py-2">About {listing.title}</div>
-              <p className="text-sm mt-2 whitespace-pre-wrap">{listing.description}</p>
+              <FormattedText text={listing.description} className="text-sm mt-2 text-slate-800" />
             </div>
             <div className="mt-4">
               <div className="text-xs text-slate-500 mb-1">Property Type</div>
