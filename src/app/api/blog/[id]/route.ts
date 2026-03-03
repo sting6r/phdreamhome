@@ -189,13 +189,39 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const post = await withRetry(() => prisma.blogPost.findUnique({ where: { id }, include: { media: true } }));
   if (!post || post.userId !== userId) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  
   const paths: string[] = [];
   if (post.coverPath) paths.push(post.coverPath);
   for (const m of post.media) paths.push(m.path);
+  
+  const foldersToDelete = new Set<string>();
+
   for (const p of paths) {
     const { bucketName, objectPath } = parseBucketSpec(p);
+    // Delete the file itself
     await supabaseAdmin.storage.from(bucketName).remove([objectPath]);
+    
+    // Identify folder
+    if (objectPath.includes('/')) {
+        const folder = objectPath.split('/')[0];
+        foldersToDelete.add(`${bucketName}:${folder}`);
+    }
   }
+
+  // Clean up folders (orphans)
+  for (const item of foldersToDelete) {
+      const [bucket, folder] = item.split(':');
+      try {
+          const { data: files } = await supabaseAdmin.storage.from(bucket).list(folder);
+          if (files && files.length > 0) {
+              const filePaths = files.map(f => `${folder}/${f.name}`);
+              await supabaseAdmin.storage.from(bucket).remove(filePaths);
+          }
+      } catch (e) {
+          console.error(`Failed to clean folder ${folder} in ${bucket}:`, e);
+      }
+  }
+
   await withRetry(() => prisma.blogMedia.deleteMany({ where: { blogId: id } }));
   await withRetry(() => prisma.blogPost.delete({ where: { id } }));
   return NextResponse.json({ ok: true });
