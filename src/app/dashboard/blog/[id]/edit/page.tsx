@@ -1649,7 +1649,7 @@ export default function EditBlogPage({ params }: { params: Promise<{ id: string 
                             <div className="mb-1 text-[10px] text-slate-600">URL</div>
                             <input
                               type="text"
-                              className="w-full rounded-md border border-gray-300 bg-white px-2 py-1 text-xs text-gray-900"
+                              className="w-full rounded-md border border-gray-300 bg-gray-100 px-2 py-1 text-xs text-gray-900"
                               placeholder="https://example.com"
                               value={linkUrl}
                               onChange={e => setLinkUrl(e.target.value)}
@@ -1659,7 +1659,7 @@ export default function EditBlogPage({ params }: { params: Promise<{ id: string 
                             <div className="mb-1 text-[10px] text-slate-600">Link text</div>
                             <input
                               type="text"
-                              className="w-full rounded-md border border-gray-300 bg-white px-2 py-1 text-xs text-gray-900"
+                              className="w-full rounded-md border border-gray-300 bg-gray-100 px-2 py-1 text-xs text-gray-900"
                               placeholder="Link text"
                               value={linkText}
                               onChange={e => setLinkText(e.target.value)}
