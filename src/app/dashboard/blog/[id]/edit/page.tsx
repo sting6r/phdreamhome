@@ -1224,7 +1224,6 @@ export default function EditBlogPage({ params }: { params: Promise<{ id: string 
     });
     return merged
       .map(s => s.trim())
-      .filter(Boolean)
       .join("\n\n");
   }
 

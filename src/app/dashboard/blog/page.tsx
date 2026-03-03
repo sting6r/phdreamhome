@@ -881,7 +881,6 @@ export default function NewBlogPage() {
     });
     return merged
       .map(s => s.trim())
-      .filter(Boolean)
       .join("\n\n");
   }
 
