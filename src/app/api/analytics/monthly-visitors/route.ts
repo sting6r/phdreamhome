@@ -76,31 +76,27 @@ export async function GET() {
 
     const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
     
-    interface FormattedEntry {
-      name: string;
-      visitors: number;
-      monthIndex: number;
-    }
+    // Initialize full year data with 0s
+    const fullYearData = monthNames.map((name, index) => ({
+      name,
+      visitors: 0,
+      monthIndex: index
+    }));
     
-    // Safety check for response.rows
-    if (!response || !response.rows || response.rows.length === 0) {
-      console.warn("GA response has no rows. Returning empty array.");
-      return NextResponse.json([]);
+    // Fill with GA data if available
+    if (response && response.rows && response.rows.length > 0) {
+      response.rows.forEach((row: any) => {
+        const monthStr = row.dimensionValues?.[0]?.value || '01';
+        const monthIndex = parseInt(monthStr) - 1;
+        const visitors = parseInt(row.metricValues?.[0]?.value || '0');
+        
+        if (monthIndex >= 0 && monthIndex < 12) {
+          fullYearData[monthIndex].visitors = isNaN(visitors) ? 0 : visitors;
+        }
+      });
     }
 
-    const formattedData = ((response.rows.map((row: any) => {
-      const monthStr = row.dimensionValues?.[0]?.value || '01';
-      const monthIndex = parseInt(monthStr) - 1;
-      const visitors = parseInt(row.metricValues?.[0]?.value || '0');
-      
-      return {
-        name: monthNames[monthIndex] || monthStr,
-        visitors: isNaN(visitors) ? 0 : visitors,
-        monthIndex,
-      };
-    })) as FormattedEntry[]).sort((a, b) => a.monthIndex - b.monthIndex);
-
-    return NextResponse.json(formattedData);
+    return NextResponse.json(fullYearData);
   } catch (error: any) {
     console.error('Error fetching GA data:', error);
     
