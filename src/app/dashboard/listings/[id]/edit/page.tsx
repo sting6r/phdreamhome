@@ -514,7 +514,7 @@ function EditListingPageContent({ params }: { params: Promise<{ id: string }> })
 
     const start = textarea.selectionStart;
     const end = textarea.selectionEnd;
-    const text = form.description;
+    const text = form.description || "";
     const before = text.substring(0, start);
     const selected = text.substring(start, end);
     const after = text.substring(end);
@@ -538,7 +538,7 @@ function EditListingPageContent({ params }: { params: Promise<{ id: string }> })
       newCursorPos = start + sep.length;
     }
 
-    setForm({ ...form, description: newText });
+    setForm(prev => ({ ...prev, description: newText }));
     
     setTimeout(() => {
       textarea.focus();

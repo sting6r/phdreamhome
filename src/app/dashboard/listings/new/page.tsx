@@ -275,8 +275,8 @@ export default function NewListingPage() {
         newCursorPos = start + 2 + target.length + 2;
     } else if (tool === "italic") {
         const target = selected || "text";
-        next = value.slice(0, start) + `***${target}***` + value.slice(end);
-        newCursorPos = start + 3 + target.length + 3;
+        next = value.slice(0, start) + `_${target}_` + value.slice(end);
+        newCursorPos = start + 1 + target.length + 1;
     } else if (tool === "list") {
         if (start === end) {
             const lineStart = value.lastIndexOf("\n", start - 1) + 1;
