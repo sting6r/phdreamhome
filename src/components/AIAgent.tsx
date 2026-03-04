@@ -959,10 +959,17 @@ export default function AIAgent() {
                            chatInstance.setMessages([...chatInstance.messages, phoneMsg]);
                            return;
                          }
-                         if (lowerOpt === 'view listings' || lowerOpt === 'see properties') {
-                          router.push('/properties');
-                          return;
-                        }
+                         if (lowerOpt === 'view listings' || lowerOpt === 'see properties' || lowerOpt === 'view listing') {
+                           // Try to find a specific listing URL in the message content
+                           // We use a regex that excludes common trailing punctuation like ), ], or ,
+                           const listingMatch = text.match(/\/listing\/[^\s\)\],]+/);
+                           if (listingMatch) {
+                             router.push(listingMatch[0]);
+                           } else {
+                             router.push('/properties');
+                           }
+                           return;
+                         }
                         if (lowerOpt === 'email agent' || lowerOpt === 'email us') {
                           // Display only the email address in a styled div
                           const emailMsg = {
@@ -1346,7 +1353,7 @@ export default function AIAgent() {
             let listingUrl: string | null = null;
             const nextPart = text.split(/(!\[.*?\]\(.*?\)|\[.*?\]\(.*?\)|\[PROPERTY_DETAILS\][\s\S]*?\[\/PROPERTY_DETAILS\])/g)[index + 1];
             if (nextPart && nextPart.includes('/listing/')) {
-              const match = nextPart.match(/\/listing\/[^\s]+/);
+              const match = nextPart.match(/\/listing\/[^\s\)\],]+/);
               if (match) listingUrl = match[0];
             }
 
@@ -1467,7 +1474,7 @@ export default function AIAgent() {
           }
           
           if (part.includes('/listing/')) {
-            const match = part.match(/\/listing\/[^\s]+/);
+            const match = part.match(/\/listing\/[^\s\)\],]+/);
             const url = match ? match[0] : null;
             if (url) {
               const [before, after] = part.split(url);
