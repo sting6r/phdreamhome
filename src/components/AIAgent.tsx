@@ -996,8 +996,8 @@ export default function AIAgent() {
               }
             });
 
-            // Dynamic image for agent card, fallback to agentProfileImage or null
-            const agentImage = data.Image || agentProfileImage;
+            // Dynamic image for agent card, fallback to agentImageSrc or null
+            const agentImage = data.Image || agentImageSrc;
 
             return (
               <div key={index} className="my-3 bg-[#FDFCFE] border border-slate-100 rounded-2xl overflow-hidden shadow-sm text-slate-800 max-w-sm mx-auto sm:max-w-none">
