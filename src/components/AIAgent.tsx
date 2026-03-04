@@ -73,71 +73,8 @@ export default function AIAgent() {
   const [providerInfo, setProviderInfo] = useState<{ provider: string; model: string } | null>(null);
   const [showShareMenu, setShowShareMenu] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
-  const [agentProfileImage, setAgentProfileImage] = useState<string | null>(null);
 
-  const agentImageSrc = useMemo(() => 
-    agentProfileImage ? getProxyImageUrl(agentProfileImage) : "/cat.png",
-    [agentProfileImage]
-  );
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    async function fetchAgentProfile() {
-      const agentProfileController = new AbortController();
-      const agentProfileTimeoutId = setTimeout(() => agentProfileController.abort(), 30000);
-      try {
-        // Try to get from session storage first
-        const cacheKey = "agent-profile-data";
-        const cacheExpKey = "agent-profile-exp";
-        const now = Date.now();
-        const cached = typeof sessionStorage !== "undefined" ? sessionStorage.getItem(cacheKey) : null;
-        const exp = typeof sessionStorage !== "undefined" ? Number(sessionStorage.getItem(cacheExpKey) || 0) : 0;
-        
-        if (cached && exp > now) {
-           const data = JSON.parse(cached);
-           if (data && data.imageUrl) {
-             setAgentProfileImage(data.imageUrl);
-           }
-           clearTimeout(agentProfileTimeoutId);
-           return;
-        }
-
-        let res;
-        try {
-          res = await fetch('/api/public-profile', { signal: agentProfileController.signal });
-        } finally {
-          clearTimeout(agentProfileTimeoutId);
-        }
-        
-        if (res.ok) {
-          const text = await res.text();
-          let data;
-          try {
-            data = JSON.parse(text);
-          } catch (e) {
-            console.error("Agent profile parse error. Status:", res.status, "Body:", text.slice(0, 200));
-            return;
-          }
-          
-          // Cache the successful response for 5 minutes
-          if (typeof sessionStorage !== "undefined" && data) {
-            sessionStorage.setItem(cacheKey, JSON.stringify(data));
-            sessionStorage.setItem(cacheExpKey, String(now + 300000));
-          }
-
-          if (data && data.imageUrl) {
-            setAgentProfileImage(data.imageUrl);
-          }
-        }
-      } catch (error: any) {
-        if (error.name === 'AbortError') return;
-        console.error('Error fetching agent profile:', error);
-      } finally {
-        clearTimeout(agentProfileTimeoutId);
-      }
-    }
-    fetchAgentProfile();
-  }, []);
+  const agentImageSrc = "/cat.png";
 
   const handleShare = (platform: 'facebook' | 'twitter' | 'copy') => {
     const url = typeof window !== 'undefined' ? window.location.href : '';
