@@ -1069,6 +1069,9 @@ export default function AIAgent() {
                         unoptimized
                         onError={(e) => {
                           const target = e.target as any;
+                          if (agentImage !== 'image_url') {
+                            console.error("Agent image load failed:", agentImage);
+                          }
                           target.style.display = 'none';
                           target.parentElement.classList.add('flex', 'items-center', 'justify-center', 'bg-slate-100');
                         }}
@@ -1372,7 +1375,9 @@ export default function AIAgent() {
                       unoptimized
                       className="w-full h-auto object-cover max-h-80 group-hover:opacity-95 transition-opacity"
                       onError={(e) => { 
-                        console.error("Image load failed:", url);
+                        if (url !== 'image_url') {
+                          console.error("Image load failed:", url);
+                        }
                         (e.target as HTMLImageElement).style.display = 'none'; 
                       }}
                     />
