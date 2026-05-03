@@ -56,8 +56,8 @@ RUN chown nextjs:nodejs /app/start.sh
 
 USER nextjs
 
-EXPOSE 3000
-ENV PORT=3000
+EXPOSE 8000
+ENV PORT=8000
 ENV HOSTNAME=0.0.0.0
 
 # Start both services using the start script
