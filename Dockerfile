@@ -45,14 +45,15 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 RUN echo '#!/bin/sh\n\
 # Start the Python agent on port 8000\n\
 cd /app/ai-agent && PORT=8000 /app/ai-agent/.venv/bin/python agent_api.py &\n\
-# Start Next.js on port 3001 (default from ENV)\n\
+# Start Next.js using the standalone server\n\
 cd /app && node server.js' > /app/start.sh
 RUN chmod +x /app/start.sh
 
 USER nextjs
 
 EXPOSE 3001
-ENV PORT 3001
+ENV PORT=3001
+ENV HOSTNAME="0.0.0.0"
 
 # Start both services using the start script
 CMD ["sh", "/app/start.sh"]
