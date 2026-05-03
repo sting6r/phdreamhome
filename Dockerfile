@@ -44,14 +44,16 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
 # Create a start script to run both Next.js and the Python agent
-RUN echo '#!/bin/sh\n\
-echo "Starting PhDreamHome Services..."\n\
-# Start the Python agent on internal port 8001\n\
-cd /app/ai-agent && PORT=8001 /app/ai-agent/.venv/bin/python agent_api.py &\n\
-# Wait a bit for the agent to initialize\n\
-sleep 2\n\
-# Start Next.js using the standalone server\n\
-cd /app && node server.js' > /app/start.sh
+RUN cat > /app/start.sh << 'EOF'
+#!/bin/sh
+echo "Starting PhDreamHome Services..."
+# Start the Python agent on internal port 8001
+cd /app/ai-agent && PORT=8001 /app/ai-agent/.venv/bin/python agent_api.py &
+# Wait a bit for the agent to initialize
+sleep 2
+# Start Next.js using the standalone server
+cd /app && node server.js
+EOF
 RUN chmod +x /app/start.sh
 RUN chown nextjs:nodejs /app/start.sh
 
