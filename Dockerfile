@@ -9,6 +9,7 @@ RUN npm ci
 
 # Stage 2: Build the application
 FROM node:20-alpine AS builder
+RUN apk add --no-cache openssl
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
@@ -45,8 +46,8 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 # Create a start script to run both Next.js and the Python agent
 RUN echo '#!/bin/sh\n\
 echo "Starting PhDreamHome Services..."\n\
-# Start the Python agent on port 8000\n\
-cd /app/ai-agent && PORT=8000 /app/ai-agent/.venv/bin/python agent_api.py &\n\
+# Start the Python agent on internal port 8001\n\
+cd /app/ai-agent && PORT=8001 /app/ai-agent/.venv/bin/python agent_api.py &\n\
 # Wait a bit for the agent to initialize\n\
 sleep 2\n\
 # Start Next.js using the standalone server\n\
@@ -56,8 +57,8 @@ RUN chown nextjs:nodejs /app/start.sh
 
 USER nextjs
 
-EXPOSE 8000
-ENV PORT=8000
+EXPOSE 3000
+ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
 
 # Start both services using the start script
