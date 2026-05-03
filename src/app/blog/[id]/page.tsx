@@ -5,6 +5,7 @@ import Link from "next/link";
 import MainFooterCards from "@components/MainFooterCards";
 import { getProxyImageUrl } from "@/lib/image-utils";
 import BlogMediaViewer from "@components/BlogMediaViewer";
+import BlogImage from "@components/BlogImage";
 import ShareButtons from "@components/ShareButtons";
 import type { Metadata } from "next";
 
@@ -233,9 +234,7 @@ export default async function BlogDetailPage({ params }: { params: Promise<{ id:
           if (mediaItem && mediaItem.url) {
             if (mediaType === "image") {
               lineNodes.push(
-                <div key={key++} className="relative w-full h-72 sm:h-96 rounded overflow-hidden bg-slate-200 my-4">
-                  <Image src={getProxyImageUrl(mediaItem.path)} alt={mediaItem.title || "Blog image"} fill sizes="(max-width: 640px) 100vw, 60vw" className="object-cover" unoptimized />
-                </div>
+                <BlogImage key={key++} src={mediaItem.url} alt={mediaItem.title || "Blog image"} path={mediaItem.path} />
               );
             } else if (mediaType === "video") {
               lineNodes.push(
@@ -314,13 +313,7 @@ export default async function BlogDetailPage({ params }: { params: Promise<{ id:
             <div className="flex justify-end">
               <ShareButtons title={post.title} />
             </div>
-            <div className="relative w-full h-80 sm:h-[450px] rounded overflow-hidden bg-slate-200 shadow-md">
-              {post.coverPath ? (
-                <Image src={getProxyImageUrl(post.coverPath)} alt={post.title} fill sizes="(max-width: 640px) 100vw, 60vw" className="object-cover" unoptimized />
-              ) : (
-                <div className="absolute inset-0 bg-slate-200" />
-              )}
-            </div>
+            <BlogImage src={post.coverUrl || ""} alt={post.title} path={post.coverPath || undefined} />
             <div>
               <h1 className="text-3xl font-bold">{post.title}</h1>
               <div className="text-sm text-slate-700 mt-2">
