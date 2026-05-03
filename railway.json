@@ -5,7 +5,6 @@
     "dockerfilePath": "Dockerfile"
   },
   "deploy": {
-    "startCommand": "sh start.sh",
     "healthcheckPath": "/api/chat",
     "restartPolicyType": "ON_FAILURE",
     "restartPolicyMaxRetries": 10
