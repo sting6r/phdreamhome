@@ -6,7 +6,9 @@
   },
   "deploy": {
     "startCommand": "sh start.sh",
-    "healthcheckPath": "/api/public-listings",
+    "healthcheckPath": "/api/chat",
+    "healthcheckTimeout": 30,
+    "healthcheckInterval": 10,
     "restartPolicyType": "ON_FAILURE",
     "restartPolicyMaxRetries": 10
   }

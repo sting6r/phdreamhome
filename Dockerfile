@@ -31,11 +31,12 @@ RUN adduser --system --uid 1001 nextjs
 # Copy only necessary files
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/prisma ./prisma
-COPY --from=builder /app/ai-agent ./ai-agent
+COPY --from=builder --chown=nextjs:nodejs /app/ai-agent ./ai-agent
 
 # Set up Python virtual environment for the AI Agent
 RUN python3 -m venv /app/ai-agent/.venv
 RUN /app/ai-agent/.venv/bin/pip install --no-cache-dir -r /app/ai-agent/requirements.txt
+RUN chown -R nextjs:nodejs /app/ai-agent/.venv
 
 # Use standalone output
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
@@ -53,7 +54,7 @@ USER nextjs
 
 EXPOSE 3001
 ENV PORT=3001
-ENV HOSTNAME="0.0.0.0"
+ENV HOSTNAME=0.0.0.0
 
 # Start both services using the start script
 CMD ["sh", "/app/start.sh"]
